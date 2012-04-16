@@ -1,16 +1,19 @@
 
 LINUX ?= /lib/modules/$(shell uname -r)/build
-
 ZIO ?= $(HOME)/zio
-SPEC ?= $(HOME)/spec-sw
+SPEC_SW ?= $(HOME)/spec-sw/kernel
 
-ccflags-y = -I$(ZIO)/include -I$(SPEC)/kernel
+ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel
+
+ccflags-y += -DDEBUG # temporary
 
 obj-m := spec-fine-delay.o
 
-spec-fine-delay-objs = fd-lib.o fd-zio.o fd-probe.o
+spec-fine-delay-objs	=  fd-zio.o fd-spec.o fd-core.o
+spec-fine-delay-objs	+= onewire.o spi.o i2c.o
+spec-fine-delay-objs	+= acam.o pll.o time.o
 
-all modules:
-	$(MAKE) -C $(LINUX) M=$(shell /bin/pwd) modules
+all: modules
 
-clean:
+modules_install clean modules:
+	$(MAKE) -C $(LINUX) M=$(shell /bin/pwd) $@
