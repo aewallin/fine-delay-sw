@@ -60,6 +60,7 @@ struct modlist {
 #define M(x) { #x, fd_ ## x ## _init, fd_ ## x ## _exit }
 static struct modlist mods[] = {
 	M(spi),
+	M(gpio),
 	M(pll),
 	//M(w1),
 	//M(i2c),
