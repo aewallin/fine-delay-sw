@@ -3,7 +3,7 @@ LINUX ?= /lib/modules/$(shell uname -r)/build
 ZIO ?= $(HOME)/zio
 SPEC_SW ?= $(HOME)/spec-sw/kernel
 
-ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel
+ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$M
 
 ccflags-y += -DDEBUG # temporary
 
