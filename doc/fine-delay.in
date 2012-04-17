@@ -42,7 +42,7 @@
 @titlepage
 @title fine-delay
 @subtitle @value{update-month}
-@subtitle A sub-driver for ``fmc-delay-1ns-8cha'' based on SPEC driver
+@subtitle A sub-driver for ``fmc-delay-1ns-4cha'' based on SPEC driver
 @author Alessandro Rubini for CERN
 @end titlepage
 @headings single
@@ -56,13 +56,168 @@
 @node Top
 @top Introduction
 
+This is the user manual for the device driver developed for the
+``fmc-delay-1ns-4cha'' board developed on @code{ohwr.org}.  Please
+note that the ohwr project is misnamed as @code{fmc-delay-1ns-8cha};
+thus the web references include this wrong naming and it's not a typo
+in the documentation.
+
 @menu
-* Examples::                    
+* Driver Features::             
+* Installation::                
+* Using the Driver Directly::   
+* Using the Provided API::      
 @end menu
 
 @c ##########################################################################
-@node Examples
-@chapter Examples
+@node Driver Features
+@chapter Driver Features
+
+@c ##########################################################################
+@node Installation
+@chapter Installation
+
+This driver depends on two other drivers, as well as the Linux kernel.
+Also, it must talk to a specific FPGA binary file running in the carrier
+card.
+
+@menu
+* Software Dependencies::       
+* Gateware Dependencies::       
+* Instructions::                
+@end menu
+
+@c ==========================================================================
+@node Gateware Dependencies
+@section Gateware Dependencies
+
+This driver has been developed from the FPGA binary included in the
+package as @code{binaries/spec_top.bin}.  This can also be downloaded
+from the @i{Files} tab of the hardware project:
+@code{http://www.ohwr.org/projects/fmc-delay-1ns-8cha/files} (direct
+link:
+@code{http://www.ohwr.org/attachments/download/1179/spec_top.bin}.
+
+If the gateware is updated, I'll take care to always include in this
+package the exact binary the software is developed and verified
+against.
+
+@c ==========================================================================
+@node Gateware Installation
+@section Gateware Installation
+
+To install the FPGA image in the target system, please follow the
+instruction in the documentation of @i{spec-sw}.  To summarize, you'll
+need to place the @code{.bin} file, properly renamed, in
+@i{/lib/firmware}.
+
+If you have several @i{fine-delay} cards in the same host, you can
+install several copies of the binary, renamed to match the bus and
+slot number of the various SPEC cards, or you can use the default
+filename if there are no other SPEC cards (i.e. cards hosting
+something else than the @i{fine-delay} module).
+
+@c ==========================================================================
+@node Software Dependencies
+@section Software Dependencies
+
+The kernel I used during development is version 2.6.32, because this
+is the one where installed boards are going to run first.  
+
+The driver, then is based on the ZIO framework, available from
+@code{ohw.org}. The version being used during development is FIXME.
+Similarly, this is a sub-module for the SPEC board, and thus relies
+on code from the @i{spec-sw} package, again from @code{ohwr.org}.
+
+@c ==========================================================================
+@node Software Installation
+@section Software Installation
+
+First of all, please note that you need to define the following
+environment variables to be able to compile this driver. All of
+them are assumed to be already set when running the commands shown.
+
+@table @code
+@item LINUX
+
+	The top-level directory of the Linux kernel you are compiling
+        against. This document assumes it is already set.
+
+@item ZIO
+
+	The top-level directory of the ZIO repository checkout.
+
+@item SPEC_SW
+
+	The top-level directory of the @i{spec-sw} repository checkout.
+
+@end table
+
+To install ZIO you should download it and install the branch called
+``for-linux-2.6.32'' (this is the only kernel version this
+driver has been tested against so far).
+
+The commands here are reported without prompt for easy cut-and-paste,
+and the exact version number is used in the checkout command in order
+to ensure you are running the same version that has been used during
+development.  We plan to place a permanent tag in the ZIO repository
+when this driver is completed.
+
+@example
+   test -d zio/.git || git clone git://ohwr.org/misc/zio.git
+   cd zio
+   export ZIO=$(/bin/pwd)
+   git checkout zio-beta3-117-g97387e8 || \
+       git checkout origin/for-linux-2.6.32
+   make
+   sudo make modules_install
+@end example
+
+@b{Warning:} the commit-ID above is volatile until this driver is
+finalized, that's why the command above retrieves the @i{current}
+branch @code{for-linux-2.6.32} if the first checkout fails.
+
+
+The procedure for @i{spec-sw} is similar, but the master branch will
+work in this case. Again, the command shows the exact commit
+identifier.
+
+@example
+   test -d spec-sw/.git || \
+       git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
+   cd spec-sw
+   export SPEC_SW=$(/bin/pwd)
+   git checkout 8be5e1b || 
+       git checkout origin/for-linux-2.6.32
+   cd kernel
+   make
+   sudo make modules_install
+@end example
+
+@b{Warning:} the commit-ID above is volatile until this driver is
+finalized, that's why the command above retrieves the @i{current}
+branch @code{for-linux-2.6.32} if the first checkout fails.
+@c FIXME: the commit identifiers.
+
+Finally, you need to compile and install this driver, using the following
+commands, from the @i{master} branch:
+
+@example
+   make
+   sudo make modules_install
+@end example
+
+At this point all the software modules are ready to be loaded.
+Actually, the right set sill be auto-loaded when you @i{modprobe} for
+@code{spec-fine-delay}.
+
+@c ##########################################################################
+@node Using the Driver Directly
+@chapter Using the Driver Directly
+
+@c ##########################################################################
+@node Using the Provided API
+@chapter Using the Provided API
 
 
 
@@ -71,5 +226,5 @@
 
 
 @c  LocalWords:  gnudd titlepage iftex texinfo CERN documentlanguage settitle
-@c  LocalWords:  documentencoding setfilename afourpaper paragraphindent
-@c  LocalWords:  setchapternewpage finalout
+@c  LocalWords:  documentencoding setfilename afourpaper paragraphindent FPGA
+@c  LocalWords:  setchapternewpage finalout gateware ohwr
