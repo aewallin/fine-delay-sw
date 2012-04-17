@@ -3,11 +3,24 @@
 
 struct spec_fd {
 	struct spec_dev *spec;
-	unsigned char __iomem *base; /* regs files are byte-oriented */
+	unsigned char __iomem *base;	/* regs files are byte-oriented */
 	unsigned char __iomem *regs;
+	int acam_addr;			/* cache of currently active addr */
 };
 
 #define FD_REGS_OFFSET	0x84000
+
+/* Values for the configuration of the acam PLL. Can be changed */
+#define ACAM_DESIRED_BIN	80.9553
+#define ACAM_CLOCK_FREQ_KHZ	31250
+
+/*
+ * You can change the following value to have a pll with smaller divisor,
+ * at the cost of potentially less precision in the desired bin value.
+ */
+#define ACAM_MAX_REFDIV		7
+
+#define ACAM_MASK		((1<<29) - 1) /* 28 bits */
 
 /* SPI Bus chip selects */
 #define FD_CS_PLL	1	/* AD9516 PLL */
