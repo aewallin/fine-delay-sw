@@ -47,7 +47,19 @@ static void fd_do_reset(struct spec_fd *fd, int hw_reset)
 	udelay(1000);
 }
 
+/* Some init procedures to be intermixed with subsystems */
+int fd_gpio_defaults(struct spec_fd *fd)
+{
+	/* FIXME */
+	return 0;
+}
 
+int fd_reset_again(struct spec_fd *fd)
+{
+	/* FIXME */
+	return 0;
+
+}
 
 /* This structure lists the various subsystems */
 struct modlist {
@@ -57,17 +69,19 @@ struct modlist {
 };
 
 
-#define M(x) { #x, fd_ ## x ## _init, fd_ ## x ## _exit }
+#define SUBSYS(x) { #x, fd_ ## x ## _init, fd_ ## x ## _exit }
 static struct modlist mods[] = {
-	M(spi),
-	M(gpio),
-	M(pll),
-	//M(w1),
-	//M(i2c),
-	//M(acam),
-	//M(zio),
+	SUBSYS(spi),
+	SUBSYS(gpio),
+	SUBSYS(pll),
+	//SUBSYS(w1),
+	{"gpio-default", fd_gpio_defaults},
+	{"reset-again", fd_reset_again},
+	//SUBSYS(acam),
+	//SUBSYS(time),
+	//SUBSYS(i2c),
+	//SUBSYS(zio),
 };
-#undef M
 
 /* probe and remove are called by fd-spec.c */
 int fd_probe(struct spec_dev *dev)
@@ -115,7 +129,8 @@ void fd_remove(struct spec_dev *dev)
 	pr_debug("%s\n",__func__);
 	while (--i >= 0) {
 		m = mods + i;
-		m->exit(dev->sub_priv);
+		if (m->exit)
+			m->exit(dev->sub_priv);
 	}
 }
 
