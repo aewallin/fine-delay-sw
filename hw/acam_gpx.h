@@ -48,8 +48,8 @@
 #define AR6_InSelECL		(1<<26)
 #define AR6_PowerOnECL		(1<<27)
 
-#define AR7_HSDiv(value)d	((value) & 0xff)
-#define AR7_RefClkDiv(value)	((value) & 0x7) << 8)
+#define AR7_HSDiv(value)	((value) & 0xff)
+#define AR7_RefClkDiv(value)	(((value) & 0x7) << 8)
 #define AR7_ResAdj		(1<<11)
 #define AR7_NegPhase		(1<<12)
 #define AR7_Track		(1<<13)
