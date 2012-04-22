@@ -74,7 +74,7 @@ static struct modlist mods[] = {
 	SUBSYS(spi),
 	SUBSYS(gpio),
 	SUBSYS(pll),
-	//SUBSYS(w1),
+	SUBSYS(onewire),
 	{"gpio-default", fd_gpio_defaults},
 	{"reset-again", fd_reset_again},
 	//SUBSYS(acam),
@@ -100,12 +100,15 @@ int fd_probe(struct spec_dev *dev)
 	fd->spec = dev;
 	fd->base = dev->remap[0];
 	fd->regs = fd->base + FD_REGS_OFFSET;
+	fd->ow_regs = fd->regs + 0x500;
 
 	/* First, hardware reset */
 	fd_do_reset(fd, 1);
 
 	/* init all subsystems */
 	for (i = 0, m = mods; i < ARRAY_SIZE(mods); i++, m++) {
+		pr_debug("%s: Calling init for \"%s\"\n", __func__,
+			 m->name);
 		ret = m->init(fd);
 		if (ret < 0) {
 			pr_err("%s: error initializing %s\n", __func__,

@@ -5,6 +5,7 @@ struct spec_fd {
 	struct spec_dev *spec;
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
 	unsigned char __iomem *regs;
+	unsigned char __iomem *ow_regs;
 	int acam_addr;			/* cache of currently active addr */
 };
 
@@ -13,6 +14,12 @@ struct spec_fd {
 /* Values for the configuration of the acam PLL. Can be changed */
 #define ACAM_DESIRED_BIN	80.9553
 #define ACAM_CLOCK_FREQ_KHZ	31250
+
+/* ACAM TDC operation modes */
+enum fd_acam_modes {
+	ACAM_RMODE,
+	ACAM_IMODE
+};
 
 /*
  * You can change the following value to have a pll with smaller divisor,
@@ -49,6 +56,11 @@ extern void fd_spi_exit(struct spec_fd *fd);
 /* Functions exported by pll.c */
 extern int fd_pll_init(struct spec_fd *fd);
 extern void fd_pll_exit(struct spec_fd *fd);
+
+/* Functions exported by onewire.c */
+extern int fd_onewire_init(struct spec_fd *fd);
+extern void fd_onewire_exit(struct spec_fd *fd);
+extern int fd_read_temp(struct spec_fd *fd);
 
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct spec_fd *fd);
