@@ -90,9 +90,15 @@ static void acam_writel(struct spec_fd *fd, int val, int reg)
 	writel(FD_TDCSR_WRITE, fd->regs + FD_REG_TDCSR);
 }
 
+static void acam_set_bypass(struct spec_fd *fd, int on)
+{
+	/* FIXME: this zeroes all other GCR bits */
+	writel(on ? FD_GCR_BYPASS : 0, fd->regs + FD_REG_GCR);
+}
+
 static inline int acam_is_pll_locked(struct spec_fd *fd)
 {
-        return !(acam_readl(fd, 12) &AR12_NotLocked);
+	return !(acam_readl(fd, 12) &AR12_NotLocked);
 }
 
 /* Two test functions to verify the bus is working -- Tom */
@@ -161,11 +167,153 @@ out:
 	return -EIO;
 }
 
+static int acam_calibrate_outputs(struct spec_fd *fd)
+{
+	/* FIXME */
+	return 0;
+}
 
+/* We need to write come static configuration in the registers */
+struct acam_init_data {
+	int addr;
+	int val;
+};
+
+/* Commented values are not constant, they are added at runtime (see later) */
+static struct acam_init_data acam_init_rmode[] = {
+	{0,	AR0_ROsc | AR0_RiseEn0 | AR0_RiseEn1 | AR0_HQSel},
+	{1,	AR1_Adj(0, 0) | AR1_Adj(1, 2) |	AR1_Adj(2, 6) |
+		AR1_Adj(3, 0) |	AR1_Adj(4, 2) | AR1_Adj(5, 6) | AR1_Adj(6, 0)},
+	{2,	AR2_RMode | AR2_Adj(7, 2) | AR2_Adj(8, 6)},
+	{3,	0},
+	{4,	AR4_EFlagHiZN},
+	{5,	AR5_StartRetrig
+		| 0 /* AR5_StartOff1(hw->calib.acam_start_offset) */
+		| AR5_MasterAluTrig},
+	{6,	AR6_Fill(200) | AR6_PowerOnECL},
+	{7,	/* AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv) */ 0
+		| AR7_ResAdj | AR7_NegPhase},
+	{11,	0x7ff0000},
+	{12,	0x0000000},
+	{14,	0},
+	/* finally, reset */
+	{4,	AR4_EFlagHiZN | AR4_MasterReset | AR4_StartTimer(0)},
+};
+
+static struct acam_init_data acam_init_imode[] = {
+	{0,	AR0_TRiseEn(0) | AR0_HQSel | AR0_ROsc},
+	{2,	AR2_IMode},
+	{5,	AR5_StartOff1(3000) | AR5_MasterAluTrig},
+	{6,	0},
+	{7,	/* AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv) */ 0
+		| AR7_ResAdj | AR7_NegPhase},
+	{11,	0x7ff0000},
+	{12,	0x0000000},
+	{14,	0},
+	/* finally, reset */
+	{4,	AR4_EFlagHiZN | AR4_MasterReset | AR4_StartTimer(0)},
+};
+
+struct acam_mode_setup {
+	enum fd_acam_modes mode;
+	char *name;
+	struct acam_init_data *data;
+	int data_size;
+};
+
+static struct acam_mode_setup fd_acam_table[] = {
+	{
+		ACAM_RMODE, "R",
+		acam_init_rmode, ARRAY_SIZE(acam_init_rmode),
+	},
+	{
+		ACAM_IMODE, "I",
+		acam_init_imode, ARRAY_SIZE(acam_init_imode)
+	},
+};
+
+/* To configure the thing, follow the table, but treat 5 and 7 as special */
+static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
+{
+	int i, bin, hsdiv, refdiv, reg7val;
+	struct acam_init_data *p;
+	uint32_t regval;
+	unsigned long j;
+
+	pr_debug("%s: config for %s-mode\n", __func__, s->name);
+	bin = acam_calc_pll(ACAM_FP_TREF, ACAM_FP_BIN, &hsdiv, &refdiv);
+	reg7val = AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv);
+
+	/* Disable TDC inputs prior to configuring */
+	writel(FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS,
+	       fd->regs + FD_REG_TDCSR);
+
+	for (p = s->data, i = 0; i < s->data_size; p++, i++) {
+		regval = p->val;
+		if (p->addr == 7)
+			regval |= reg7val;
+		if (p->addr == 5 && s->mode == ACAM_RMODE)
+			regval |= AR5_StartOff1(fd->calib.acam_start_offset);
+		acam_writel(fd, regval, p->addr);
+	}
+
+	/* Wait for the oscillator to lock */
+	j = jiffies + 2 * HZ;
+	while (time_before(jiffies, j)) {
+		if (acam_is_pll_locked(fd))
+			break;
+		msleep(10);
+	}
+	if (time_after_eq(jiffies, j)) {
+		pr_err("%s: ACAM PLL does not lock\n", __func__);
+		return -EIO;
+	}
+	/* after config, set the FIFO address for further reads */
+	acam_set_address(fd, 8);
+	return 0;
+}
+
+int fd_acam_config(struct spec_fd *fd, enum fd_acam_modes mode)
+{
+	struct acam_mode_setup *s;
+	int i;
+
+	for (s = fd_acam_table, i = 0; i < ARRAY_SIZE(fd_acam_table); s++, i++)
+		if (mode == s->mode)
+			return __acam_config(fd, s);
+	pr_err("%s: invalid mode %i\n", __func__, mode);
+	return -EINVAL;
+}
 
 int fd_acam_init(struct spec_fd *fd)
 {
+	int ret;
 	fd->acam_addr = -1; /* First time must be activated */
+
+	acam_set_bypass(fd, 1); /* Driven by host, not core */
+
+	if ( (ret = acam_test_bus(fd)) )
+		return ret;
+
+	if ( (ret = fd_acam_config(fd, ACAM_IMODE)) )
+		return ret;
+
+	if ( (ret = acam_calibrate_outputs(fd)) )
+		return ret;
+
+	if ( (ret = fd_acam_config(fd, ACAM_RMODE)) )
+		return ret;
+
+	acam_set_bypass(fd, 0); /* Driven by core, not host */
+
+#if 0 /* FIXME */
+	/* Clear and disable the timestamp readout buffer */
+	fd_writel( FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ, FD_REG_TSBCR);
+
+	fd_writel( hw->calib.adsfr_val, FD_REG_ADSFR);
+	fd_writel( 3 * hw->calib.acam_start_offset, FD_REG_ASOR);
+	fd_writel( hw->calib.atmcr_val, FD_REG_ATMCR);
+#endif
 	return 0;
 }
 
@@ -173,4 +321,3 @@ void fd_acam_exit(struct spec_fd *fd)
 {
 	/* nothing to do */
 }
-

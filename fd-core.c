@@ -115,7 +115,7 @@ static struct modlist mods[] = {
 	SUBSYS(onewire),
 	{"gpio-default", fd_gpio_defaults},
 	{"reset-again", fd_reset_again},
-	//SUBSYS(acam),
+	SUBSYS(acam),
 	//SUBSYS(time),
 	//SUBSYS(i2c),
 	//SUBSYS(zio),
