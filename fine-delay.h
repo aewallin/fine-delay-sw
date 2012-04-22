@@ -1,8 +1,20 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
+struct fd_calib {
+	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
+	uint32_t magic;			/* magic ID: 0xf19ede1a */
+	uint32_t zero_offset[4];	/* Output zero offset, fixed point */
+	uint32_t adsfr_val;		/* ADSFR register value */
+	uint32_t acam_start_offset;	/* ACAM Start offset value */
+	uint32_t atmcr_val;		/* ATMCR register value */
+	uint32_t tdc_zero_offset;	/* Zero offset of the TDC, in ps */
+};
+
+/* This is the device we use all around */
 struct spec_fd {
 	struct spec_dev *spec;
+	struct fd_calib calib;
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
 	unsigned char __iomem *regs;
 	unsigned char __iomem *ow_regs;

@@ -23,6 +23,22 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
+/* This is pre-set at load time (data by Tomasz) */
+static struct fd_calib fd_default_calib = {
+	.frr_poly = {
+		[0] =     -165202LL,
+		[1] =     -29825595LL,
+		[2] = 3801939743082LL,
+	},
+	.tdc_zero_offset = 35600,
+	.atmcr_val =  2 | (1000 << 4),
+	.adsfr_val = 56648,
+	.acam_start_offset = 10000,
+	.zero_offset = {
+		50000, 50000, 50000, 50000
+	},
+};
+
 /* The reset function (by Tomasz) */
 static void fd_do_reset(struct spec_fd *fd, int hw_reset)
 {
@@ -50,15 +66,37 @@ static void fd_do_reset(struct spec_fd *fd, int hw_reset)
 /* Some init procedures to be intermixed with subsystems */
 int fd_gpio_defaults(struct spec_fd *fd)
 {
-	/* FIXME */
+	fd_gpio_dir(fd, FD_GPIO_TRIG_INTERNAL, FD_GPIO_OUT);
+	fd_gpio_set(fd, FD_GPIO_TRIG_INTERNAL);
+
+	fd_gpio_set(fd, FD_GPIO_OUTPUT_MASK);
+	fd_gpio_dir(fd, FD_GPIO_OUTPUT_MASK, FD_GPIO_OUT);
+
+	fd_gpio_dir(fd, FD_GPIO_TERM_EN, FD_GPIO_OUT);
+	fd_gpio_clr(fd, FD_GPIO_TERM_EN);
 	return 0;
 }
 
 int fd_reset_again(struct spec_fd *fd)
 {
-	/* FIXME */
-	return 0;
+	unsigned long j;
 
+	/* Reset the FD core once we have proper reference/TDC clocks */
+	fd_do_reset(fd, 0 /* not hw */);
+
+	j = jiffies + 2 * HZ;
+	while (time_before(jiffies, j)) {
+		if ( !(readl(fd->regs + FD_REG_GCR) & FD_GCR_DDR_LOCKED) )
+			break;
+		msleep(10);
+	}
+	if (time_after_eq(jiffies, j)) {
+		pr_err("%s: timeout waiting for GCR lock bit\n", __func__);
+		return -EIO;
+	}
+
+	fd_do_reset(fd, 0 /* not hw */);
+	return 0;
 }
 
 /* This structure lists the various subsystems */
@@ -102,6 +140,8 @@ int fd_probe(struct spec_dev *dev)
 	fd->regs = fd->base + FD_REGS_OFFSET;
 	fd->ow_regs = fd->regs + 0x500;
 
+	fd->calib = fd_default_calib;
+
 	/* First, hardware reset */
 	fd_do_reset(fd, 1);
 
@@ -116,6 +156,10 @@ int fd_probe(struct spec_dev *dev)
 			goto err;
 		}
 	}
+
+	/* Finally, enable the input */
+	writel(FD_GCR_INPUT_EN, fd->regs + FD_REG_GCR);
+
 	return 0;
 
 err:
