@@ -43,8 +43,24 @@ enum fd_acam_modes {
 #define FD_MCP_GPIO	0x12
 #define FD_MCP_OLAT	0x14
 
+/*
+ * MCP23S17 GPIO direction and meaning
+ * NOTE: outputs are called 1..4 to match hw schematics
+ */
 #define FD_GPIO_IN	0
 #define FD_GPIO_OUT	1
+
+static inline void __check_output(int x)
+{
+	BUG_ON(x < 1 || x > 4);
+}
+
+#define FD_GPIO_TERM_EN		0x0001		/* Input terminator enable */
+#define FD_GPIO_OUTPUT_EN(x)	\
+	({__check_output(x); 1 << (6-(x));})	/* Output driver enable */
+#define FD_GPIO_OUTPUT_MASK	0x003c		/* Output driver enable */
+#define FD_GPIO_TRIG_INTERNAL	0x0040		/* TDC trig (1=in, 1=fpga) */
+#define FD_GPIO_CAL_DISABLE	0x0080		/* 0 enables calibration */
 
 /* Functions exported by fd-core.c */
 extern int fd_probe(struct spec_dev *dev);
@@ -65,11 +81,18 @@ extern int fd_onewire_init(struct spec_fd *fd);
 extern void fd_onewire_exit(struct spec_fd *fd);
 extern int fd_read_temp(struct spec_fd *fd, int verbose);
 
+/* Functions exported by acam.c */
+extern int fd_acam_init(struct spec_fd *fd);
+extern void fd_acam_exit(struct spec_fd *fd);
+
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct spec_fd *fd);
 extern void fd_gpio_exit(struct spec_fd *fd);
 extern void fd_gpio_dir(struct spec_fd *fd, int pin, int dir);
 extern void fd_gpio_val(struct spec_fd *fd, int pin, int val);
+extern void fd_gpio_set_clr(struct spec_fd *fd, int pin, int set);
+#define fd_gpio_set(fd, pin) fd_gpio_set_clr((fd), (pin), 1)
+#define fd_gpio_clr(fd, pin) fd_gpio_set_clr((fd), (pin), 0)
 
 /* Functions exported by fd-zio.c */
 extern int fd_zio_register(void);

@@ -63,6 +63,13 @@ void fd_gpio_val(struct spec_fd *fd, int mask, int values)
 	gpio_writel(fd, reg | values, addr);
 }
 
+void fd_gpio_set_clr(struct spec_fd *fd, int mask, int set)
+{
+	if (set)
+		fd_gpio_val(fd, mask, mask);
+	else
+		fd_gpio_val(fd, mask, 0);
+}
 
 int fd_gpio_init(struct spec_fd *fd)
 {
