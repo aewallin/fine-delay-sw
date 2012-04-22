@@ -12,6 +12,7 @@
  */
 
 #include <linux/jiffies.h>
+#include <linux/interrupt.h>
 #include <linux/io.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
@@ -36,6 +37,21 @@
 
 #define CLK_DIV_NOR	(624/2)
 #define CLK_DIV_OVD	(124/2)
+
+#define CMD_ROM_SEARCH		0xF0
+#define CMD_ROM_READ		0x33
+#define CMD_ROM_MATCH		0x55
+#define CMD_ROM_SKIP		0xCC
+#define CMD_ROM_ALARM_SEARCH	0xEC
+
+#define CMD_CONVERT_TEMP	0x44
+#define CMD_WRITE_SCRATCHPAD	0x4E
+#define CMD_READ_SCRATCHPAD	0xBE
+#define CMD_COPY_SCRATCHPAD	0x48
+#define CMD_RECALL_EEPROM	0xB8
+#define CMD_READ_POWER_SUPPLY	0xB4
+
+#define FD_OW_PORT 0 /* what is this slow? */
 
 static void ow_writel(struct spec_fd *fd, uint32_t val, unsigned long reg)
 {
@@ -85,23 +101,23 @@ static int write_bit(struct spec_fd *fd, int port, int bit)
 
 static int ow_read_byte(struct spec_fd *fd, int port)
 {
-	int data = 0, i;
+	int byte = 0, i;
 
 	for(i = 0; i < 8; i++)
-		data |= (read_bit(fd, port) << i);
-	return data;
+		byte |= (read_bit(fd, port) << i);
+	return byte;
 }
 
 static int ow_write_byte(struct spec_fd *fd, int port, int byte)
 {
-	int  data = 0;
-	int   byte_old = byte, i;
+	int data = 0;
+	int i;
 
 	for (i = 0; i < 8; i++){
 		data |= write_bit(fd, port, (byte & 0x1)) << i;
 		byte >>= 1;
 	}
-	return byte_old == data ? 0 : -1;
+	return 0; /* success */
 }
 
 static int ow_write_block(struct spec_fd *fd, int port, uint8_t *block, int len)
@@ -121,97 +137,101 @@ static int ow_read_block(struct spec_fd *fd, int port, uint8_t *block, int len)
 	return 0;
 }
 
-#define ROM_SEARCH		0xF0
-#define ROM_READ		0x33
-#define ROM_MATCH		0x55
-#define ROM_SKIP		0xCC
-#define ROM_ALARM_SEARCH	0xEC
-
-#define CONVERT_TEMP		0x44
-#define WRITE_SCRATCHPAD	0x4E
-#define READ_SCRATCHPAD		0xBE
-#define COPY_SCRATCHPAD		0x48
-#define RECALL_EEPROM		0xB8
-#define READ_POWER_SUPPLY	0xB4
-
-static uint8_t ds18x_id[8];
-
-static int ds18x_read_serial(struct spec_fd *fd, uint8_t *id)
+static int ds18x_read_serial(struct spec_fd *fd)
 {
-	int i;
-
 	if(!ow_reset(fd, 0))
 		return -EIO;
 
-	ow_write_byte(fd, 0, ROM_READ);
-	for(i = 0; i < 8; i++) {
-		*id = ow_read_byte(fd, 0);
-		id++;
-	}
-	return 0;
+	ow_write_byte(fd, FD_OW_PORT, CMD_ROM_READ);
+	return ow_read_block(fd, FD_OW_PORT, fd->ds18_id, 8);
 }
 
-static int ds18x_access(struct spec_fd *fd, uint8_t *id)
+static int ds18x_access(struct spec_fd *fd)
 {
-	int i;
 	if(!ow_reset(fd, 0))
 		return -EIO;
 
-	if(ow_write_byte(fd, 0, ROM_MATCH) < 0)
-		return -EIO;
-	for(i = 0; i < 8; i++)
-		if(ow_write_byte(fd, 0, id[i]) < 0)
+	if (0) {
+		/* select the rom among several of them */
+		if (ow_write_byte(fd, FD_OW_PORT, CMD_ROM_MATCH) < 0)
 			return -EIO;
-	return 0;
+		return ow_write_block(fd, FD_OW_PORT, fd->ds18_id, 8);
+	} else {
+		/* we have one only, so skip rom */
+		return ow_write_byte(fd, FD_OW_PORT, CMD_ROM_SKIP);
+	}
 }
 
-static int ds18x_read_temp(struct spec_fd *fd, int *temp_r)
+static void __temp_command_and_next_t(struct spec_fd *fd, int cfg_reg)
+{
+	int ms;
+
+	ds18x_access(fd);
+	ow_write_byte(fd, FD_OW_PORT, CMD_CONVERT_TEMP);
+	/* The conversion takes some time, so mark when will it be ready */
+	ms = 94 * ( 1 << (cfg_reg >> 5));
+	fd->next_t = jiffies + msecs_to_jiffies(ms);
+}
+
+int fd_read_temp(struct spec_fd *fd, int verbose)
 {
 	int i, temp;
+	unsigned long j;
 	uint8_t data[9];
 
-	if(ds18x_access(fd, ds18x_id) < 0)
-		return -1;
-	ow_write_byte(fd, 0, READ_SCRATCHPAD);
+	/* If first conversion, ask for it first */
+	if (fd->next_t == 0)
+		__temp_command_and_next_t(fd, 0x7f /* we ignore: max time */);
 
-	for(i = 0; i < 9; i++)
-		data[i] = ow_read_byte(fd, 0);
+	/* Wait for it to be ready: (FIXME: we need a time policy here) */
+	j = jiffies;
+	if (time_before(j, fd->next_t)) {
+		/* If we cannot sleep, return the previous value */
+		if (in_atomic())
+			return fd->temp;
+		msleep(jiffies_to_msecs(fd->next_t - j));
+	}
 
+	ds18x_access(fd);
+	ow_write_byte(fd, FD_OW_PORT, CMD_READ_SCRATCHPAD);
+	ow_read_block(fd, FD_OW_PORT, data, 9);
+
+	if (verbose > 1) {
+		pr_info("%s: Scratchpad: ", __func__);
+		for (i = 0; i < 9; i++)
+			printk("%02x%c", data[i], i == 8 ? '\n' : ':');
+	}
 	temp = ((int)data[1] << 8) | ((int)data[0]);
 	if(temp & 0x1000)
 		temp = -0x10000 + temp;
+	fd->temp = temp;
+	if (verbose) {
+		pr_info("%s: Temperature 0x%x (%i bits: %i.%03i)\n", __func__,
+			temp, 9 + (data[4] >> 5),
+			temp / 16, (temp & 0xf) * 1000 / 16);
+	}
 
-	ds18x_access(fd, ds18x_id);
-	ow_write_byte(fd, 0, CONVERT_TEMP);
-
-	if(temp_r) *temp_r = temp;
-	return 0;
-}
-
-int fd_read_temp(struct spec_fd *fd)
-{
-	int i;
-
-	//ow_init(dev);
-	if(ds18x_read_serial(fd, ds18x_id) < 0)
-		return -EIO;
-
-	pr_debug("%s: Found DS18xx sensor: ", __func__);
-	for (i = 0; i < 8; i++)
-		printk("%02x%c", ds18x_id[i], i == 7 ? '\n' : ':');
-	return ds18x_read_temp(fd, NULL);
+	__temp_command_and_next_t(fd, data[4]);	/* start next conversion */
+	return temp;
 }
 
 int fd_onewire_init(struct spec_fd *fd)
 {
-	int temp;
+	int i;
 
 	ow_writel(fd, ((CLK_DIV_NOR & CDR_NOR_MSK)
 		       | (( CLK_DIV_OVD << CDR_OVD_OFS) & CDR_OVD_MSK)),
 		  R_CDR);
 
-	temp = fd_read_temp(fd);
-	printk("temp: %x\n", temp);
+	if(ds18x_read_serial(fd) < 0)
+		return -EIO;
+
+	pr_info("%s: Found DS18xx sensor: ", __func__);
+	for (i = 0; i < 8; i++)
+		printk("%02x%c", fd->ds18_id[i], i == 7 ? '\n' : ':');
+
+	/* read the temperature once, to ensure it works, and print it */
+	fd_read_temp(fd, 2);
 
 	return 0;
 }

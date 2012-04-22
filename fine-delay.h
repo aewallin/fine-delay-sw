@@ -7,6 +7,9 @@ struct spec_fd {
 	unsigned char __iomem *regs;
 	unsigned char __iomem *ow_regs;
 	int acam_addr;			/* cache of currently active addr */
+	uint8_t ds18_id[8];
+	unsigned long next_t;
+	int temp;			/* scaled by 4 bits */
 };
 
 #define FD_REGS_OFFSET	0x84000
@@ -60,7 +63,7 @@ extern void fd_pll_exit(struct spec_fd *fd);
 /* Functions exported by onewire.c */
 extern int fd_onewire_init(struct spec_fd *fd);
 extern void fd_onewire_exit(struct spec_fd *fd);
-extern int fd_read_temp(struct spec_fd *fd);
+extern int fd_read_temp(struct spec_fd *fd, int verbose);
 
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct spec_fd *fd);
