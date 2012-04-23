@@ -101,6 +101,7 @@ static uint32_t acam_readl(struct spec_fd *fd, int reg)
 
 static void acam_writel(struct spec_fd *fd, int val, int reg)
 {
+	acam_set_address(fd, reg);
 	writel(val, fd->regs + FD_REG_TDR);
 	writel(FD_TDCSR_WRITE, fd->regs + FD_REG_TDCSR);
 }
