@@ -255,9 +255,11 @@ static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 	uint32_t regval;
 	unsigned long j;
 
-	pr_debug("%s: config for %s-mode\n", __func__, s->name);
 	bin = acam_calc_pll(ACAM_FP_TREF, ACAM_FP_BIN, &hsdiv, &refdiv);
 	reg7val = AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv);
+
+	pr_debug("%s: config for %s-mode (bin 0x%x, hsdiv %i, refdiv %i)\n",
+		 __func__, s->name, bin, hsdiv, refdiv);
 
 	/* Disable TDC inputs prior to configuring */
 	writel(FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS,
@@ -269,8 +271,12 @@ static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 			regval |= reg7val;
 		if (p->addr == 5 && s->mode == ACAM_RMODE)
 			regval |= AR5_StartOff1(fd->calib.acam_start_offset);
+		pr_debug("acam write %2i = %08x\n", p->addr, regval);
 		acam_writel(fd, regval, p->addr);
 	}
+
+	for (i = 0; i < 16; i++)
+		pr_debug("acam reg %2i: %08x\n", i, acam_readl(fd, i));
 
 	/* Wait for the oscillator to lock */
 	j = jiffies + 2 * HZ;
