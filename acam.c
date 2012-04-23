@@ -14,6 +14,7 @@
 #include <linux/jiffies.h>
 #include <linux/io.h>
 #include <linux/delay.h>
+#include <linux/math64.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 #include "hw/acam_gpx.h"
@@ -29,7 +30,9 @@
 static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 			 int *refdiv_out)
 {
+	uint64_t tmpll;
 	int x, refdiv, hsdiv;
+	int32_t rem;
 
 	/*
 	 *     Tbin(I-mode) = (Tref << refdiv) / (216 * hsdiv)
@@ -42,8 +45,14 @@ static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 	 * and then shift out the zeros to get smaller values.
 	 * 
 	 */
-	x = (tref << 16) / 216 / bin;
-	//printf("x = %lf\n", (double)x / (1<<16));
+	if (0) {
+		x = (tref << 16) / 216 / bin;
+		//printf("x = %lf\n", (double)x / (1<<16));
+	} else {
+		/* We can't divide 64 bits in kernel space */
+		tmpll = div_u64_rem(tref << 16, 216, &rem);
+		x = div_u64_rem(tmpll, bin, &rem);
+	}
 
 	/* Now, shift out the max bits (usually 7) and drop decimal part */
 	refdiv = ACAM_MAX_REFDIV;
@@ -61,7 +70,13 @@ static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 	*refdiv_out = refdiv;
 
 	/* Finally, calculate what we really have */
-	return (tref << refdiv) / 216 / hsdiv;
+	if (0) {
+		bin = (tref << refdiv) / 216 / hsdiv;
+	} else {
+		tmpll = div_u64_rem(tref << refdiv, 216, &rem);
+		bin = div_u64_rem(tmpll, hsdiv, &rem);
+	}
+	return bin;
 }
 
 static void acam_set_address(struct spec_fd *fd, int addr)
