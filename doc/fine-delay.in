@@ -67,6 +67,8 @@ in the documentation.
 * Installation::                
 * Using the Driver Directly::   
 * Using the Provided API::      
+* Known bugs and missing features::  
+* Troubleshooting::             
 @end menu
 
 @c ##########################################################################
@@ -82,9 +84,10 @@ Also, it must talk to a specific FPGA binary file running in the carrier
 card.
 
 @menu
-* Software Dependencies::       
 * Gateware Dependencies::       
-* Instructions::                
+* Gateware Installation::       
+* Software Dependencies::       
+* Software Installation::       
 @end menu
 
 @c ==========================================================================
@@ -209,15 +212,98 @@ commands, from the @i{master} branch:
 
 At this point all the software modules are ready to be loaded.
 Actually, the right set sill be auto-loaded when you @i{modprobe} for
-@code{spec-fine-delay}.
+@code{spec-fine-delay} if you installed everything.
+
+This is an example of the kernel messages you'll get back:
+
+@smallexample
+   spec_probe (device 0002:0000)
+   spec_probe: current 2893 (modprobe)
+   spec 0000:02:00.0: PCI INT A -> GSI 18 (level, low) -> IRQ 18
+   spec_load_files
+   spec 0000:02:00.0: firmware: requesting spec-B0002.bin
+   spec_load_fpga: got binary file "spec-B0002.bin", 1484404 (0x16a674) bytes
+   spec 0000:02:00.0: firmware: requesting spec-B0002-cpu.bin
+   spec 0000:02:00.0: Can't load program "spec-B0002-cpu.bin" - -2
+   spec_load_submodule: load "spec-B0002": 256
+   fd_onewire_init: Found DS18xx sensor: 28:13:f2:06:03:00:00:d4
+   fd_read_temp: Scratchpad: d6:04:4b:46:7f:ff:0a:10:8a
+   fd_read_temp: Temperature 0x4d6 (12 bits: 77.375)
+@end smallexample
 
 @c ##########################################################################
 @node Using the Driver Directly
 @chapter Using the Driver Directly
 
+To be filled.
+
 @c ##########################################################################
 @node Using the Provided API
 @chapter Using the Provided API
+
+To be filled.
+
+@c ##########################################################################
+@node Known bugs and missing features
+@chapter Known bugs and missing features
+
+This package is still work in progress, and unfortunately the same
+applies to the packages it depends on.  The current package set has
+the following known issues exposed by @i{fine-delay}:
+
+@itemize @bullet
+
+@item The auto-loading of @i{spec} submodules is not really working:
+the @i{modprobe} command will be stuck sleeping if you try to use it.
+Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
+
+@end itemize
+
+Not all features are there, and the package currently lacks these features
+over what hardware allows:
+
+@itemize @bullet
+
+@item Everything. Let's be honest: the driver does nothing at this point.
+
+@item EEPROM support. The driver uses default calibration settings
+
+@end itemize
+
+
+
+@c ##########################################################################
+@node Troubleshooting
+@chapter Troubleshooting
+
+This chapters lists a few errors that may happen and how to deal with
+them.
+
+@menu
+* Wrong FPGA Image::            
+@end menu
+
+@c ==========================================================================
+@node Wrong FPGA Image
+@section Wrong FPGA Image
+
+
+Thanks to Tomasz, the @i{fine-delay} FPGA binary has a magic number at
+a magic address, so the driver can detect if the @i{spec} includes no
+gateware or a different binary image.
+
+In this case, a message like the following one is reported:
+
+@example
+   fd_probe: card at 0002:0000 has wrong gateware
+@end example
+
+If this happens, please put the binary image in @i{/lib/firmware}
+where the spec driver can find it. In my case the file name is
+@code{spec-B0002.bin} (refer to @i{spec-sw} documentation for details.
+
+
+
 
 
 
