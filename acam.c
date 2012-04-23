@@ -95,21 +95,21 @@ static void acam_set_address(struct spec_fd *fd, int addr)
 static uint32_t acam_readl(struct spec_fd *fd, int reg)
 {
 	acam_set_address(fd, reg);
-	writel(FD_TDCSR_READ, fd->regs + FD_REG_TDCSR);
-	return readl(fd->regs + FD_REG_TDR) & ACAM_MASK;
+	fd_writel(fd, FD_TDCSR_READ, FD_REG_TDCSR);
+	return fd_readl(fd, FD_REG_TDR) & ACAM_MASK;
 }
 
 static void acam_writel(struct spec_fd *fd, int val, int reg)
 {
 	acam_set_address(fd, reg);
-	writel(val, fd->regs + FD_REG_TDR);
-	writel(FD_TDCSR_WRITE, fd->regs + FD_REG_TDCSR);
+	fd_writel(fd, val, FD_REG_TDR);
+	fd_writel(fd, FD_TDCSR_WRITE, FD_REG_TDCSR);
 }
 
 static void acam_set_bypass(struct spec_fd *fd, int on)
 {
 	/* FIXME: this zeroes all other GCR bits */
-	writel(on ? FD_GCR_BYPASS : 0, fd->regs + FD_REG_GCR);
+	fd_writel(fd, on ? FD_GCR_BYPASS : 0, FD_REG_GCR);
 }
 
 static inline int acam_is_pll_locked(struct spec_fd *fd)
@@ -263,8 +263,7 @@ static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 		 __func__, s->name, bin, hsdiv, refdiv);
 
 	/* Disable TDC inputs prior to configuring */
-	writel(FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS,
-	       fd->regs + FD_REG_TDCSR);
+	fd_writel(fd, FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS, FD_REG_TDCSR);
 
 	for (p = s->data, i = 0; i < s->data_size; p++, i++) {
 		regval = p->val;

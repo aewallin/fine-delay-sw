@@ -43,23 +43,21 @@ static struct fd_calib fd_default_calib = {
 static void fd_do_reset(struct spec_fd *fd, int hw_reset)
 {
 	if (hw_reset) {
-		writel(FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_CORE_MASK,
-		       fd->regs + FD_REG_RSTR);
+		fd_writel(fd, FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_CORE_MASK,
+		       FD_REG_RSTR);
 		udelay(10000);
-		writel(FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_CORE_MASK
-		       | FD_RSTR_RST_FMC_MASK,
-		       fd->regs + FD_REG_RSTR);
+		fd_writel(fd, FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_CORE_MASK
+		       | FD_RSTR_RST_FMC_MASK, FD_REG_RSTR);
 		/* TPS3307 supervisor needs time to de-assert master reset */
 		msleep(600);
 		return;
 	}
 
-	writel(FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_FMC_MASK,
-	       fd->regs + FD_REG_RSTR);
+	fd_writel(fd, FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_FMC_MASK,
+		  FD_REG_RSTR);
 	udelay(1000);
-	writel(FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_FMC_MASK
-	       | FD_RSTR_RST_CORE_MASK,
-	       fd->regs + FD_REG_RSTR);
+	fd_writel(fd, FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_FMC_MASK
+	       | FD_RSTR_RST_CORE_MASK, FD_REG_RSTR);
 	udelay(1000);
 }
 
@@ -86,7 +84,7 @@ int fd_reset_again(struct spec_fd *fd)
 
 	j = jiffies + 2 * HZ;
 	while (time_before(jiffies, j)) {
-		if (readl(fd->regs + FD_REG_GCR) & FD_GCR_DDR_LOCKED)
+		if (fd_readl(fd, FD_REG_GCR) & FD_GCR_DDR_LOCKED)
 			break;
 		msleep(10);
 	}
@@ -143,7 +141,7 @@ int fd_probe(struct spec_dev *dev)
 	fd->calib = fd_default_calib;
 
 	/* Check the binary is there */
-	if (readl(fd->regs + FD_REG_IDR) != FD_MAGIC_FPGA) {
+	if (fd_readl(fd, FD_REG_IDR) != FD_MAGIC_FPGA) {
 		pr_err("%s: card at %04x:%04x has wrong gateware\n",
 		       __func__, dev->pdev->bus->number, dev->pdev->devfn);
 		return -ENODEV;
@@ -165,7 +163,7 @@ int fd_probe(struct spec_dev *dev)
 	}
 
 	/* Finally, enable the input */
-	writel(FD_GCR_INPUT_EN, fd->regs + FD_REG_GCR);
+	fd_writel(fd, FD_GCR_INPUT_EN, FD_REG_GCR);
 
 	return 0;
 

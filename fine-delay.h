@@ -24,6 +24,15 @@ struct spec_fd {
 	int temp;			/* scaled by 4 bits */
 };
 
+static inline uint32_t fd_readl(struct spec_fd *fd, unsigned long reg)
+{
+	return readl(fd->regs + reg);
+}
+static inline void fd_writel(struct spec_fd *fd, uint32_t v, unsigned long reg)
+{
+	writel(v, fd->regs + reg);
+}
+
 #define FD_REGS_OFFSET	0x84000
 #define FD_MAGIC_FPGA	0xf19ede1a	/* FD_REG_IDR content */
 

@@ -29,14 +29,14 @@ int fd_spi_xfer(struct spec_fd *fd, int ss, int num_bits,
 	else if(ss == FD_CS_GPIO)
 		scr |= FD_SCR_SEL_GPIO;
 
-	writel(scr, fd->regs + FD_REG_SCR);
-	writel(scr | FD_SCR_START, fd->regs + FD_REG_SCR);
-	while (!(readl(fd->regs + FD_REG_SCR) & FD_SCR_READY))
+	fd_writel(fd, scr, FD_REG_SCR);
+	fd_writel(fd, scr | FD_SCR_START, FD_REG_SCR);
+	while (!(fd_readl(fd, FD_REG_SCR) & FD_SCR_READY))
 		if (jiffies > j)
 			break;
-	if (!(readl(fd->regs + FD_REG_SCR) & FD_SCR_READY))
+	if (!(fd_readl(fd, FD_REG_SCR) & FD_SCR_READY))
 		return -EIO;
-	scr = readl(fd->regs + FD_REG_SCR);
+	scr = fd_readl(fd, FD_REG_SCR);
 	r = FD_SCR_DATA_R(scr);
 	if(out) *out=r;
 	udelay(100); /* FIXME: check */
