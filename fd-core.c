@@ -142,6 +142,13 @@ int fd_probe(struct spec_dev *dev)
 
 	fd->calib = fd_default_calib;
 
+	/* Check the binary is there */
+	if (readl(fd->regs + FD_REG_IDR) != FD_MAGIC_FPGA) {
+		pr_err("%s: card at %04x:%04x has wrong gateware\n",
+		       __func__, dev->pdev->bus->number, dev->pdev->devfn);
+		return -ENODEV;
+	}
+
 	/* First, hardware reset */
 	fd_do_reset(fd, 1);
 

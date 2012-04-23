@@ -25,6 +25,7 @@ struct spec_fd {
 };
 
 #define FD_REGS_OFFSET	0x84000
+#define FD_MAGIC_FPGA	0xf19ede1a	/* FD_REG_IDR content */
 
 /* Values for the configuration of the acam PLL. Can be changed */
 #define ACAM_DESIRED_BIN	80.9553
