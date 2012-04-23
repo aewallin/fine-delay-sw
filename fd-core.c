@@ -86,7 +86,7 @@ int fd_reset_again(struct spec_fd *fd)
 
 	j = jiffies + 2 * HZ;
 	while (time_before(jiffies, j)) {
-		if ( !(readl(fd->regs + FD_REG_GCR) & FD_GCR_DDR_LOCKED) )
+		if (readl(fd->regs + FD_REG_GCR) & FD_GCR_DDR_LOCKED)
 			break;
 		msleep(10);
 	}
