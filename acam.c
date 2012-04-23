@@ -272,12 +272,8 @@ static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 			regval |= reg7val;
 		if (p->addr == 5 && s->mode == ACAM_RMODE)
 			regval |= AR5_StartOff1(fd->calib.acam_start_offset);
-		pr_debug("acam write %2i = %08x\n", p->addr, regval);
 		acam_writel(fd, regval, p->addr);
 	}
-
-	for (i = 0; i < 16; i++)
-		pr_debug("acam reg %2i: %08x\n", i, acam_readl(fd, i));
 
 	/* Wait for the oscillator to lock */
 	j = jiffies + 2 * HZ;
