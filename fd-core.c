@@ -171,7 +171,8 @@ int fd_probe(struct spec_dev *dev)
 
 err:
 	while (--m, --i >= 0)
-		m->exit(fd);
+		if (m->exit)
+			m->exit(fd);
 	return ret;
 }
 
