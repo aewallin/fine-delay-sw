@@ -131,9 +131,9 @@ static int acam_test_addr_bit(struct spec_fd *fd, int base, int bit,
 	acam_writel(fd, reg, addr2); /* set the data mask */
 
 	if ((acam_readl(fd, addr1) & data) != 0)
-		return -EIO;
+		goto out;
 	if ((acam_readl(fd, addr2) & data) != data)
-		return -EIO;
+		goto out;
 
 	/* the other way around */
 	reg = acam_readl(fd, addr2) & ~data;
