@@ -1,6 +1,8 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
+#include <linux/spinlock.h>
+
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
 	uint32_t magic;			/* magic ID: 0xf19ede1a */
@@ -11,10 +13,26 @@ struct fd_calib {
 	uint32_t tdc_zero_offset;	/* Zero offset of the TDC, in ps */
 };
 
+/* Channels are called 1..4 in all docs. Internally it's 0..3 */
+#define FD_CH_1		0
+#define FD_CH_LAST	3
+#define FD_CH_NUMBER	4
+#define FD_CH_INT(i)	((i) - 1)
+#define FD_CH_EXT(i)	((i) + 1)
+
+struct fd_ch {
+	/* Offset between FRR measured at known T at startup and poly-fitted */
+	uint32_t frr_offset;
+	/* Fine range register for each ch, current value (after T comp.) */
+	uint32_t frr_cur;
+};
+
 /* This is the device we use all around */
 struct spec_fd {
+	spinlock_t lock;
 	struct spec_dev *spec;
 	struct fd_calib calib;
+	struct fd_ch ch[FD_CH_NUMBER];
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
 	unsigned char __iomem *regs;
 	unsigned char __iomem *ow_regs;

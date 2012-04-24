@@ -183,9 +183,46 @@ out:
 	return -EIO;
 }
 
-static int acam_calibrate_outputs(struct spec_fd *fd)
+static int acam_test_delay_transfer_function(struct spec_fd *fd)
 {
 	/* FIXME */
+	return 0;
+}
+
+/* Evaluates 2nd order polynomial. Coefs have 32 fractional bits. */
+static int fd_eval_polynomial(struct spec_fd *fd)
+{
+	int64_t x = fd->temp;
+	int64_t *coef = fd->calib.frr_poly;
+
+	return (coef[0] * x * x + coef[1] * x + coef[2]) >> 32;
+}
+
+static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
+{
+	/* FIXME */
+	return 0;
+}
+
+static int acam_calibrate_outputs(struct spec_fd *fd)
+{
+	int ret, ch;
+	int measured, fitted;
+
+	if ((ret = acam_test_delay_transfer_function(fd)) < 0)
+		return ret;
+	fitted = fd_eval_polynomial(fd);
+	for (ch = FD_CH_1; ch <= FD_CH_LAST; ch++) {
+		fd_read_temp(fd, 0);
+		measured = fd_find_8ns_tap(fd, ch);
+		fd->ch[ch].frr_cur = measured;
+		fd->ch[ch].frr_offset = measured - fitted;
+
+		pr_info("%s: ch %i: 8ns @ %i (f %i, offset %i, t %i.%02i)\n",
+			__func__, FD_CH_EXT(ch),
+			fd->ch[ch].frr_cur, fitted, fd->ch[ch].frr_offset,
+			fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+	}
 	return 0;
 }
 
@@ -323,14 +360,19 @@ int fd_acam_init(struct spec_fd *fd)
 
 	acam_set_bypass(fd, 0); /* Driven by core, not host */
 
-#if 0 /* FIXME */
 	/* Clear and disable the timestamp readout buffer */
-	fd_writel( FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ, FD_REG_TSBCR);
+	fd_writel(fd, FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ, FD_REG_TSBCR);
 
-	fd_writel( hw->calib.adsfr_val, FD_REG_ADSFR);
-	fd_writel( 3 * hw->calib.acam_start_offset, FD_REG_ASOR);
-	fd_writel( hw->calib.atmcr_val, FD_REG_ATMCR);
-#endif
+	/*
+	 * Program the ACAM-specific TS registers w pre-defined calib values:
+	 * - bin -> internal timebase scalefactor (ADSFR),
+	 * - Start offset (must be consistent with value in ACAM reg 4)
+	 * - timestamp merging control register (ATMCR)
+	 */
+	fd_writel(fd, fd->calib.adsfr_val, FD_REG_ADSFR);
+	fd_writel(fd, 3 * fd->calib.acam_start_offset, FD_REG_ASOR);
+	fd_writel(fd, fd->calib.atmcr_val, FD_REG_ATMCR);
+
 	return 0;
 }
 
