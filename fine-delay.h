@@ -42,6 +42,16 @@ struct spec_fd {
 	int temp;			/* scaled by 4 bits */
 };
 
+/* Internal time: the first three fields are just converted to zio time */
+struct fd_time {
+	int64_t utc;
+	int32_t coarse;
+	int32_t frac;
+	int channel;
+	uint16_t seq_id;
+};
+
+
 static inline uint32_t fd_readl(struct spec_fd *fd, unsigned long reg)
 {
 	return readl(fd->regs + reg);
@@ -133,6 +143,16 @@ extern void fd_gpio_val(struct spec_fd *fd, int pin, int val);
 extern void fd_gpio_set_clr(struct spec_fd *fd, int pin, int set);
 #define fd_gpio_set(fd, pin) fd_gpio_set_clr((fd), (pin), 1)
 #define fd_gpio_clr(fd, pin) fd_gpio_set_clr((fd), (pin), 0)
+
+/* Functions exported by time.c */
+extern int fd_time_init(struct spec_fd *fd);
+extern void fd_time_exit(struct spec_fd *fd);
+extern int fd_time_set(struct spec_fd *fd, struct fd_time *t,
+		       struct timespec *ts);
+extern int fd_time_get(struct spec_fd *fd, struct fd_time *t,
+		       struct timespec *ts);
+
+
 
 /* Functions exported by fd-zio.c */
 extern int fd_zio_register(void);

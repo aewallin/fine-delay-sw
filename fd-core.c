@@ -14,6 +14,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/interrupt.h>
+#include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/list.h>
@@ -114,7 +115,7 @@ static struct modlist mods[] = {
 	{"gpio-default", fd_gpio_defaults},
 	{"reset-again", fd_reset_again},
 	SUBSYS(acam),
-	//SUBSYS(time),
+	SUBSYS(time),
 	//SUBSYS(i2c),
 	//SUBSYS(zio),
 };
@@ -132,6 +133,7 @@ int fd_probe(struct spec_dev *dev)
 		pr_err("%s: can't allocate device\n", __func__);
 		return -ENOMEM;
 	}
+	spin_lock_init(&fd->lock);
 	dev->sub_priv = fd;
 	fd->spec = dev;
 	fd->base = dev->remap[0];
@@ -165,6 +167,19 @@ int fd_probe(struct spec_dev *dev)
 	/* Finally, enable the input */
 	fd_writel(fd, FD_GCR_INPUT_EN, FD_REG_GCR);
 
+	if (1) {
+		struct timespec ts1, ts2, ts3;
+		/* Temporarily, test the time stuff */
+		fd_time_set(fd, NULL, NULL);
+		fd_time_get(fd, NULL, &ts1);
+		msleep(100);
+		fd_time_get(fd, NULL, &ts2);
+		getnstimeofday(&ts3);
+		printk("%li.%li\n%li.%li\n%li.%li\n",
+		       ts1.tv_sec, ts1.tv_nsec,
+		       ts2.tv_sec, ts2.tv_nsec,
+		       ts3.tv_sec, ts3.tv_nsec);
+	}
 	return 0;
 
 err:
