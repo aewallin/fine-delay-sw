@@ -34,6 +34,7 @@ struct fd_ch {
 struct spec_fd {
 	spinlock_t lock;
 	struct spec_dev *spec;
+	struct zio_device *zdev;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
 	unsigned char __iomem *base;	/* regs files are byte-oriented */

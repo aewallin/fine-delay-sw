@@ -124,7 +124,7 @@ static struct modlist mods[] = {
 	SUBSYS(acam),
 	SUBSYS(time),
 	//SUBSYS(i2c),
-	//SUBSYS(zio),
+	SUBSYS(zio),
 };
 
 /* probe and remove are called by fd-spec.c */
