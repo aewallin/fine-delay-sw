@@ -76,7 +76,7 @@ static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 		tmpll = div_u64_rem(tref << refdiv, 216, &rem);
 		bin = div_u64_rem(tmpll, hsdiv, &rem);
 	}
-	return bin;
+	return (bin + 1) / 3; /* We are in I-Mode, R-Mode bin is 1/3 if this */
 }
 
 static void acam_set_address(struct spec_fd *fd, int addr)

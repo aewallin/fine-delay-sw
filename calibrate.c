@@ -15,6 +15,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/delay.h>
+#include <linux/math64.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 #include "hw/acam_gpx.h"
@@ -51,18 +52,18 @@ static int fd_eval_polynomial(struct spec_fd *fd)
  * of the result can be written to (sdev) if it's not NULL.
  */
 struct delay_stats {
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
+	uint64_t avg;
+	uint64_t min;
+	uint64_t max;
 };
 
 /* Note: channel is the "internal" one: 0..3 */
-static uint32_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
+static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 				struct delay_stats *stats)
 {
 	int i;
-	uint32_t res, *results;
-	uint64_t acc = 0;
+	uint64_t *results;
+	uint64_t res, acc = 0;
 
 	results = kmalloc(n * sizeof(*results), GFP_KERNEL);
 	if (!results)
@@ -88,23 +89,30 @@ static uint32_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 	 * the accuracy of calibration measurements
 	 */
 	fd_writel(fd, FD_CALR_PSEL_W(1 << ch), FD_REG_CALR);
-	udelay(100);
+	udelay(1);
 
 	/* Do n_avgs single measurements and average */
 	for (i = 0; i < n; i++) {
 		uint32_t fr;
 		/* Re-arm the ACAM (it's working in a single-shot mode) */
 		fd_writel(fd, FD_TDCSR_ALUTRIG, FD_REG_TDCSR);
-		udelay(100);
+		udelay(1);
 		/* Produce a calib pulse on the TDC start and the output ch */
 		fd_writel(fd, FD_CALR_CAL_PULSE |
 			  FD_CALR_PSEL_W(1 << ch), FD_REG_CALR);
-		udelay(10000);
+		udelay(1);
 		/* read the tag, convert to picoseconds (fixed point: 16.16) */
-		fr = acam_readl(fd, 8 /* fifo */);
+		fr = acam_readl(fd, 8 /* fifo */) & 0x1ffff;
 
-		res = fr & 0x1ffff * fd->bin * 3; /* bin is 16.16 already */
-		printk("%i: %08x, 0x%08x\n", fine, fr, res);
+		/*
+		 * This is I-Mode, but fd->bin is for R-Mode, so 3x
+		 * Then, fr is around 0xc00, bin is 0x50.0000: use 3LL for 64b
+		 */
+		res = fr * 3LL * fd->bin;
+		if (0)
+			printk("%s: ch %i, fine %i, bin %x got %08x, "
+			       "res 0x%016llx\n", __func__, ch, fine,
+			       fd->bin, fr, res);
 		results[i] = res;
 		acc += res;
 	}
@@ -114,22 +122,31 @@ static uint32_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 	acc = (acc + n / 2) / n;
 	if (stats) {
 		stats->avg = acc;
-		stats->min = ~0;
-		stats->max = 0;
+		stats->min = ~0LL;
+		stats->max = 0LL;
 		for (i = 0; i < n; i++) {
 			if (results[i] > stats->max) stats->max = results[i];
 			if (results[i] < stats->min) stats->min = results[i];
 		}
+		printk("res %llx avg %llx min %llx max %llx\n", acc,
+		       stats->avg, stats->min, stats->max);
 	}
 	kfree(results);
 
 	return acc;
 }
 
+static void __pr_fixed(char *head, uint64_t val, char *tail)
+{
+	printk("%s%i.%03i%s", head, (int)(val >> 16),
+	       ((int)(val & 0xffff) * 1000) >> 16, tail);
+}
+
 static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
 {
 	int l = 0, mid, r = FD_NUM_TAPS - 1;
-	uint32_t bias, dly;
+	uint64_t bias, dly;
+	struct delay_stats stats;
 
 	/*
 	 * Measure the delay at zero setting, so it can be further
@@ -139,9 +156,14 @@ static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
 	bias = output_delay_ps(fd, ch, 0, FD_CAL_STEPS, NULL);
 	while( r - l > 1) {
 		mid = ( l + r) / 2;
-		dly = output_delay_ps(fd, ch, mid, FD_CAL_STEPS, NULL)
-			- bias;
-		printk("%i %i %i %08xx (bias %08x)\n", l, r, mid, dly, bias);
+		dly = output_delay_ps(fd, ch, mid, FD_CAL_STEPS, &stats) - bias;
+		if (1) {
+			printk("%s: ch%i @ %-5i: ", __func__, ch, mid);
+			__pr_fixed("bias ", bias, ", ");
+			__pr_fixed("min ", stats.min, ", ");
+			__pr_fixed("avg ", stats.avg, ", ");
+			__pr_fixed("max ", stats.max, "\n");
+		}
 
 		if(dly < 8000 << 16)
 			l = mid;
