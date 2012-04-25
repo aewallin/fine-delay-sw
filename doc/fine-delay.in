@@ -88,6 +88,7 @@ card.
 * Gateware Installation::       
 * Software Dependencies::       
 * Software Installation::       
+* Module Parameters::           
 @end menu
 
 @c ==========================================================================
@@ -268,13 +269,185 @@ The following parameters are used:
 @node Using the Driver Directly
 @chapter Using the Driver Directly
 
-To be filled.
+The driver is designed as a ZIO driver that offsers 1 input channel and
+4 output channels. Since each output channel is independent (they do
+not output at the same time) the device is modeled as 5 separate
+@i{csets}.
+
+The reader of this chapter is expected to be confident with basic ZIO
+concepts, available in ZIO documentation (ZIO is an @code{ohwr.org}
+project).
+
+@menu
+* The input cset::              
+* The oputput cset::            
+@end menu
+
+@c ==========================================================================
+@node The device
+@section The device
+
+@b{Note:} This is not documentation at this point in time, it is
+just material for some brainstorming: the code is not there yet.
+
+The overall device includes a few device attributes and the csets.
+The attributes allow to read and write the internal timing of the
+card, as well as other stuff that may be identified later. Since ZIO
+has no support for @i{ioctl}, all the attributes appear in @i{sysfs}.
+For multi-valued attributes (like a time tag, which is more than 32
+bits) the order of reading and writing is mandated by the driver
+(e.g.: writing the seconds field of a time must be last, as it is the
+action that fires hardware access for all current values).
+
+The device appears in @i{/dev} as a set of char devices:
+
+@smallexample
+   spusa.root# ls -l /dev/zio/*
+   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0000-0-0-ctrl
+   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0000-0-0-data
+   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0000-1-0-ctrl
+   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/zio-fd-0000-1-0-data
+   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/zio-fd-0000-2-0-ctrl
+   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/zio-fd-0000-2-0-data
+   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/zio-fd-0000-3-0-ctrl
+   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/zio-fd-0000-3-0-data
+   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/zio-fd-0000-4-0-ctrl
+   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/zio-fd-0000-4-0-data
+@end smallexample
+
+The actual pathnames depend on the version of @i{udev}, and the support
+library tries both names (the new one shown above, and the older one).
+Also, please note that a still-newer version of @i{udev} obeys device
+permissions, so you'll have read-only and write-only device files.
+
+If more than one board is probed for, you'll have two similar
+sets of devices, differing in the @i{dev_id} field, i.e. the
+@code{0000} that follows the device name @code{zio-fd}.
+
+Since probing order of the boards is unpredictable, I'll try to
+arrange for @i{dev_id} to be the @i{bus-devfn} values for the host
+computer.  For remotely-controlled (e.g. Etherbone) devices the
+problem will need to be solved differently.
+
+@c ==========================================================================
+@node The input cset
+@section The input cset
+
+@b{Note:} This is not documentation at this point in time, it is
+just material for some brainstorming: the code is not there yet.
+
+The input cset only returns a time stamp, and it has no associated
+data. It can be enabled and disabled at will, and in the first
+implementation the device is just polled every 10ms. Interrupt
+support will be added soon after the thing works.
+
+The timestamp is returned in the 3-field time stamp structure of
+ZIO. No data is associated to the control block, since this is a
+TDC device. However, it may turn out that the current version of ZIO
+doesn't support 0-sized blocks. In that case I'll add a fake input
+datum just to make stuff flow until the problem is fixed upstream.
+
+@c ==========================================================================
+@node The oputput cset
+@section The output cset
+
+@b{Note:} This is not documentation at this point in time, it is
+just material for some brainstorming: the code is not there yet.
+
+The output channels need some configuration to be provided. This
+is done using attributes. Attributes can either be written in
+@i{sysfs} or can be passed in the control block that sides data.
+
+While in theory we may define the channels as zero-data ones (like the
+input channel described earlier), this would prevent a shell user to
+configure the output: attributes can be set in @i{sysfs} but then to
+fire the action you'll need to write a data block.  This would not be
+a problem for compiled code, which will just push attributes to the
+control device and would be happy with a zero-lenght data area.
+
+The attributes to be defined are the various parameters of the output
+channel: whether it is triggered by the input or is outputting pulses
+by itself; the delay; the number of pulses, the two periods, and so
+on.
 
 @c ##########################################################################
 @node Using the Provided API
 @chapter Using the Provided API
 
-To be filled.
+@b{Note:} This is not documentation at this point in time, it is
+just material for some brainstorming.
+
+The public interface offered by the initial library is like this:
+
+@smallexample
+   typedef struct fdelay_device { ... } fdelay_device_t;
+   typedef struct { ... } fdelay_time_t;
+
+   fdelay_time_t fdelay_from_picos(const uint64_t ps);
+   int64_t fdelay_to_picos(const fdelay_time_t t);
+
+   int fdelay_init(fdelay_device_t *dev);
+   int fdelay_release(fdelay_device_t *dev);
+   int fdelay_read(fdelay_device_t *dev, fdelay_time_t *timestamps, int how_many);
+   int fdelay_configure_trigger(fdelay_device_t *dev, int enable, int termination);
+   int fdelay_configure_output(fdelay_device_t *dev, int channel, int enable, int64_t delay_ps, int64_t width_ps, int64_t delta_ps, int rep_count);
+
+   int fdelay_configure_sync(fdelay_device_t *dev, int mode);
+   int fdelay_update_sync_status(fdelay_device_t *dev);
+   int fdelay_set_time(fdelay_device_t *dev, const fdelay_time_t t);
+   int fdelay_configure_pulse_gen(fdelay_device_t *dev, int channel, int enable, fdelay_time_t t_start, int64_t width_ps, int64_t delta_ps, int rep_count);
+   int fdelay_channel_triggered(fdelay_device_t *dev, int channel);
+   int fdelay_get_time(fdelay_device_t *dev, fdelay_time_t *t);
+@end smallexample
+
+While it does everything that's needed for testing, I see some
+issues with it and would like to offer something different.
+
+This is a list of issues I find and that must be discussed before the
+code is finalized with the final public API:
+
+@table @i
+
+@item Multiple boards
+
+	The ``fdelay_init'' just fills a pointer passed by the user,
+        which assumes there is one card only. The function should,
+        instead, pass a device id to say which one it wants to open.
+
+@item typedef
+
+	I'd better not use typedefs, for the same reason the kernel
+        is avoiding them.
+
+@item fdelay_read
+
+	This is perfect in my opinion. It resembles the @i{read}
+        system call, and it's great. We must choose what is the
+        structure being returned. I'd love it to be a control block
+        or a ZIO timestamp structure. To be decided.  But we need a
+        function to enable and disable the channel (and disable
+        may flush any pending events, with a flag).  Otherwise we'll
+        continue to enqueue events even if nobody is willing to
+        receive them.
+
+@item configuring output
+
+	Instead of functions with many parameters I'd better pass
+        a pointer to a structure. This simplifies code at the various
+        levels and also allows a user to have two or more predefined
+        configurations and easily activate either with minimal code.
+        In practice, those structures may resemble ZIO attributes, to
+        minimize data marshalling and un-marshalling.
+
+@item asking for events
+
+	Instead of a boolean ``channel_triggered'' I'd offer a flag
+        to the various functions, similar to O_NONBLOCK for files.
+        So the read function may return EAGAIN and we save one level
+        of calls.
+
+@end table
+
 
 @c ##########################################################################
 @node Known bugs and missing features
@@ -296,6 +469,7 @@ over what hardware allows:
 
 @itemize @bullet
 @item Everything. Let's be honest: the driver does nothing at this point.
+The basics are working but the higher level code is still missing.
 
 @item EEPROM support. The driver uses default calibration settings and
 no i2c support is there yet.
