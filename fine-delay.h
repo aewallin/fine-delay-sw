@@ -20,8 +20,8 @@ struct fd_calib {
 #define FD_CH_INT(i)	((i) - 1)
 #define FD_CH_EXT(i)	((i) + 1)
 
-#define FD_NUM_TAPS	1024
-#define FD_CAL_STEPS	16 //1024
+#define FD_NUM_TAPS	1024	/* This is an hardware feature of SY89295U */
+#define FD_CAL_STEPS	1024	/* This is a parameter: must be power of 2 */
 
 struct fd_ch {
 	/* Offset between FRR measured at known T at startup and poly-fitted */
@@ -43,7 +43,8 @@ struct spec_fd {
 	int acam_addr;			/* cache of currently active addr */
 	uint8_t ds18_id[8];
 	unsigned long next_t;
-	int temp;			/* scaled by 4 bits */
+	int temp;			/* temperature: scaled by 4 bits */
+	int verbose;
 };
 
 /* Internal time: the first three fields are just converted to zio time */
@@ -85,7 +86,7 @@ static inline void fd_ch_writel(struct spec_fd *fd, int ch,
 	fd_writel(fd, v, 0x100 + ch * 0x100 + reg);
 }
 
-#define FD_REGS_OFFSET	0x84000
+#define FD_REGS_OFFSET	0x84000		/* can be changed by "regs=" */
 #define FD_MAGIC_FPGA	0xf19ede1a	/* FD_REG_IDR content */
 
 /* Values for the configuration of the acam PLL. Can be changed */

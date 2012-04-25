@@ -24,6 +24,13 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
+/* Module parameters */
+static int fd_regs_offset = FD_REGS_OFFSET;
+module_param_named(regs, fd_regs_offset, int, 0444);
+
+static int fd_verbose = 0;
+module_param_named(verbose, fd_verbose, int, 0444);
+
 /* This is pre-set at load time (data by Tomasz) */
 static struct fd_calib fd_default_calib = {
 	.frr_poly = {
@@ -137,9 +144,9 @@ int fd_probe(struct spec_dev *dev)
 	dev->sub_priv = fd;
 	fd->spec = dev;
 	fd->base = dev->remap[0];
-	fd->regs = fd->base + FD_REGS_OFFSET;
+	fd->regs = fd->base + fd_regs_offset;
 	fd->ow_regs = fd->regs + 0x500;
-
+	fd->verbose = fd_verbose;
 	fd->calib = fd_default_calib;
 
 	/* Check the binary is there */
@@ -167,7 +174,7 @@ int fd_probe(struct spec_dev *dev)
 	/* Finally, enable the input */
 	fd_writel(fd, FD_GCR_INPUT_EN, FD_REG_GCR);
 
-	if (1) {
+	if (0) {
 		struct timespec ts1, ts2, ts3;
 		/* Temporarily, test the time stuff */
 		fd_time_set(fd, NULL, NULL);

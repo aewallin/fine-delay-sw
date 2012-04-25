@@ -109,10 +109,10 @@ static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 		 * Then, fr is around 0xc00, bin is 0x50.0000: use 3LL for 64b
 		 */
 		res = fr * 3LL * fd->bin;
-		if (0)
-			printk("%s: ch %i, fine %i, bin %x got %08x, "
-			       "res 0x%016llx\n", __func__, ch, fine,
-			       fd->bin, fr, res);
+		if (fd->verbose > 3)
+			pr_info("%s: ch %i, fine %i, bin %x got %08x, "
+				"res 0x%016llx\n", __func__, ch, fine,
+				fd->bin, fr, res);
 		results[i] = res;
 		acc += res;
 	}
@@ -128,8 +128,10 @@ static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 			if (results[i] > stats->max) stats->max = results[i];
 			if (results[i] < stats->min) stats->min = results[i];
 		}
-		printk("res %llx avg %llx min %llx max %llx\n", acc,
-		       stats->avg, stats->min, stats->max);
+		if (fd->verbose > 2)
+			pr_info("%s: ch %i, taps %i, count %i, result %llx "
+				"(max-min %llx)\n", __func__, ch, fine, n,
+				stats->avg, stats->max - stats->min);
 	}
 	kfree(results);
 
@@ -157,12 +159,12 @@ static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
 	while( r - l > 1) {
 		mid = ( l + r) / 2;
 		dly = output_delay_ps(fd, ch, mid, FD_CAL_STEPS, &stats) - bias;
-		if (1) {
+		if (fd->verbose > 1) {
 			printk("%s: ch%i @ %-5i: ", __func__, ch, mid);
 			__pr_fixed("bias ", bias, ", ");
-			__pr_fixed("min ", stats.min, ", ");
-			__pr_fixed("avg ", stats.avg, ", ");
-			__pr_fixed("max ", stats.max, "\n");
+			__pr_fixed("min ", stats.min - bias, ", ");
+			__pr_fixed("avg ", stats.avg - bias, ", ");
+			__pr_fixed("max ", stats.max - bias, "\n");
 		}
 
 		if(dly < 8000 << 16)
