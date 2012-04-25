@@ -128,7 +128,8 @@ The kernel I used during development is version 2.6.32, because this
 is the one where installed boards are going to run first.  
 
 The driver, then is based on the ZIO framework, available from
-@code{ohw.org}. The version being used during development is FIXME.
+@code{ohw.org}. The version being used during development is a development
+version, back-ported to Linux-2.6.32.
 Similarly, this is a sub-module for the SPEC board, and thus relies
 on code from the @i{spec-sw} package, again from @code{ohwr.org}.
 
@@ -211,10 +212,12 @@ commands, from the @i{master} branch:
 @end example
 
 At this point all the software modules are ready to be loaded.
-Actually, the right set sill be auto-loaded when you @i{modprobe} for
+Actually, the right set will be auto-loaded when you @i{modprobe} for
 @code{spec-fine-delay} if you installed everything.
 
-This is an example of the kernel messages you'll get back:
+This is an example of the kernel messages you'll get back over
+a few seconds (initializing the fine-delay card above, takes almost
+4 seconds, including the calibration.
 
 @smallexample
    spec_probe (device 0002:0000)
@@ -227,9 +230,39 @@ This is an example of the kernel messages you'll get back:
    spec 0000:02:00.0: Can't load program "spec-B0002-cpu.bin" - -2
    spec_load_submodule: load "spec-B0002": 256
    fd_onewire_init: Found DS18xx sensor: 28:13:f2:06:03:00:00:d4
-   fd_read_temp: Scratchpad: d6:04:4b:46:7f:ff:0a:10:8a
-   fd_read_temp: Temperature 0x4d6 (12 bits: 77.375)
+   fd_read_temp: Scratchpad: eb:04:4b:46:7f:ff:05:10:12
+   fd_read_temp: Temperature 0x4eb (12 bits: 78.687)
+   fd_calibrate_outputs: ch 1: 8ns @ 837 (f 815, offset 22, t 78.81)
+   fd_calibrate_outputs: ch 2: 8ns @ 1022 (f 815, offset 207, t 78.81)
+   fd_calibrate_outputs: ch 3: 8ns @ 827 (f 815, offset 12, t 78.81)
+   fd_calibrate_outputs: ch 4: 8ns @ 837 (f 815, offset 22, t 78.87)
 @end smallexample
+
+@c ==========================================================================
+@node Module Parameters
+@section Module Parameters
+
+The driver accepts a few load-time parameters for configuration. You
+can pass them to @i{insmod} directly, or write them in
+@code{/etc/modules.conf} or the proper file in @code{/etc/modutils/} .
+
+The following parameters are used:
+
+@table @code
+
+@item regs=
+
+	The @i{regs} parameter defaults to 0x8400 and is the offset of
+        fine-delay registers within the PCI memory area.  You shouldn't
+        use it unless you are Tomasz Wlostowski or you otherwise
+	changed the FPGA design
+
+@item verbose=
+
+	The parameter defaults to 0. If set, it enables more diagnostic
+        messages during probe.
+
+@end table
 
 @c ##########################################################################
 @node Using the Driver Directly
@@ -252,7 +285,6 @@ applies to the packages it depends on.  The current package set has
 the following known issues exposed by @i{fine-delay}:
 
 @itemize @bullet
-
 @item The auto-loading of @i{spec} submodules is not really working:
 the @i{modprobe} command will be stuck sleeping if you try to use it.
 Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
@@ -263,11 +295,10 @@ Not all features are there, and the package currently lacks these features
 over what hardware allows:
 
 @itemize @bullet
-
 @item Everything. Let's be honest: the driver does nothing at this point.
 
-@item EEPROM support. The driver uses default calibration settings
-
+@item EEPROM support. The driver uses default calibration settings and
+no i2c support is there yet.
 @end itemize
 
 
@@ -303,13 +334,8 @@ where the spec driver can find it. In my case the file name is
 @code{spec-B0002.bin} (refer to @i{spec-sw} documentation for details.
 
 
-
-
-
-
 @c ##########################################################################
 @bye
-
 
 @c  LocalWords:  gnudd titlepage iftex texinfo CERN documentlanguage settitle
 @c  LocalWords:  documentencoding setfilename afourpaper paragraphindent FPGA
