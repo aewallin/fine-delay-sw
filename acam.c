@@ -92,14 +92,14 @@ static void acam_set_address(struct spec_fd *fd, int addr)
 }
 
 /* Warning: acam_readl and acam_writel only work if GCR.BYPASS is set */
-static uint32_t acam_readl(struct spec_fd *fd, int reg)
+uint32_t acam_readl(struct spec_fd *fd, int reg)
 {
 	acam_set_address(fd, reg);
 	fd_writel(fd, FD_TDCSR_READ, FD_REG_TDCSR);
 	return fd_readl(fd, FD_REG_TDR) & ACAM_MASK;
 }
 
-static void acam_writel(struct spec_fd *fd, int val, int reg)
+void acam_writel(struct spec_fd *fd, int val, int reg)
 {
 	acam_set_address(fd, reg);
 	fd_writel(fd, val, FD_REG_TDR);
@@ -183,48 +183,6 @@ out:
 	return -EIO;
 }
 
-static int acam_test_delay_transfer_function(struct spec_fd *fd)
-{
-	/* FIXME */
-	return 0;
-}
-
-/* Evaluates 2nd order polynomial. Coefs have 32 fractional bits. */
-static int fd_eval_polynomial(struct spec_fd *fd)
-{
-	int64_t x = fd->temp;
-	int64_t *coef = fd->calib.frr_poly;
-
-	return (coef[0] * x * x + coef[1] * x + coef[2]) >> 32;
-}
-
-static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
-{
-	/* FIXME */
-	return 0;
-}
-
-static int acam_calibrate_outputs(struct spec_fd *fd)
-{
-	int ret, ch;
-	int measured, fitted;
-
-	if ((ret = acam_test_delay_transfer_function(fd)) < 0)
-		return ret;
-	fitted = fd_eval_polynomial(fd);
-	for (ch = FD_CH_1; ch <= FD_CH_LAST; ch++) {
-		fd_read_temp(fd, 0);
-		measured = fd_find_8ns_tap(fd, ch);
-		fd->ch[ch].frr_cur = measured;
-		fd->ch[ch].frr_offset = measured - fitted;
-
-		pr_info("%s: ch %i: 8ns @ %i (f %i, offset %i, t %i.%02i)\n",
-			__func__, FD_CH_EXT(ch),
-			fd->ch[ch].frr_cur, fitted, fd->ch[ch].frr_offset,
-			fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
-	}
-	return 0;
-}
 
 /* We need to write come static configuration in the registers */
 struct acam_init_data {
@@ -288,16 +246,16 @@ static struct acam_mode_setup fd_acam_table[] = {
 /* To configure the thing, follow the table, but treat 5 and 7 as special */
 static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 {
-	int i, bin, hsdiv, refdiv, reg7val;
+	int i, hsdiv, refdiv, reg7val;
 	struct acam_init_data *p;
 	uint32_t regval;
 	unsigned long j;
 
-	bin = acam_calc_pll(ACAM_FP_TREF, ACAM_FP_BIN, &hsdiv, &refdiv);
+	fd->bin = acam_calc_pll(ACAM_FP_TREF, ACAM_FP_BIN, &hsdiv, &refdiv);
 	reg7val = AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv);
 
 	pr_debug("%s: config for %s-mode (bin 0x%x, hsdiv %i, refdiv %i)\n",
-		 __func__, s->name, bin, hsdiv, refdiv);
+		 __func__, s->name, fd->bin, hsdiv, refdiv);
 
 	/* Disable TDC inputs prior to configuring */
 	fd_writel(fd, FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS, FD_REG_TDCSR);
@@ -352,7 +310,7 @@ int fd_acam_init(struct spec_fd *fd)
 	if ( (ret = fd_acam_config(fd, ACAM_IMODE)) )
 		return ret;
 
-	if ( (ret = acam_calibrate_outputs(fd)) )
+	if ( (ret = fd_calibrate_outputs(fd)) )
 		return ret;
 
 	if ( (ret = fd_acam_config(fd, ACAM_RMODE)) )

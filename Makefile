@@ -13,7 +13,7 @@ obj-m := spec-fine-delay.o
 
 spec-fine-delay-objs	=  fd-zio.o fd-spec.o fd-core.o
 spec-fine-delay-objs	+= onewire.o spi.o i2c.o gpio.o
-spec-fine-delay-objs	+= acam.o pll.o time.o
+spec-fine-delay-objs	+= acam.o calibrate.o pll.o time.o
 
 all: modules
 

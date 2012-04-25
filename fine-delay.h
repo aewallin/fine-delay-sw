@@ -20,6 +20,9 @@ struct fd_calib {
 #define FD_CH_INT(i)	((i) - 1)
 #define FD_CH_EXT(i)	((i) + 1)
 
+#define FD_NUM_TAPS	1024
+#define FD_CAL_STEPS	16 //1024
+
 struct fd_ch {
 	/* Offset between FRR measured at known T at startup and poly-fitted */
 	uint32_t frr_offset;
@@ -36,6 +39,7 @@ struct spec_fd {
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
 	unsigned char __iomem *regs;
 	unsigned char __iomem *ow_regs;
+	uint32_t bin;
 	int acam_addr;			/* cache of currently active addr */
 	uint8_t ds18_id[8];
 	unsigned long next_t;
@@ -59,6 +63,26 @@ static inline uint32_t fd_readl(struct spec_fd *fd, unsigned long reg)
 static inline void fd_writel(struct spec_fd *fd, uint32_t v, unsigned long reg)
 {
 	writel(v, fd->regs + reg);
+}
+
+static inline void __check_chan(int x)
+{
+	BUG_ON(x < 0 || x > 3);
+}
+
+
+static inline uint32_t fd_ch_readl(struct spec_fd *fd, int ch,
+				   unsigned long reg)
+{
+	__check_chan(ch);
+	return fd_readl(fd, 0x100 + ch * 0x100 + reg);
+}
+
+static inline void fd_ch_writel(struct spec_fd *fd, int ch,
+				uint32_t v, unsigned long reg)
+{
+	__check_chan(ch);
+	fd_writel(fd, v, 0x100 + ch * 0x100 + reg);
 }
 
 #define FD_REGS_OFFSET	0x84000
@@ -134,6 +158,11 @@ extern int fd_read_temp(struct spec_fd *fd, int verbose);
 /* Functions exported by acam.c */
 extern int fd_acam_init(struct spec_fd *fd);
 extern void fd_acam_exit(struct spec_fd *fd);
+extern uint32_t acam_readl(struct spec_fd *fd, int reg);
+extern void acam_writel(struct spec_fd *fd, int val, int reg);
+
+/* Functions exported by calibrate.c, called within acam.c */
+extern int fd_calibrate_outputs(struct spec_fd *fd);
 
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct spec_fd *fd);
@@ -151,8 +180,6 @@ extern int fd_time_set(struct spec_fd *fd, struct fd_time *t,
 		       struct timespec *ts);
 extern int fd_time_get(struct spec_fd *fd, struct fd_time *t,
 		       struct timespec *ts);
-
-
 
 /* Functions exported by fd-zio.c */
 extern int fd_zio_register(void);
