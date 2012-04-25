@@ -55,30 +55,24 @@ int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 /* If fd_time is not null, use it. Otherwise use ts */
 int fd_time_get(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 {
-	uint32_t h1, l1, h2, l2, c;
+	uint32_t tcr, h, l, c;
 	unsigned long flags;
 
 	spin_lock_irqsave(&fd->lock, flags);
-
-	/* get the tuple. If inconsistent re-read the high part */
-	h1 = fd_readl(fd, FD_REG_TM_SECH);
-	l1 = fd_readl(fd, FD_REG_TM_SECL);
-	c  = fd_readl(fd, FD_REG_TM_CYCLES);
-	h2 = fd_readl(fd, FD_REG_TM_SECH);
-	l2 = fd_readl(fd, FD_REG_TM_SECL);
-	if (h2 != h1 || l2 != l1) {
-		c  = fd_readl(fd, FD_REG_TM_CYCLES);
-		h1 = h2;
-		l1 = l2;
-	}
+	tcr = fd_readl(fd, FD_REG_TCR);
+	fd_writel(fd, tcr | FD_TCR_CAP_TIME, FD_REG_TCR);
+	h = fd_readl(fd, FD_REG_TM_SECH);
+	l = fd_readl(fd, FD_REG_TM_SECL);
+	c = fd_readl(fd, FD_REG_TM_CYCLES);
 	spin_unlock_irqrestore(&fd->lock, flags);
-	printk("got %i %i %i\n", h1, l1, c);
+
+	printk("%s: got %i %i %i\n", __func__, h, l, c);
 	if (t) {
-		t->utc = ((uint64_t)h1 << 32) | l1;
+		t->utc = ((uint64_t)h << 32) | l;
 		t->coarse = c;
 	}
 	if (ts) {
-		ts->tv_sec = ((uint64_t)h1 << 32) | l1;
+		ts->tv_sec = ((uint64_t)h << 32) | l;
 		ts->tv_nsec = c * 8;
 	}
 	return 0;
