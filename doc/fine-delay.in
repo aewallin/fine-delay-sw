@@ -263,13 +263,22 @@ The following parameters are used:
 	The parameter defaults to 0. If set, it enables more diagnostic
         messages during probe.
 
+@item timer_ms=
+
+	The period of the internal timer. The timer is used to poll
+        for input events. We currently have no interrupt support so
+        we must poll, but the parameter will remain even when interrupt
+        is available, to disable it on request and reuse the current
+        polling code. The interval by default is 10ms and currently
+        only one timestamp is retrieved at each timer execution.
+
 @end table
 
 @c ##########################################################################
 @node Using the Driver Directly
 @chapter Using the Driver Directly
 
-The driver is designed as a ZIO driver that offsers 1 input channel and
+The driver is designed as a ZIO driver that offers 1 input channel and
 4 output channels. Since each output channel is independent (they do
 not output at the same time) the device is modeled as 5 separate
 @i{csets}.
@@ -287,8 +296,8 @@ project).
 @node The device
 @section The device
 
-@b{Note:} This is not documentation at this point in time, it is
-just material for some brainstorming: the code is not there yet.
+@b{Note:} This is not real documentation at this point in time, it is
+more material for some brainstorming: the code is not complete yet.
 
 The overall device includes a few device attributes and the csets.
 The attributes allow to read and write the internal timing of the
@@ -303,49 +312,102 @@ The device appears in @i{/dev} as a set of char devices:
 
 @smallexample
    spusa.root# ls -l /dev/zio/*
-   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0000-0-0-ctrl
-   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0000-0-0-data
-   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0000-1-0-ctrl
-   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/zio-fd-0000-1-0-data
-   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/zio-fd-0000-2-0-ctrl
-   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/zio-fd-0000-2-0-data
-   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/zio-fd-0000-3-0-ctrl
-   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/zio-fd-0000-3-0-data
-   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/zio-fd-0000-4-0-ctrl
-   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/zio-fd-0000-4-0-data
+   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-ctrl
+   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-data
+   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-ctrl
+   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-data
+   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-ctrl
+   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-data
+   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-ctrl
+   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-data
+   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-ctrl
+   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-data
 @end smallexample
 
 The actual pathnames depend on the version of @i{udev}, and the support
 library tries both names (the new one shown above, and the older one).
 Also, please note that a still-newer version of @i{udev} obeys device
 permissions, so you'll have read-only and write-only device files.
+Cset 0 is input, and csets 1..4 are for the output channels.
 
 If more than one board is probed for, you'll have two similar
 sets of devices, differing in the @i{dev_id} field, i.e. the
-@code{0000} that follows the device name @code{zio-fd}.
+@code{0200} that follows the device name @code{zio-fd} in the
+stanza above. The @i{dev_id} field is built using the PCI bus
+and the @i{devfn} octet; the example above refers to slot 0 of bus 2.
 
-Since probing order of the boards is unpredictable, I'll try to
-arrange for @i{dev_id} to be the @i{bus-devfn} values for the host
-computer.  For remotely-controlled (e.g. Etherbone) devices the
-problem will need to be solved differently.
+For remotely-controlled (e.g. Etherbone) devices the problem will need
+to be solved differently.
 
 @c ==========================================================================
 @node The input cset
 @section The input cset
 
-@b{Note:} This is not documentation at this point in time, it is
-just material for some brainstorming: the code is not there yet.
+@b{Note:} This is not real documentation at this point in time, it is
+more material for some brainstorming: the code is not complete yet.
 
-The input cset only returns a time stamp, and it has no associated
-data. It can be enabled and disabled at will, and in the first
-implementation the device is just polled every 10ms. Interrupt
-support will be added soon after the thing works.
+The input cset returns fake data, with timestamp information in the
+control block (the meta-information associated to data). This is
+suboptimal, but it is a ``good enough'' first implementation until
+time permits to refine it.
 
-The timestamp is returned in the 3-field time stamp structure of
-ZIO. No data is associated to the control block, since this is a
-TDC device. However, it may turn out that the current version of ZIO
-doesn't support 0-sized blocks. In that case I'll add a fake input
-datum just to make stuff flow until the problem is fixed upstream.
+Currently, no input timestamp is returned until some process calls
+the @i{read} function on the control or data char device.
+
+In a perfect world we would have a custom @i{trigger} module that
+stuffs the timestamp information directly in the proper place.  This
+version of the code uses the default ZIO trigger, which is
+transparent to hardware timings, but sticks a software timestamp in
+the control block.
+
+The timestamp and other information is returned as @i{channel
+attributes}, which you can look at using @code{zio-dump}
+until a specific tool is written for this package:
+
+@smallexample
+   spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
+   Ctrl: version 0.5, trigger user, dev fd, cset 0, chan 0
+   Ctrl: seq 1, n 16, size 4, bits 32, flags 01000001 (little-endian)
+   Ctrl: stamp 1335737285.312696982 (0)
+   Device attributes:
+       [...]
+       Extended: 0x0000003f
+       0x0 0x30 0x640f20d 0x60a 0x0 0x0 0x0 0x0
+       [...]
+       Extended: 0x0000003f
+       0x0 0x40 0x454b747 0x1d3 0x1 0x0 0x0 0x0
+       [...]
+       Extended: 0x0000003f
+       0x0 0x47 0xf04c57 0x772 0x2 0x0 0x0 0x0
+@end smallexample
+
+The attributes are all 32-bit unsigned values, and their meaning
+is defined in @i{fine-delay.h} for libraries/applications to use them:
+
+@example
+   enum fd_zattr_in_idx {
+           FD_ATTR_IN_UTC_H = 0,
+           FD_ATTR_IN_UTC_L,
+           FD_ATTR_IN_COARSE,
+           FD_ATTR_IN_FRAC,
+           FD_ATTR_IN_SEQ,
+           FD_ATTR_IN_CHAN,
+   }; 
+@end example
+
+The attributes are also visibile in @i{/sys}, in the directory
+describing the cset:
+
+@smallexample
+spusa# ls -F /sys/bus/zio/devices/zio-fd-0200/fd-input/
+chan    coarse          current_trigger  frac  power/  trigger/  utc-h
+chan0/  current_buffer  enable           name  seq     uevent    utc-l
+@end smallexample
+
+Note, howver, that the values of those files don't change to reflect
+the values last retrieved, to avoid wasting CPU power.  If it is
+considered useful, copying over the acquired attributes where
+@i{sysfs} can read them is pretty trivial.
 
 @c ==========================================================================
 @node The oputput cset
