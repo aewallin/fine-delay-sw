@@ -2,6 +2,7 @@
 #define __FINE_DELAY_H__
 
 #include <linux/spinlock.h>
+#include <linux/timer.h>
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
@@ -33,8 +34,10 @@ struct fd_ch {
 /* This is the device we use all around */
 struct spec_fd {
 	spinlock_t lock;
+	unsigned long flags;
 	struct spec_dev *spec;
 	struct zio_device *zdev;
+	struct timer_list timer;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
@@ -47,14 +50,25 @@ struct spec_fd {
 	int temp;			/* temperature: scaled by 4 bits */
 	int verbose;
 };
+#define FD_FLAG_INPUT 1	/* temporary: check flags */
 
-/* Internal time: the first three fields are just converted to zio time */
+/* Internal time: the first three fields should be converted to zio time */
 struct fd_time {
 	int64_t utc;
 	int32_t coarse;
 	int32_t frac;
 	int channel;
 	uint16_t seq_id;
+};
+
+/* input ZIO attributes (actually, the internal time is represented as attrs */
+enum fd_zattr_in_idx {
+	FD_ATTR_IN_UTC_H = 0,
+	FD_ATTR_IN_UTC_L,
+	FD_ATTR_IN_COARSE,
+	FD_ATTR_IN_FRAC,
+	FD_ATTR_IN_SEQ,
+	FD_ATTR_IN_CHAN,
 };
 
 
