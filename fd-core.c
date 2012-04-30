@@ -15,6 +15,7 @@
 #include <linux/moduleparam.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
+#include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/list.h>
@@ -106,7 +107,7 @@ int fd_reset_again(struct spec_fd *fd)
 }
 
 /* This structure lists the various subsystems */
-struct modlist {
+struct fd_modlist {
 	char *name;
 	int (*init)(struct spec_fd *);
 	void (*exit)(struct spec_fd *);
@@ -114,7 +115,7 @@ struct modlist {
 
 
 #define SUBSYS(x) { #x, fd_ ## x ## _init, fd_ ## x ## _exit }
-static struct modlist mods[] = {
+static struct fd_modlist mods[] = {
 	SUBSYS(spi),
 	SUBSYS(gpio),
 	SUBSYS(pll),
@@ -130,7 +131,7 @@ static struct modlist mods[] = {
 /* probe and remove are called by fd-spec.c */
 int fd_probe(struct spec_dev *dev)
 {
-	struct modlist *m;
+	struct fd_modlist *m;
 	struct spec_fd *fd;
 	int i, ret;
 
@@ -187,6 +188,7 @@ int fd_probe(struct spec_dev *dev)
 		       ts2.tv_sec, ts2.tv_nsec,
 		       ts3.tv_sec, ts3.tv_nsec);
 	}
+	set_bit(FD_FLAG_INITED, &fd->flags);
 	return 0;
 
 err:
@@ -198,14 +200,18 @@ err:
 
 void fd_remove(struct spec_dev *dev)
 {
-	struct modlist *m;
+	struct fd_modlist *m;
+	struct spec_fd *fd = dev->sub_priv;
 	int i = ARRAY_SIZE(mods);
+
+	if (!test_bit(FD_FLAG_INITED, &fd->flags))
+		return; /* No init, no exit */
 
 	pr_debug("%s\n",__func__);
 	while (--i >= 0) {
 		m = mods + i;
 		if (m->exit)
-			m->exit(dev->sub_priv);
+			m->exit(fd);
 	}
 }
 

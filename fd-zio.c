@@ -16,6 +16,7 @@
 #include <linux/init.h>
 #include <linux/timer.h>
 #include <linux/jiffies.h>
+#include <linux/bitops.h>
 #include <linux/io.h>
 
 #include <linux/zio.h>
@@ -132,11 +133,11 @@ static int fd_input(struct zio_cset *cset)
 	fd = __HACK__FD__;
 
 	/* Configure the device for input */
-	if (!fd->flags & FD_FLAG_INPUT) {
+	if (!test_bit(FD_FLAG_INPUT, &fd->flags)) {
 		fd_writel(fd, FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ, FD_REG_TSBCR);
 		fd_writel(fd, FD_TSBCR_CHAN_MASK_W(1) | FD_TSBCR_ENABLE,
 			  FD_REG_TSBCR);
-		fd->flags |= FD_FLAG_INPUT;
+		set_bit(FD_FLAG_INPUT, &fd->flags);
 	}
 
 	return -EAGAIN; /* Will be completed over time */

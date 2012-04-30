@@ -50,7 +50,11 @@ struct spec_fd {
 	int temp;			/* temperature: scaled by 4 bits */
 	int verbose;
 };
-#define FD_FLAG_INPUT 1	/* temporary: check flags */
+/* We act on flags using atomic ops, so flag is the number, not the mask */
+enum fd_flags {
+	FD_FLAG_INITED = 0,
+	FD_FLAG_INPUT
+};
 
 /* Internal time: the first three fields should be converted to zio time */
 struct fd_time {

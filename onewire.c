@@ -139,8 +139,11 @@ static int ow_read_block(struct spec_fd *fd, int port, uint8_t *block, int len)
 
 static int ds18x_read_serial(struct spec_fd *fd)
 {
-	if(!ow_reset(fd, 0))
+	if(!ow_reset(fd, 0)) {
+		pr_err("%s: Failure in resetting one-wire channel\n",
+		       KBUILD_MODNAME);
 		return -EIO;
+	}
 
 	ow_write_byte(fd, FD_OW_PORT, CMD_ROM_READ);
 	return ow_read_block(fd, FD_OW_PORT, fd->ds18_id, 8);
@@ -149,17 +152,20 @@ static int ds18x_read_serial(struct spec_fd *fd)
 static int ds18x_access(struct spec_fd *fd)
 {
 	if(!ow_reset(fd, 0))
-		return -EIO;
+		goto out;
 
 	if (0) {
 		/* select the rom among several of them */
 		if (ow_write_byte(fd, FD_OW_PORT, CMD_ROM_MATCH) < 0)
-			return -EIO;
+			goto out;
 		return ow_write_block(fd, FD_OW_PORT, fd->ds18_id, 8);
 	} else {
 		/* we have one only, so skip rom */
 		return ow_write_byte(fd, FD_OW_PORT, CMD_ROM_SKIP);
 	}
+out:
+	pr_err("%s: Failure in one-wire communication\n", KBUILD_MODNAME);
+	return -EIO;
 }
 
 static void __temp_command_and_next_t(struct spec_fd *fd, int cfg_reg)

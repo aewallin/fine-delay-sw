@@ -31,7 +31,7 @@ static int fd_is_valid(int bus, int devfn)
 int fd_spec_init(void)
 {
 	struct spec_dev *dev;
-	int ret, retsave = 0, err = 0;
+	int ret, success = 0, retsave = 0, err = 0;
 
 	/* Scan the list and see what is there. Take hold of everything */
 	list_for_each_entry(dev, &spec_list, list) {
@@ -44,13 +44,20 @@ int fd_spec_init(void)
 		if (ret < 0) {
 			retsave = ret;
 			err++;
+		} else {
+			success++;
 		}
 	}
 	if (err) {
-		/* FIXME: doesn't undo the other boards */
-		return retsave;
+		pr_err("%s: Setup of %i boards failed (%i succeeded)\n",
+		       KBUILD_MODNAME, err, success);
+		pr_err("%s: last error: %i\n", KBUILD_MODNAME, retsave);
 	}
-	return 0;
+	if (success) {
+		/* At least one board has been successfully initialized */
+		return 0;
+	}
+	return retsave; /* last error code */
 }
 
 void fd_spec_exit(void)
