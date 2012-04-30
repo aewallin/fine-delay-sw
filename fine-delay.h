@@ -1,6 +1,17 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
+/* input ZIO attributes (actually, the internal time is represented as attrs */
+enum fd_zattr_in_idx {
+	FD_ATTR_IN_UTC_H = 0,
+	FD_ATTR_IN_UTC_L,
+	FD_ATTR_IN_COARSE,
+	FD_ATTR_IN_FRAC,
+	FD_ATTR_IN_SEQ,
+	FD_ATTR_IN_CHAN,
+};
+
+#ifdef __KERNEL__ /* All the rest is only of kernel users */
 #include <linux/spinlock.h>
 #include <linux/timer.h>
 
@@ -63,16 +74,6 @@ struct fd_time {
 	int32_t frac;
 	int channel;
 	uint16_t seq_id;
-};
-
-/* input ZIO attributes (actually, the internal time is represented as attrs */
-enum fd_zattr_in_idx {
-	FD_ATTR_IN_UTC_H = 0,
-	FD_ATTR_IN_UTC_L,
-	FD_ATTR_IN_COARSE,
-	FD_ATTR_IN_FRAC,
-	FD_ATTR_IN_SEQ,
-	FD_ATTR_IN_CHAN,
 };
 
 
@@ -212,4 +213,5 @@ extern int fd_spec_init(void);
 extern void fd_spec_exit(void);
 
 
+#endif /* __KERNEL__ */
 #endif /* __FINE_DELAY_H__ */

@@ -9,6 +9,8 @@ ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$M
 
 ccflags-y += -DDEBUG # temporary
 
+subdirs-ccflags-y = $(ccflags-y)
+
 obj-m := spec-fine-delay.o
 
 spec-fine-delay-objs	=  fd-zio.o fd-spec.o fd-core.o
@@ -19,3 +21,4 @@ all: modules
 
 modules_install clean modules:
 	$(MAKE) -C $(LINUX) M=$(shell /bin/pwd) $@
+	$(MAKE) -C tools  M=$(shell /bin/pwd) $@
