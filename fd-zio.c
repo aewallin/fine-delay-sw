@@ -108,7 +108,6 @@ static void fd_timer_fn(unsigned long arg)
 
 	/* there is an active block, try reading fifo */
 	if (fd_read_fifo(fd, chan) == 0) {
-		printk("%s: reading %p\n", __func__, chan->active_block);
 		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
 		chan->cset->trig->t_op->data_done(chan->cset);
 	}
@@ -144,14 +143,10 @@ static int fd_input(struct zio_cset *cset)
 	}
 	/* Ready for input. If there's already something, return it now */
 	if (fd_read_fifo(fd, cset->chan) == 0) {
-		printk("%s: returning now %p\n", __func__,
-		       cset->chan->active_block);
-		cset->trig->t_op->data_done(cset);
-		return 0;
+		return 0; /* don't call data_done, let the caller do it */
 	}
 	/* Mark the active block is valid, and return EAGAIN */
 	set_bit(FD_FLAG_INPUT_READY, &fd->flags);
-	printk("%s: set bit\n", __func__);
 	return -EAGAIN;
 }
 
