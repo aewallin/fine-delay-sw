@@ -64,7 +64,8 @@ struct spec_fd {
 /* We act on flags using atomic ops, so flag is the number, not the mask */
 enum fd_flags {
 	FD_FLAG_INITED = 0,
-	FD_FLAG_INPUT
+	FD_FLAG_DO_INPUT,
+	FD_FLAG_INPUT_READY,
 };
 
 /* Internal time: the first three fields should be converted to zio time */

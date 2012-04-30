@@ -103,12 +103,16 @@ static void fd_timer_fn(unsigned long arg)
 	}
 
 	/* FIXME: manage an array of input samples */
+	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
+		goto out;
+
+	/* there is an active block, try reading fifo */
 	if (fd_read_fifo(fd, chan) == 0) {
-		if (chan->active_block)
-			chan->cset->trig->t_op->data_done(chan->cset);
-		else
-			pr_err("data and no block\n");
+		printk("%s: reading %p\n", __func__, chan->active_block);
+		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
+		chan->cset->trig->t_op->data_done(chan->cset);
 	}
+
 out:
 	mod_timer(&fd->timer, jiffies + fd_timer_period_jiffies);
 }
@@ -121,26 +125,34 @@ static int fd_output(struct zio_cset *cset)
 }
 
 /*
- * The input method will return immediately, because input is
+ * The input method may return immediately, because input is
  * asynchronous. The data_done callback is invoked when the block is
  * full.
  */
 static int fd_input(struct zio_cset *cset)
 {
 	struct spec_fd *fd;
-
 	__HACK__ZDEV__ = cset->zdev;
 	fd = __HACK__FD__;
 
 	/* Configure the device for input */
-	if (!test_bit(FD_FLAG_INPUT, &fd->flags)) {
+	if (!test_bit(FD_FLAG_DO_INPUT, &fd->flags)) {
 		fd_writel(fd, FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ, FD_REG_TSBCR);
 		fd_writel(fd, FD_TSBCR_CHAN_MASK_W(1) | FD_TSBCR_ENABLE,
 			  FD_REG_TSBCR);
-		set_bit(FD_FLAG_INPUT, &fd->flags);
+		set_bit(FD_FLAG_DO_INPUT, &fd->flags);
 	}
-
-	return -EAGAIN; /* Will be completed over time */
+	/* Ready for input. If there's already something, return it now */
+	if (fd_read_fifo(fd, cset->chan) == 0) {
+		printk("%s: returning now %p\n", __func__,
+		       cset->chan->active_block);
+		cset->trig->t_op->data_done(cset);
+		return 0;
+	}
+	/* Mark the active block is valid, and return EAGAIN */
+	set_bit(FD_FLAG_INPUT_READY, &fd->flags);
+	printk("%s: set bit\n", __func__);
+	return -EAGAIN;
 }
 
 /* We have 5 csets, since each output triggers separately */
