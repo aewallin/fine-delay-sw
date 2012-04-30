@@ -288,6 +288,7 @@ concepts, available in ZIO documentation (ZIO is an @code{ohwr.org}
 project).
 
 @menu
+* The device::                  
 * The input cset::              
 * The oputput cset::            
 @end menu
@@ -343,9 +344,6 @@ to be solved differently.
 @node The input cset
 @section The input cset
 
-@b{Note:} This is not real documentation at this point in time, it is
-more material for some brainstorming: the code is not complete yet.
-
 The input cset returns fake data, with timestamp information in the
 control block (the meta-information associated to data). This is
 suboptimal, but it is a ``good enough'' first implementation until
@@ -356,30 +354,22 @@ the @i{read} function on the control or data char device.
 
 In a perfect world we would have a custom @i{trigger} module that
 stuffs the timestamp information directly in the proper place.  This
-version of the code uses the default ZIO trigger, which is
-transparent to hardware timings, but sticks a software timestamp in
-the control block.
+version of the code uses the default ZIO trigger, which is user-driven.
+In other words, data is only requested to hardware if a user process
+is actually reading.  This ``software'' trigger sticks a software
+timestamp in the control block
 
-The timestamp and other information is returned as @i{channel
-attributes}, which you can look at using @code{zio-dump}
-until a specific tool is written for this package:
+The hardware timestamp and other information is returned as @i{channel
+attributes}, which you can look at using @code{zio-dump} or
+@i{tools/fd-raw-input} which is part of this package.
 
-@smallexample
-   spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
-   Ctrl: version 0.5, trigger user, dev fd, cset 0, chan 0
-   Ctrl: seq 1, n 16, size 4, bits 32, flags 01000001 (little-endian)
-   Ctrl: stamp 1335737285.312696982 (0)
-   Device attributes:
-       [...]
-       Extended: 0x0000003f
-       0x0 0x30 0x640f20d 0x60a 0x0 0x0 0x0 0x0
-       [...]
-       Extended: 0x0000003f
-       0x0 0x40 0x454b747 0x1d3 0x1 0x0 0x0 0x0
-       [...]
-       Extended: 0x0000003f
-       0x0 0x47 0xf04c57 0x772 0x2 0x0 0x0 0x0
-@end smallexample
+@menu
+* Reading with zio-dump::       
+@end menu
+
+@c --------------------------------------------------------------------------
+@node Input Device Attributes
+@subsection Input Device Attributes
 
 The attributes are all 32-bit unsigned values, and their meaning
 is defined in @i{fine-delay.h} for libraries/applications to use them:
@@ -399,15 +389,60 @@ The attributes are also visibile in @i{/sys}, in the directory
 describing the cset:
 
 @smallexample
-spusa# ls -F /sys/bus/zio/devices/zio-fd-0200/fd-input/
-chan    coarse          current_trigger  frac  power/  trigger/  utc-h
-chan0/  current_buffer  enable           name  seq     uevent    utc-l
+   spusa# ls -F /sys/bus/zio/devices/zio-fd-0200/fd-input/
+   chan    coarse          current_trigger  frac  power/  trigger/  utc-h
+   chan0/  current_buffer  enable           name  seq     uevent    utc-l
 @end smallexample
 
-Note, howver, that the values of those files don't change to reflect
+Note, however, that the values in those files don't change to reflect
 the values last retrieved, to avoid wasting CPU power.  If it is
 considered useful, copying over the acquired attributes where
 @i{sysfs} can read them is pretty trivial.
+
+@c --------------------------------------------------------------------------
+@node Reading with zio-dump
+@subsection Reading with zio-dump
+
+This is an example read sequence using @i{zio-dump}. Data must be ignored
+and only the first 6 extended attributes are meaningful.
+
+@smallexample
+   spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
+   Ctrl: version 0.5, trigger user, dev fd, cset 0, chan 0
+   Ctrl: seq 1, n 16, size 4, bits 32, flags 01000001 (little-endian)
+   Ctrl: stamp 1335737285.312696982 (0)
+   Device attributes:
+       [...]
+       Extended: 0x0000003f
+       0x0 0x30 0x640f20d 0x60a 0x0 0x0 0x0 0x0
+       [...]
+       Extended: 0x0000003f
+       0x0 0x40 0x454b747 0x1d3 0x1 0x0 0x0 0x0
+       [...]
+       Extended: 0x0000003f
+       0x0 0x47 0xf04c57 0x772 0x2 0x0 0x0 0x0
+@end smallexample
+
+@c --------------------------------------------------------------------------
+@node Reading with fd-raw-input
+@subsection Reading with fd-raw-input
+
+The @i{tools/fd-raw-input} program, part of this package, only reads
+the control devices associated to @i{fine-delay} cards. It can receive
+file names on the command line, but if called with no arguments it
+will look for filenames in @i{/dev} using @i{glob} patterns (also
+called ``wildcards'').
+
+This is an example run:
+
+@smallexample
+   spusa.root# ./fd-raw-input
+   /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001a 00b9be2b 00000bf2 00000000
+   /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 00e7f5c2 0000097d 00000001
+   /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 02c88901 00000035 00000002
+   /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 03e23c26 000006ce 00000003
+@end smallexample
+
 
 @c ==========================================================================
 @node The oputput cset
