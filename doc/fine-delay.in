@@ -443,6 +443,53 @@ This is an example run:
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 03e23c26 000006ce 00000003
 @end smallexample
 
+The program also has a ``float'' mode, that reports floating point
+time differences between two samples (this doesn't use the fine delay,
+though, only the integer second and the coarse 8ns timer).
+
+This is an example while lisenting to a software-generated 1kHz signal:
+
+@smallexample
+   spusa.root# ./fd-raw-input -f
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1825.903957552 (delta   0.001007848)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1825.904971384 (delta   0.001013832)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1825.905968648 (delta   0.000997264)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1825.906980376 (delta   0.001011728)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1825.907997128 (delta   0.001016752)
+@end smallexample
+
+The tool reports lost events using the sequence number (attribute number 
+4). This is an example using a software-generated burst with a 10us period:
+
+@smallexample
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.385815880 (delta   0.000010024)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.385825832 (delta   0.000009952)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.385835720 (delta   0.000009888)
+   /dev/zio/zio-fd-0200-0-0-ctrl: LOST 2770 events
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412775304 (delta   0.026939584)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412784808 (delta   0.000009504)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412794808 (delta   0.000010000)
+   /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412804184 (delta   0.000009376)
+@end smallexample
+
+@c --------------------------------------------------------------------------
+@node Generating Bursts by Software
+@subsection Generating Bursts by Software
+
+For my tests, as shown above, I generate bursts of pulses with a program.
+To do so, I connect a pin of a parallel port plugged on the PCI bus to
+the input channel of the @i{fine-delay} card.
+
+The program @i{tools/parport-burst}, part of this package, generates a
+burst according to three command line parameters: the I/O port of
+the data byte of the parallel port, the repeat count and the duration
+of each period. This example makes 1000 pulses of 100 usec each,
+using the physical address of my parallel port (if yours is part
+of the motherboard, the address is @code{378}):
+
+@example
+   ./parport-burst d080 1000 100
+@end example
 
 @c ==========================================================================
 @node The oputput cset
@@ -565,8 +612,14 @@ Not all features are there, and the package currently lacks these features
 over what hardware allows:
 
 @itemize @bullet
-@item Everything. Let's be honest: the driver does nothing at this point.
-The basics are working but the higher level code is still missing.
+@item Output support. It is not there at this point.
+
+@item An API for C programs, this is being worked on.
+
+@item Interrupt support. The input is performed with a kernel timer.
+
+@item A timely procedure to re-measure the temperature to keep the output
+delay calibrated.
 
 @item EEPROM support. The driver uses default calibration settings and
 no i2c support is there yet.
