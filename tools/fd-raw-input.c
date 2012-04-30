@@ -32,8 +32,16 @@ int main(int argc, char **argv)
 {
 	glob_t glob_buf;
 	int fd[MAXFD];
-	int i, j, maxfd = 0;
+	int i, j, maxfd = 0, last = 0;
 	fd_set allset, curset;
+	int floatmode = 0;
+	long double t1 = 0.0, t2;
+
+	if (argc > 1 && !strcmp(argv[1], "-f")) {
+		floatmode = 1;
+		argv[1] = argv[0];
+		argv++, argc--;
+	}
 
 	if (argc < 2) {
 		/* rebuild argv using globbing */
@@ -94,8 +102,25 @@ int main(int argc, char **argv)
 					argv[0], j, sizeof(ctrl));
 				exit(1);
 			}
-			printf("%s: %08x %08x %08x %08x %08x\n",
-			       argv[i],
+			if (ctrl.attr_channel.ext_val[4] - last != 1)
+				printf("%s: LOST %i events\n", argv[i],
+				       ctrl.attr_channel.ext_val[4] - last - 1);
+			last = ctrl.attr_channel.ext_val[4];
+			printf("%s: ", argv[i]);
+			if (floatmode) {
+				t2 = ctrl.attr_channel.ext_val[1] +
+					ctrl.attr_channel.ext_val[2]
+					* .000000008; /* 8ns */
+				if (t1) {
+					printf("%17.9Lf (delta %13.9Lf)\n",
+					       t2, t2 - t1);
+				} else {
+					printf("%17.9Lf\n", t2);
+				}
+				t1 = t2;
+				continue;
+			}
+			printf("%08x %08x %08x %08x %08x\n",
 			       ctrl.attr_channel.ext_val[0],
 			       ctrl.attr_channel.ext_val[1],
 			       ctrl.attr_channel.ext_val[2],
