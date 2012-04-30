@@ -5,6 +5,7 @@ HOST_EXTRACFLAGS += -I$(M) -I$(ZIO)/include -Wno-trigraphs
 HOSTCC ?= gcc
 
 hostprogs-y := fd-raw-input
+hostprogs-y += parport-burst
 
 # we are not in the kernel, so we need to piggy-back on "make modules"
 modules: $(hostprogs-y)
