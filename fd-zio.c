@@ -86,14 +86,11 @@ module_param_named(timer_ms, fd_timer_period_ms, int, 0444);
 
 static int fd_timer_period_jiffies; /* converted from ms at init time */
 
-static struct zio_device *__HACK__ZDEV__; /* don't do it! */
-static struct spec_fd *__HACK__FD__; /* don't do it! */
-
 static void fd_timer_fn(unsigned long arg)
 {
 	struct spec_fd *fd = (void *)arg;
 	struct zio_channel *chan = NULL;
-	struct zio_device *zdev = __HACK__ZDEV__;
+	struct zio_device *zdev = fd->zdev;
 
 	if (zdev) {
 		chan = zdev->cset[0].chan;
@@ -131,8 +128,7 @@ static int fd_output(struct zio_cset *cset)
 static int fd_input(struct zio_cset *cset)
 {
 	struct spec_fd *fd;
-	__HACK__ZDEV__ = cset->zdev;
-	fd = __HACK__FD__;
+	fd = cset->zdev->private_data;
 
 	/* Configure the device for input */
 	if (!test_bit(FD_FLAG_DO_INPUT, &fd->flags)) {
@@ -148,6 +144,20 @@ static int fd_input(struct zio_cset *cset)
 	/* Mark the active block is valid, and return EAGAIN */
 	set_bit(FD_FLAG_INPUT_READY, &fd->flags);
 	return -EAGAIN;
+}
+
+/*
+ * The probe remove receives a new zio_device, which is different from
+ * what we allocated (that one is the "hardwre" device) but has the
+ * same private data. So we make the link and return success.
+ */
+static int fd_zio_probe(struct zio_device *zdev)
+{
+	struct spec_fd *fd;
+
+	fd = zdev->private_data;
+	fd->zdev = zdev;
+	return 0;
 }
 
 /* We have 5 csets, since each output triggers separately */
@@ -214,6 +224,7 @@ static struct zio_driver fd_zdrv = {
 		.owner = THIS_MODULE,
 	},
 	.id_table = fd_table,
+	.probe = fd_zio_probe,
 };
 
 
@@ -252,21 +263,23 @@ int fd_zio_init(struct spec_fd *fd)
 	struct pci_dev *pdev;
 	int dev_id;
 
-	fd->zdev = zio_allocate_device();
-	if (IS_ERR(fd->zdev))
-		return PTR_ERR(fd->zdev);
+	fd->hwzdev = zio_allocate_device();
+	if (IS_ERR(fd->hwzdev))
+		return PTR_ERR(fd->hwzdev);
+
+	/* Mandatory fields */
+	fd->hwzdev->owner = THIS_MODULE;
+	fd->hwzdev->private_data = fd;
 
 	/* Our dev_id is bus+devfn */
 	pdev = fd->spec->pdev;
 	dev_id = (pdev->bus->number << 8) | pdev->devfn;
-	fd->zdev->owner = THIS_MODULE;
-	err = zio_register_device(fd->zdev, "fd", dev_id);
+
+	err = zio_register_device(fd->hwzdev, "fd", dev_id);
 	if (err) {
-		zio_free_device(fd->zdev);
+		zio_free_device(fd->hwzdev);
 		return err;
 	}
-
-	__HACK__FD__ = fd;
 
 	setup_timer(&fd->timer, fd_timer_fn, (unsigned long)fd);
 	if (fd_timer_period_ms)
@@ -277,6 +290,6 @@ int fd_zio_init(struct spec_fd *fd)
 void fd_zio_exit(struct spec_fd *fd)
 {
 	del_timer_sync(&fd->timer);
-	zio_unregister_device(fd->zdev);
-	zio_free_device(fd->zdev);
+	zio_unregister_device(fd->hwzdev);
+	zio_free_device(fd->hwzdev);
 }

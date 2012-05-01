@@ -47,7 +47,7 @@ struct spec_fd {
 	spinlock_t lock;
 	unsigned long flags;
 	struct spec_dev *spec;
-	struct zio_device *zdev;
+	struct zio_device *zdev, *hwzdev;
 	struct timer_list timer;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
