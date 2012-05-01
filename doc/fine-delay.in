@@ -96,11 +96,13 @@ card.
 @section Gateware Dependencies
 
 This driver has been developed from the FPGA binary included in the
-package as @code{binaries/spec_top.bin}.  This can also be downloaded
-from the @i{Files} tab of the hardware project:
-@code{http://www.ohwr.org/projects/fmc-delay-1ns-8cha/files} (direct
-link:
-@code{http://www.ohwr.org/attachments/download/1179/spec_top.bin}.
+package as @code{binaries/spec_top.bin}.
+
+@c This can also be downloaded
+@c from the @i{Files} tab of the hardware project:
+@c @code{http://www.ohwr.org/projects/fmc-delay-1ns-8cha/files} (direct
+@c link:
+@c @code{http://www.ohwr.org/attachments/download/1179/spec_top.bin}.
 
 If the gateware is updated, I'll take care to always include in this
 package the exact binary the software is developed and verified
@@ -253,7 +255,7 @@ The following parameters are used:
 
 @item regs=
 
-	The @i{regs} parameter defaults to 0x8400 and is the offset of
+	The @i{regs} parameter defaults to 0x80000 and is the offset of
         fine-delay registers within the PCI memory area.  You shouldn't
         use it unless you are Tomasz Wlostowski or you otherwise
 	changed the FPGA design
@@ -364,7 +366,10 @@ attributes}, which you can look at using @code{zio-dump} or
 @i{tools/fd-raw-input} which is part of this package.
 
 @menu
+* Input Device Attributes::     
 * Reading with zio-dump::       
+* Reading with fd-raw-input::   
+* Generating Bursts by Software::  
 @end menu
 
 @c --------------------------------------------------------------------------

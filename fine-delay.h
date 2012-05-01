@@ -107,7 +107,7 @@ static inline void fd_ch_writel(struct spec_fd *fd, int ch,
 	fd_writel(fd, v, 0x100 + ch * 0x100 + reg);
 }
 
-#define FD_REGS_OFFSET	0x84000		/* can be changed by "regs=" */
+#define FD_REGS_OFFSET	0x80000		/* can be changed by "regs=" */
 #define FD_MAGIC_FPGA	0xf19ede1a	/* FD_REG_IDR content */
 
 /* Values for the configuration of the acam PLL. Can be changed */
