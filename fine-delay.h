@@ -6,6 +6,7 @@ enum fd_zattr_dev_idx {
 	FD_ATTR_DEV_UTC_H = 0,
 	FD_ATTR_DEV_UTC_L,
 	FD_ATTR_DEV_COARSE,
+	FD_ATTR_DEV_HOST_T,
 };
 
 /* Input ZIO attributes (actually, the internal time is represented as attrs */

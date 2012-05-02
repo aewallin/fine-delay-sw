@@ -61,6 +61,7 @@ static struct zio_attribute fd_zattr_dev[] = {
 	ZATTR_EXT_REG("utc-h", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_H, 0),
 	ZATTR_EXT_REG("utc-l", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_L, 0),
 	ZATTR_EXT_REG("coarse", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_COARSE, 0),
+	ZATTR_EXT_REG("host-time", S_IWUGO,		FD_ATTR_DEV_HOST_T, 0),
 };
 
 /* This identifies if our "struct device" is device, input, output */
@@ -110,7 +111,30 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 			    uint32_t  usr_val)
 {
-	return 0; /* FIXME: conf_set */
+	struct fd_time t;
+	struct zio_device *zdev;
+	struct spec_fd *fd;
+	struct zio_attribute *attr;
+
+	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
+		return 0; /* FIXME: no support for cset attrs yet */
+
+	zdev = to_zio_dev(dev);
+	attr = zdev->zattr_set.ext_zattr;
+	fd = zdev->private_data;
+
+	/* Special case: set host time to the board */
+	if (zattr->priv.addr == FD_ATTR_DEV_HOST_T)
+		return fd_time_set(fd, NULL, NULL);
+
+	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
+		return 0;
+	/* writing utc-h calls an atomic set-time */
+	t.utc = (uint64_t)attr[FD_ATTR_DEV_UTC_H].value << 32;
+	t.utc |= attr[FD_ATTR_DEV_UTC_L].value;
+	t.coarse = attr[FD_ATTR_DEV_COARSE].value;
+	fd_time_set(fd, &t, NULL);
+	return 0;
 }
 
 /*
