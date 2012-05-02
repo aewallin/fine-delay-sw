@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month April 2012
+@set update-month May 2012
 
 @finalout
 
@@ -350,9 +350,9 @@ directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
 @smallexample
    spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/
    ./      enable           utc-l       power/     fd-ch2/
-   ../     resolution-bits  coarse      driver@    fd-ch3/
-   uevent  version          host-time   fd-input/  fd-ch4/
-   name    utc-h            subsystem@  fd-ch1/
+   ../     resolution-bits  coarse      driver     fd-ch3/
+   uevent  version          command     fd-input/  fd-ch4/
+   name    utc-h            subsystem   fd-ch1/
 @end smallexample
 
 @c ==========================================================================
@@ -475,6 +475,7 @@ attributes}, which you can look at using @code{zio-dump} or
 * Input Device Attributes::     
 * Reading with zio-dump::       
 * Reading with fd-raw-input::   
+* Configuring the Input Channel::  
 * Generating Bursts by Software::  
 @end menu
 
@@ -494,9 +495,12 @@ is defined in @i{fine-delay.h} for libraries/applications to use them:
            FD_ATTR_TDC_SEQ,
            FD_ATTR_TDC_CHAN,
            FD_ATTR_TDC_FLAGS,
+           FD_ATTR_TDC_OFFSET,
    }; 
-   #define FD_ATTR_TDCF_ENABLE	1
-   #define FD_ATTR_TDCF_TERM	2
+   /* Names have been chosen so that 0 is the default at load time */
+   #define FD_TDCF_DISABLE_INPUT	1
+   #define FD_TDCF_DISABLE_TSTAMP	2
+   #define FD_TDCF_TERM_50		4
 @end example
 
 The attributes are also visibile in @i{/sys}, in the directory
@@ -504,16 +508,21 @@ describing the cset:
 
 @smallexample
    spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/fd-input/
-   ./      enable           utc-l   chan      chan0/
-   ../     current_trigger  coarse  flags
-   uevent  current_buffer   frac    power/
-   name    utc-h            seq     trigger/
+   ./      enable           utc-l   chan    trigger/
+   ../     current_trigger  coarse  flags   chan0/
+   uevent  current_buffer   frac    offset
+   name    utc-h            seq     power/
 @end smallexample
 
-Note, however, that the values in those files don't change to reflect
-the values last retrieved, to avoid wasting CPU power.  If it is
-considered useful, copying over the acquired attributes where
-@i{sysfs} can read them is pretty trivial.
+The timestamp-related values in this file reflect the last stamp that
+has been enqueued to user space (this may be the next event to be
+read by the actual reading process).  The @i{offset} attribute
+is the stamping offset, in picoseconds, for the TDC channe.
+
+The @i{flags} attribute can be used to change three configuration
+bits, defined by the respective macros. Please note that the default
+at module load time is zero, so some of the flags bits are inverted
+over the hardware counterpart.
 
 @c --------------------------------------------------------------------------
 @node Reading with zio-dump
@@ -587,6 +596,15 @@ The tool reports lost events using the sequence number (attribute number
    /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412794808 (delta   0.000010000)
    /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412804184 (delta   0.000009376)
 @end smallexample
+
+@c --------------------------------------------------------------------------
+@node Configuring the Input Channel
+@subsection Configuring the Input Channel
+
+There is no support in @i{tools/} to change channel configuration.
+The user is expected to write values in the @i{flags} file directly.
+For example, to enable the termination resistors, write 4 to the
+@i{flags} file in @i{sysfs}.
 
 @c --------------------------------------------------------------------------
 @node Generating Bursts by Software
@@ -678,12 +696,8 @@ Tomasz, is as follows. It covers all device features we need to export:
 @end smallexample
 
 This API doesn't support multiple boards but is still a useful reference
-for the feature-set we need.
-While it does everything that's needed for testing, I see some
-issues with it and would like to offer something different.
-
-This is a list of issues I find and that must be discussed before the
-code is finalized with the final public API:
+for the feature-set we need.  The next sections describe the new library,
+that is part of this package and relies on the kernel driver.
 
 @c ==========================================================================
 @node Initialization and Cleanup
@@ -774,9 +788,44 @@ to validate the library works as expected:
    1335974946.493415600
 @end smallexample
 
+@c ==========================================================================
+@node Input Configuration
+@section Input Configuration
+
+To configure the input channel for a board, the library offers the
+following function and macros:
+
+@table @code
+
+@item int fdelay_set_config_tdc(struct fdelay_board *b, int flags);
+@itemx int fdelay_get_config_tdc(struct fdelay_board *b);
+
+	The function configures a few options in the input channel.
+	The @i{flags} argument is a bitmask of the following three
+        values (note that 0 is the default at initialization time).
+        The function returns -1 with @code{EINVAL} if the @i{flags}
+        argument includes undefined bits.
+
+@item FD_TDCF_DISABLE_INPUT
+@itemx FD_TDCF_DISABLE_TSTAMP
+@itemx FD_TDCF_TERM_50
+
+	The first bit disables the input channel, the second disables
+        acquisition of timestamps, and the last enables the 50-ohm
+        termination on the input channel.
+
+@end table
+
+The example program @i{fdelay-term} demonstrates use of the function.
+It just enables or disables the 50-ohm resistor.  The effect is
+usually verifiable by hooking a scope to the input signal:
+
+
+
+
 @c ##########################################################################
-@node Known bugs and missing features
-@chapter Known bugs and missing features
+@node Known Bugs and Missing Features
+@chapter Known Bugs and Missing Features
 
 This package is still work in progress, and unfortunately the same
 applies to the packages it depends on.  The current package set (i.e.,
@@ -787,7 +836,6 @@ the following known issues exposed by @i{fine-delay}:
 @item The auto-loading of @i{spec} submodules is not really working:
 the @i{modprobe} command will be stuck sleeping if you try to use it.
 Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
-
 @end itemize
 
 This is the list of known bugs and missing features over what hardware
@@ -795,10 +843,11 @@ allows:
 
 @itemize @bullet
 
+@item There is no support for White Rabbit at this time.
+
 @item Output support is missing. It simply is not there at this point.
 
 @item We need interrupt support. The input is performed with a kernel timer.
-Also, we need an in-driver buffer for input samples.
 
 @item The driver should re-measure temperature every 30s, to keep
 the output delay calibrated.
@@ -813,9 +862,17 @@ cards. Reading the magic number from an SPEC that is not programmed
 (or likely that is programmed with a different gateware) may lock up
 the host computer.
 
+@end itemize
+
+Other less important issues may be dealt with over time, but are not
+urgent as I write this:
+
 @item The driver should register its own ZIO trigger, or use the new
 attribute for ``greedy-input'' offered in new versions of ZIO
 (thank you Federico).
+
+@item We may implement commands to flush the input queue and reset the
+input sequence number.
 
 @end itemize
 
