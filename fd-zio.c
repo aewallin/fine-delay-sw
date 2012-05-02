@@ -42,14 +42,14 @@
  */
 
 static struct zio_attribute fd_zattr_input[] = {
-	ZATTR_EXT_REG("utc-h", S_IRUGO,		FD_ATTR_IN_UTC_H, 0),
-	ZATTR_EXT_REG("utc-l", S_IRUGO,		FD_ATTR_IN_UTC_L, 0),
-	ZATTR_EXT_REG("coarse", S_IRUGO,	FD_ATTR_IN_COARSE, 0),
-	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_IN_FRAC, 0),
-	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_IN_SEQ, 0),
-	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_IN_CHAN, 0),
-	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_IN_FLAGS, 0),
-	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_IN_OFFSET, 0),
+	ZATTR_EXT_REG("utc-h", S_IRUGO,		FD_ATTR_TDC_UTC_H, 0),
+	ZATTR_EXT_REG("utc-l", S_IRUGO,		FD_ATTR_TDC_UTC_L, 0),
+	ZATTR_EXT_REG("coarse", S_IRUGO,	FD_ATTR_TDC_COARSE, 0),
+	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
+	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
+	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
+	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_TDC_FLAGS, 0),
+	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_TDC_OFFSET, 0),
 };
 
 /* The sample size. Mandatory, device-wide */
@@ -169,8 +169,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
-	struct zio_attribute *attr;
-	uint32_t *v, *a, reg;
+	uint32_t *v, reg;
 
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
@@ -180,20 +179,20 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 	ctrl = zio_get_ctrl(chan->active_block);
 	v = ctrl->attr_channel.ext_val;
 	/* FIXME: use a table in some way... */
-	v[FD_ATTR_IN_UTC_H]
+	v[FD_ATTR_TDC_UTC_H]
 		= fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	v[FD_ATTR_IN_UTC_L]
+	v[FD_ATTR_TDC_UTC_L]
 		= fd_readl(fd, FD_REG_TSBR_SECL);
-	v[FD_ATTR_IN_COARSE]
+	v[FD_ATTR_TDC_COARSE]
 		= fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
 	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	v[FD_ATTR_IN_FRAC]
+	v[FD_ATTR_TDC_FRAC]
 		= FD_TSBR_FID_FINE_R(reg);
-	v[FD_ATTR_IN_SEQ]
+	v[FD_ATTR_TDC_SEQ]
 		= FD_TSBR_FID_SEQID_R(reg);
-	v[FD_ATTR_IN_CHAN]
+	v[FD_ATTR_TDC_CHAN]
 		= FD_TSBR_FID_CHANNEL_R(reg);
-	v[FD_ATTR_IN_OFFSET] =
+	v[FD_ATTR_TDC_OFFSET] =
 		fd->calib.tdc_zero_offset;
 
 	/* We also need a copy within the device, so sysfs can read it */
@@ -284,7 +283,7 @@ static int fd_zio_probe(struct zio_device *zdev)
 	fd = zdev->private_data;
 	fd->zdev = zdev;
 
-	fd->tdc_attrs[FD_CSET_INDEX(FD_ATTR_IN_OFFSET)] = \
+	fd->tdc_attrs[FD_CSET_INDEX(FD_ATTR_TDC_OFFSET)] = \
 		fd->calib.tdc_zero_offset;
 
 	/* We don't have csets at this point, so don't do anything more */

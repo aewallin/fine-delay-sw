@@ -481,16 +481,16 @@ is defined in @i{fine-delay.h} for libraries/applications to use them:
 
 @example
    enum fd_zattr_in_idx {
-           FD_ATTR_IN_UTC_H = 0,
-           FD_ATTR_IN_UTC_L,
-           FD_ATTR_IN_COARSE,
-           FD_ATTR_IN_FRAC,
-           FD_ATTR_IN_SEQ,
-           FD_ATTR_IN_CHAN,
-           FD_ATTR_IN_FLAGS,
+           FD_ATTR_TDC_UTC_H,
+           FD_ATTR_TDC_UTC_L,
+           FD_ATTR_TDC_COARSE,
+           FD_ATTR_TDC_FRAC,
+           FD_ATTR_TDC_SEQ,
+           FD_ATTR_TDC_CHAN,
+           FD_ATTR_TDC_FLAGS,
    }; 
-   #define FD_ATTR_INF_ENABLE	1
-   #define FD_ATTR_INF_TERM	2
+   #define FD_ATTR_TDCF_ENABLE	1
+   #define FD_ATTR_TDCF_TERM	2
 @end example
 
 The attributes are also visibile in @i{/sys}, in the directory

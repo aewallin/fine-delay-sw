@@ -1,6 +1,16 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
+#define FDELAY_VERSION		2
+/*
+ * ZIO concatenates device, cset and channel extended attributes in the 32
+ * values that are reported in the control block. So we are limited to
+ * 32 values at most, and the offset of cset attributes depends on the
+ * number of device attributes. For this reason, we reserve a few, in
+ * order not to increase the version number too often (we need to increase
+ * it when the layout of attributes changes in incompatible ways)
+ */
+
 /* Device-wide ZIO attributes */
 enum fd_zattr_dev_idx {
 	FD_ATTR_DEV_VERSION = 0,
@@ -8,25 +18,27 @@ enum fd_zattr_dev_idx {
 	FD_ATTR_DEV_UTC_L,
 	FD_ATTR_DEV_COARSE,
 	FD_ATTR_DEV_HOST_T,
+	FD_ATTR_DEV_RESERVE_5,
+	FD_ATTR_DEV_RESERVE_6,
+	FD_ATTR_DEV_RESERVE_7,
 	FD_ATTR_DEV__LAST,
 };
 
-#define FDELAY_VERSION		1 /* Used to handle incompatibilities */
 
-/* Input ZIO attributes (actually, the internal time is represented as attrs */
+/* Input ZIO attributes (i.e. TDC attributes) */
 enum fd_zattr_in_idx {
-	FD_ATTR_IN_UTC_H = FD_ATTR_DEV__LAST,
-	FD_ATTR_IN_UTC_L,
-	FD_ATTR_IN_COARSE,
-	FD_ATTR_IN_FRAC,
-	FD_ATTR_IN_SEQ,
-	FD_ATTR_IN_CHAN,
-	FD_ATTR_IN_FLAGS, /* enable, termination, see below */
-	FD_ATTR_IN_OFFSET,
-	FD_ATTR_IN__LAST,
+	FD_ATTR_TDC_UTC_H = FD_ATTR_DEV__LAST,
+	FD_ATTR_TDC_UTC_L,
+	FD_ATTR_TDC_COARSE,
+	FD_ATTR_TDC_FRAC,
+	FD_ATTR_TDC_SEQ,
+	FD_ATTR_TDC_CHAN,
+	FD_ATTR_TDC_FLAGS, /* enable, termination, see below */
+	FD_ATTR_TDC_OFFSET,
+	FD_ATTR_TDC__LAST,
 };
-#define FD_ATTR_INF_ENABLE	1
-#define FD_ATTR_INF_TERM	2
+#define FD_ATTR_TDCF_ENABLE	1
+#define FD_ATTR_TDCF_TERM	2
 
 /*
  * Cset attributes are concatenated to device attributes in the control
@@ -85,7 +97,7 @@ struct spec_fd {
 	unsigned long next_t;
 	int temp;			/* temperature: scaled by 4 bits */
 	int verbose;
-	uint32_t tdc_attrs[FD_ATTR_IN__LAST - FD_ATTR_DEV__LAST];
+	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
 };
 /* We act on flags using atomic ops, so flag is the number, not the mask */
 enum fd_flags {
