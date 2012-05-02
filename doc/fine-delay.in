@@ -291,7 +291,8 @@ project).
 
 @menu
 * The device::                  
-* The input cset::              
+* Device Attributes::           
+* The Input cset::              
 * The oputput cset::            
 @end menu
 
@@ -314,7 +315,7 @@ action that fires hardware access for all current values).
 The device appears in @i{/dev} as a set of char devices:
 
 @smallexample
-   spusa.root# ls -l /dev/zio/*
+   spusa# ls -l /dev/zio/*
    crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-ctrl
    crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-data
    crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-ctrl
@@ -342,9 +343,108 @@ and the @i{devfn} octet; the example above refers to slot 0 of bus 2.
 For remotely-controlled (e.g. Etherbone) devices the problem will need
 to be solved differently.
 
+Device (and channel) attributes can be accessed in the proper @i{sysfs}
+directory. For a card in slot 0 of bus 2 (like shown above), the
+directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
+
+@smallexample
+   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/
+   ./      enable           coarse      driver     fd-ch3/
+   ../     resolution-bits  host-time   fd-input/  fd-ch4/
+   uevent  utc-h            subsystem   fd-ch1/
+   name    utc-l            power/      fd-ch2/
+@end smallexample
+
 @c ==========================================================================
-@node The input cset
-@section The input cset
+@node Device Attributes
+@section Device Attributes
+
+Device-wide attributes are the three time tags (@i{utc-h}, @i{utc-l},
+@i{coarse}) and a write-only @i{host-time}.  To read device time you
+should read @i{utc-h} first.  Reading @u{utc-h} will atomically read
+all values from the card and store them in the software driver: by
+reading @i{utc-l} and @i{coarse} you'll get such cached values.
+
+Example:
+@smallexample
+   spusa# cd /sys/bus/zio/devices/zio-fd-0200/
+   spusa# cat coarse coarse utc-h coarse
+   75136756
+   75136756
+   0
+   47088910
+@end smallexample
+
+To set the time, you can write the three values leaving @i{utc-h}
+last: writing @i{utc-h} atomically programs the hardware:
+
+@smallexample
+   spusa# echo 10000 > coarse; echo 10000 > utc-l; echo 0 > utc-h
+   spusa# cat utc-h utc-l
+   0
+   10003
+@end smallexample
+
+If you write any value to @i{host-time}, board time will be
+synchronized to the current Linux clock within one microsecond
+(reading Linux time and writing to the @i{fine-delay} registers is
+done with interrupts disabled, so the actual synchronization precision
+depends on the speed of your CPU and PCI bus):
+
+@smallexample
+   spusa# cat utc-h utc-l; echo 0 > host-time; cat utc-h utc-l; date +%s
+   0
+   50005
+   0
+   1335948116
+   1335948116
+@end smallexample
+
+@menu
+* Reading Board Time::          
+* Writing Board Time::          
+@end menu
+
+@c --------------------------------------------------------------------------
+@node Reading Board Time
+@subsection Reading Board Time
+
+The program @i{fd-raw-gettime}, part of this package, allows reading
+the current board time using @i{sysfs} directly:
+
+@smallexample
+   spusa# ./fd-raw-gettime ; sleep 1; ./fd-raw-gettime
+   3303.076543536
+   3304.082016080
+@end smallexample
+
+In the example above the time has never been set, so the epoch if FPGA
+load time.
+
+@b{Note:} the tool is bugged as of 2038 because it assumes utc-h is 0.
+
+@c --------------------------------------------------------------------------
+@node Writing Board Time
+@subsection Writing Board Time
+
+The program @i{fd-raw-settime}, part of this package, allows setting
+the current board time using @i{sysfs} directly:
+
+@smallexample
+   spusa# ./fd-raw-settime  123; ./fd-raw-gettime
+   123.000541696
+   spusa# ./fd-raw-settime  123 500000000; ./fd-raw-gettime
+   123.500570096
+@end smallexample
+
+@b{Note:} the tool is bugged as of 2038 because it assumes utc-h is 0.
+
+No tool is there to sync the board to Linux time, because writing
+to the @i{host-time} attribute is atomic by itself.
+
+@c ==========================================================================
+@node The Input cset
+@section The Input cset
 
 The input cset returns fake data, with timestamp information in the
 control block (the meta-information associated to data). This is
@@ -387,16 +487,21 @@ is defined in @i{fine-delay.h} for libraries/applications to use them:
            FD_ATTR_IN_FRAC,
            FD_ATTR_IN_SEQ,
            FD_ATTR_IN_CHAN,
+           FD_ATTR_IN_FLAGS,
    }; 
+   #define FD_ATTR_INF_ENABLE	1
+   #define FD_ATTR_INF_TERM	2
 @end example
 
 The attributes are also visibile in @i{/sys}, in the directory
 describing the cset:
 
 @smallexample
-   spusa# ls -F /sys/bus/zio/devices/zio-fd-0200/fd-input/
-   chan    coarse          current_trigger  frac  power/  trigger/  utc-h
-   chan0/  current_buffer  enable           name  seq     uevent    utc-l
+   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/fd-input/
+   ./      enable           utc-l   chan      chan0/
+   ../     current_trigger  coarse  flags
+   uevent  current_buffer   frac    power/
+   name    utc-h            seq     trigger/
 @end smallexample
 
 Note, however, that the values in those files don't change to reflect
@@ -441,7 +546,7 @@ called ``wildcards'').
 This is an example run:
 
 @smallexample
-   spusa.root# ./fd-raw-input
+   spusa# ./fd-raw-input
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001a 00b9be2b 00000bf2 00000000
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 00e7f5c2 0000097d 00000001
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 02c88901 00000035 00000002
@@ -452,10 +557,10 @@ The program also has a ``float'' mode, that reports floating point
 time differences between two samples (this doesn't use the fine delay,
 though, only the integer second and the coarse 8ns timer).
 
-This is an example while lisenting to a software-generated 1kHz signal:
+This is an example while listening to a software-generated 1kHz signal:
 
 @smallexample
-   spusa.root# ./fd-raw-input -f
+   spusa# ./fd-raw-input -f
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.903957552 (delta   0.001007848)
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.904971384 (delta   0.001013832)
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.905968648 (delta   0.000997264)
@@ -512,7 +617,7 @@ input channel described earlier), this would prevent a shell user to
 configure the output: attributes can be set in @i{sysfs} but then to
 fire the action you'll need to write a data block.  This would not be
 a problem for compiled code, which will just push attributes to the
-control device and would be happy with a zero-lenght data area.
+control device and would be happy with a zero-length data area.
 
 The attributes to be defined are the various parameters of the output
 channel: whether it is triggered by the input or is outputting pulses
@@ -603,7 +708,8 @@ code is finalized with the final public API:
 @chapter Known bugs and missing features
 
 This package is still work in progress, and unfortunately the same
-applies to the packages it depends on.  The current package set has
+applies to the packages it depends on.  The current package set (i.e.,
+@i{zio}, @i{spec-sw} and this one) has
 the following known issues exposed by @i{fine-delay}:
 
 @itemize @bullet
@@ -613,21 +719,33 @@ Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
 
 @end itemize
 
-Not all features are there, and the package currently lacks these features
-over what hardware allows:
+This is the list of known bugs and missing features over what hardware
+allows:
 
 @itemize @bullet
-@item Output support. It is not there at this point.
 
-@item An API for C programs, this is being worked on.
+@item Output support is missing. It simply is not there at this point.
 
-@item Interrupt support. The input is performed with a kernel timer.
+@item The API for C programs is missing. This is being worked on.
 
-@item A timely procedure to re-measure the temperature to keep the output
-delay calibrated.
+@item We need interrupt support. The input is performed with a kernel timer.
+Also, we need an in-driver buffer for input samples.
 
-@item EEPROM support. The driver uses default calibration settings and
-no i2c support is there yet.
+@item The driver should re-measure temperature every 30s, to keep
+the output delay calibrated.
+
+@item There is no EEPROM support. The driver uses default calibration
+settings and no i2c support is there yet.
+
+@item We need a module parameter to avoid probing non-fine-delay SPEC
+cards. Reading the magic number from an SPEC that is not programmed
+(or likely that is programmed with a different gateware) may lock up
+the host computer.
+
+@item The driver should register its own ZIO trigger, or use the new
+attribute for ``greedy-input'' offered in new versions of ZIO
+(thank you Federico).
+
 @end itemize
 
 
@@ -668,4 +786,5 @@ where the spec driver can find it. In my case the file name is
 
 @c  LocalWords:  gnudd titlepage iftex texinfo CERN documentlanguage settitle
 @c  LocalWords:  documentencoding setfilename afourpaper paragraphindent FPGA
-@c  LocalWords:  setchapternewpage finalout gateware ohwr
+@c  LocalWords:  setchapternewpage finalout gateware ohwr modprobe insmod cset
+@c  LocalWords:  smallexample ctrl timestamp
