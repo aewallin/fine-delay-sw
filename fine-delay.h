@@ -258,6 +258,15 @@ extern void fd_zio_exit(struct spec_fd *fd);
 extern int fd_spec_init(void);
 extern void fd_spec_exit(void);
 
+/* Functions exported by i2c.c */
+extern int fd_i2c_init(struct spec_fd *fd);
+extern void fd_i2c_exit(struct spec_fd *fd);
+extern int fd_eerom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+			 uint8_t *buf, size_t size);
+extern int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+			uint8_t *buf, size_t size);
+
+
 
 #endif /* __KERNEL__ */
 #endif /* __FINE_DELAY_H__ */

@@ -124,7 +124,7 @@ static struct fd_modlist mods[] = {
 	{"reset-again", fd_reset_again},
 	SUBSYS(acam),
 	SUBSYS(time),
-	//SUBSYS(i2c),
+	SUBSYS(i2c),
 	SUBSYS(zio),
 };
 
