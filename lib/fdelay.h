@@ -11,6 +11,7 @@
  */
 #ifndef __FDELAY_H__
 #define __FDELAY_H__
+#include <stdint.h>
 
 /* Opaque data type used as token */
 struct fdelay_board;
@@ -39,6 +40,57 @@ static inline int fdelay_is_verbose(void)
 }
 
 #define __define_board(b, ub)	struct __fdelay_board *b = (void *)(ub)
+
+/* These two from ../tools/fdelay-raw.h, used internally */
+static inline int __fdelay_sysfs_get(char *path, uint32_t *resp)
+{
+	FILE *f = fopen(path, "r");
+
+	if (!f)
+		return -1;
+	if (fscanf(f, "%i", resp) != 1) {
+		fclose(f);
+		errno = EINVAL;
+		return -1;
+	}
+	fclose(f);
+	return 0;
+}
+
+static inline int __fdelay_sysfs_set(char *path, uint32_t *value)
+{
+	FILE *f = fopen(path, "w");
+
+	if (!f)
+		return -1;
+	if (fprintf(f, "%i\n", *value) < 2) {
+		fclose(f);
+		errno = EINVAL;
+		return -1;
+	}
+	fclose(f);
+	return 0;
+}
+
+/* And these two for the board structure */
+static inline int fdelay_sysfs_get(struct __fdelay_board *b, char *name,
+			       uint32_t *resp)
+{
+	char pathname[128];
+
+	sprintf(pathname, "%s/%s", b->sysbase, name);
+	return __fdelay_sysfs_get(pathname, resp);
+}
+
+static inline int fdelay_sysfs_set(struct __fdelay_board *b, char *name,
+			       uint32_t *value)
+{
+	char pathname[128];
+
+	sprintf(pathname, "%s/%s", b->sysbase, name);
+	return __fdelay_sysfs_set(pathname, value);
+}
+
 
 #endif /* FDELAY_INTERNAL */
 #endif /* __FDELAY_H__ */

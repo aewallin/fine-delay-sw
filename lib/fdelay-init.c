@@ -39,6 +39,7 @@ int fdelay_init(void)
 	glob_t glob_dev, glob_sys;
 	struct __fdelay_board *b;
 	int i, j;
+	uint32_t v;
 
 	/* Look for boards in /dev: old and new pathnames: only one matches */
 	glob("/dev/zio-fd-*-0-0-ctrl", 0, NULL, &glob_dev);
@@ -77,7 +78,20 @@ int fdelay_init(void)
 	}
 	globfree(&glob_dev);
 	globfree(&glob_sys);
-	return i;
+
+	/* Now, if at least one board is there, check the version */
+	if (fd_nboards == 0)
+		return 0;
+
+	if (fdelay_sysfs_get(fd_boards, "version", &v) < 0)
+		return -1;
+	if (v != FDELAY_VERSION) {
+		fprintf(stderr, "%s: version mismatch, lib(%i) != drv(%i)\n",
+			__func__, FDELAY_VERSION, v);
+		errno = EIO;
+		return -1;
+	}
+	return fd_nboards;
 }
 
 /* Free and check */
