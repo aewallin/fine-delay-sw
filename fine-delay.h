@@ -1,7 +1,14 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
-/* input ZIO attributes (actually, the internal time is represented as attrs */
+/* Device-wide ZIO attributes */
+enum fd_zattr_dev_idx {
+	FD_ATTR_DEV_UTC_H = 0,
+	FD_ATTR_DEV_UTC_L,
+	FD_ATTR_DEV_COARSE,
+};
+
+/* Input ZIO attributes (actually, the internal time is represented as attrs */
 enum fd_zattr_in_idx {
 	FD_ATTR_IN_UTC_H = 0,
 	FD_ATTR_IN_UTC_L,
@@ -9,7 +16,11 @@ enum fd_zattr_in_idx {
 	FD_ATTR_IN_FRAC,
 	FD_ATTR_IN_SEQ,
 	FD_ATTR_IN_CHAN,
+	FD_ATTR_IN_FLAGS, /* enable, termination, see below */
 };
+#define FD_ATTR_INF_ENABLE	1
+#define FD_ATTR_INF_TERM	2
+
 
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
 #include <linux/spinlock.h>

@@ -36,6 +36,7 @@
  * fractional time
  * sequential ID
  * channel
+ * flags
  *
  * See the enum in "fine-delay.h"
  */
@@ -47,33 +48,107 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_IN_FRAC, 0),
 	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_IN_SEQ, 0),
 	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_IN_CHAN, 0),
+	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_IN_FLAGS, 0),
 };
 
 /* The sample size. Mandatory, device-wide */
-DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev) = {
+DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 	ZATTR_REG(zdev, ZATTR_NBITS, S_IRUGO, 0, 32), /* 32 bits. Really? */
 };
 
+/* Extended attributes for the device */
+static struct zio_attribute fd_zattr_dev[] = {
+	ZATTR_EXT_REG("utc-h", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_H, 0),
+	ZATTR_EXT_REG("utc-l", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_L, 0),
+	ZATTR_EXT_REG("coarse", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_COARSE, 0),
+};
+
+/* This identifies if our "struct device" is device, input, output */
+enum fd_devtype {
+	FD_TYPE_WHOLEDEV,
+	FD_TYPE_INPUT,
+	FD_TYPE_OUTPUT,
+};
+
+static enum fd_devtype __fd_get_type(struct device *dev)
+{
+	struct zio_obj_head *head = to_zio_head(dev);
+	struct zio_cset *cset;
+
+	if (head->zobj_type == ZDEV)
+		return FD_TYPE_WHOLEDEV;
+	cset = to_zio_cset(dev);
+	if (cset->index == 0)
+		return FD_TYPE_INPUT;
+	return FD_TYPE_OUTPUT;
+}
+
+/* Reading attributes needs to do nothing, only get_time is special */
+static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
+			   uint32_t *usr_val)
+{
+	struct fd_time t;
+	struct zio_device *zdev;
+	struct spec_fd *fd;
+	struct zio_attribute *attr;
+
+	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
+		return 0;
+	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
+		return 0;
+	/* reading utc-h calls an atomic get-time */
+	zdev = to_zio_dev(dev);
+	attr = zdev->zattr_set.ext_zattr;
+	fd = zdev->private_data;
+	fd_time_get(fd, &t, NULL);
+	attr[FD_ATTR_DEV_UTC_H].value = t.utc >> 32;
+	attr[FD_ATTR_DEV_UTC_L].value = t.utc & 0xffffffff;
+	attr[FD_ATTR_DEV_COARSE].value = t.coarse;
+	return 0;
+}
+
+static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
+			    uint32_t  usr_val)
+{
+	return 0; /* FIXME: conf_set */
+}
+
+/*
+ * We are over with attributes, now there's real I/O
+ */
 
 static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
+	struct zio_attribute *attr;
 	uint32_t *v, reg;
 
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
 	if (!chan->active_block)
 		return 0;
+	/*
+	 * The input data is written to attributes in the active block
+	 * and in the attribute structure too (for sysfs access)
+	 */
 	ctrl = zio_get_ctrl(chan->active_block);
-	/* The input data is written to attributes */
 	v = ctrl->attr_channel.ext_val;
-	v[FD_ATTR_IN_UTC_H] = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	v[FD_ATTR_IN_UTC_L] = fd_readl(fd, FD_REG_TSBR_SECL);
-	v[FD_ATTR_IN_COARSE] = fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
+	attr = chan->cset->zattr_set.ext_zattr;
+	/* FIXME: use a table in some way... */
+	attr[FD_ATTR_IN_UTC_H].value = v[FD_ATTR_IN_UTC_H]
+		= fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
+	attr[FD_ATTR_IN_UTC_L].value = v[FD_ATTR_IN_UTC_L]
+		= fd_readl(fd, FD_REG_TSBR_SECL);
+	attr[FD_ATTR_IN_COARSE].value = v[FD_ATTR_IN_COARSE]
+		= fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
 	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	v[FD_ATTR_IN_FRAC] = FD_TSBR_FID_FINE_R(reg);
-	v[FD_ATTR_IN_SEQ] = FD_TSBR_FID_SEQID_R(reg);
-	v[FD_ATTR_IN_CHAN] = FD_TSBR_FID_CHANNEL_R(reg);
+	attr[FD_ATTR_IN_FRAC].value = v[FD_ATTR_IN_FRAC]
+		= FD_TSBR_FID_FINE_R(reg);
+	attr[FD_ATTR_IN_SEQ].value = v[FD_ATTR_IN_SEQ]
+		= FD_TSBR_FID_SEQID_R(reg);
+	attr[FD_ATTR_IN_CHAN].value = v[FD_ATTR_IN_CHAN]
+		= FD_TSBR_FID_CHANNEL_R(reg);
+
 	return 0;
 }
 
@@ -160,6 +235,12 @@ static int fd_zio_probe(struct zio_device *zdev)
 	return 0;
 }
 
+/* Our sysfs operations to access internal settings */
+static const struct zio_sysfs_operations fd_zio_s_op = {
+	.conf_set = fd_zio_conf_set,
+	.info_get = fd_zio_info_get,
+};
+
 /* We have 5 csets, since each output triggers separately */
 static struct zio_cset fd_cset[] = {
 	{
@@ -206,10 +287,13 @@ static struct zio_cset fd_cset[] = {
 static struct zio_device fd_tmpl = {
 	.owner =		THIS_MODULE,
 	.preferred_trigger =	"user",
+	.s_op =			&fd_zio_s_op,
 	.cset =			fd_cset,
 	.n_cset =		ARRAY_SIZE(fd_cset),
 	.zattr_set = {
-		.std_zattr= fd_zattr_dev,
+		.std_zattr= fd_zattr_dev_std,
+		.ext_zattr= fd_zattr_dev,
+		.n_ext_attr = ARRAY_SIZE(fd_zattr_dev),
 	},
 };
 
