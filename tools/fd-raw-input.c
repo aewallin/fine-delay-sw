@@ -31,7 +31,7 @@ struct zio_control ctrl;
 int main(int argc, char **argv)
 {
 	glob_t glob_buf;
-	int fd[MAXFD];
+	int fd[MAXFD], seq[MAXFD];
 	int i, j, maxfd = 0, sequence, last = 0;
 	fd_set allset, curset;
 	int floatmode = 0;
@@ -78,6 +78,7 @@ int main(int argc, char **argv)
 		if (fd[i] > maxfd)
 			maxfd = fd[i];
 		FD_SET(fd[i], &allset);
+		seq[i] = -1;
 	}
 
 	/* Ok, now wait for each of them to spit a timestamp */
@@ -108,11 +109,12 @@ int main(int argc, char **argv)
 			}
 			attrs = ctrl.attr_channel.ext_val;
 			sequence = attrs[FD_ATTR_TDC_SEQ];
-
-			if (sequence  - last != 1)
-				printf("%s: LOST %i events\n", argv[i],
-				       sequence - last - 1);
-			last = sequence;
+			if (seq[i] != -1) {
+				if (sequence  - seq[i] != 1)
+					printf("%s: LOST %i events\n", argv[i],
+					       sequence - seq[i] - 1);
+			}
+			seq[i] = sequence;
 			printf("%s: ", argv[i]);
 			if (floatmode) {
 				t2 = attrs[FD_ATTR_TDC_UTC_L] +
