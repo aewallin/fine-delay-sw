@@ -152,9 +152,14 @@ int fd_probe(struct spec_dev *dev)
 
 	/* Check the binary is there */
 	if (fd_readl(fd, FD_REG_IDR) != FD_MAGIC_FPGA) {
-		pr_err("%s: card at %04x:%04x has wrong gateware\n",
-		       __func__, dev->pdev->bus->number, dev->pdev->devfn);
+		pr_err("%s: card at %04x:%04x (regs @ 0x%x): wrong gateware\n",
+		       __func__, dev->pdev->bus->number, dev->pdev->devfn,
+			fd_regs_offset);
 		return -ENODEV;
+	} else {
+		pr_info("%s: card at %04x:%04x (regs @ 0x%x): initializing\n",
+		       __func__, dev->pdev->bus->number, dev->pdev->devfn,
+			fd_regs_offset);
 	}
 
 	/* First, hardware reset */
