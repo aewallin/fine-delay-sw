@@ -22,3 +22,4 @@ all: modules
 modules_install clean modules:
 	$(MAKE) -C $(LINUX) M=$(shell /bin/pwd) $@
 	$(MAKE) -C tools  M=$(shell /bin/pwd) $@
+	$(MAKE) -C lib $@
