@@ -16,13 +16,29 @@
 /* Opaque data type used as token */
 struct fdelay_board;
 
+struct fdelay_time {
+	uint64_t utc;
+	uint32_t coarse;
+	uint32_t frac;
+	uint32_t seq_id;
+	uint32_t channel;
+};
 
-/* Please see the manual for the meaning of arguments and return values */
+/*
+ * Please see the manual for the meaning of arguments and return values
+ */
+
 extern int fdelay_init(void);
 extern void fdelay_exit(void);
 
 extern struct fdelay_board *fdelay_open(int offset, int dev_id);
 extern int fdelay_close(struct fdelay_board *);
+
+extern int fdelay_set_time(struct fdelay_board *b, struct fdelay_time *t);
+extern int fdelay_get_time(struct fdelay_board *b, struct fdelay_time *t);
+extern int fdelay_set_host_time(struct fdelay_board *b);
+
+
 
 #ifdef FDELAY_INTERNAL /* Libray users should ignore what follows */
 

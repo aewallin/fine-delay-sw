@@ -1,4 +1,4 @@
-fdelay-init.o: fdelay-init.c /usr/include/stdio.h /usr/include/features.h \
+fdelay-time.o: fdelay-time.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/predefs.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
  /usr/include/gnu/stubs-32.h \
