@@ -293,7 +293,7 @@ project).
 * The device::                  
 * Device Attributes::           
 * The Input cset::              
-* The oputput cset::            
+* The Output cset::             
 @end menu
 
 @c ==========================================================================
@@ -602,8 +602,8 @@ of the motherboard, the address is @code{378}):
 @end example
 
 @c ==========================================================================
-@node The oputput cset
-@section The output cset
+@node The Output cset
+@section The Output cset
 
 @b{Note:} This is not documentation at this point in time, it is
 just material for some brainstorming: the code is not there yet.
@@ -628,10 +628,26 @@ on.
 @node Using the Provided API
 @chapter Using the Provided API
 
-@b{Note:} This is not documentation at this point in time, it is
-just material for some brainstorming.
+This chapter describes the higher level interface to the board,
+designed for user applications to use.  The code lives in the @i{lib}
+subdirectory of this package. The directory uses a plain Makefile (not
+a Kbuild one) so it can be copied elsewhere and compiled stand-alone.
+Only, it needs a copy of @code{fine-delay.h} (which it currently pulls
+from the parent directory) and the ZIO headers, retrieved using the
+@code{ZIO} environment variable).
 
-The public interface offered by the initial library is like this:
+@menu
+* The Previous API::            
+* Data Structures::             
+* Using the API::               
+@end menu
+
+@c ==========================================================================
+@node The Previous API
+@section The Previous API
+
+The public interface offered by the initial library, written by
+Tomasz, is as follows. It covers all device features we need to export:
 
 @smallexample
    typedef struct fdelay_device { ... } fdelay_device_t;
@@ -644,63 +660,70 @@ The public interface offered by the initial library is like this:
    int fdelay_release(fdelay_device_t *dev);
    int fdelay_read(fdelay_device_t *dev, fdelay_time_t *timestamps, int how_many);
    int fdelay_configure_trigger(fdelay_device_t *dev, int enable, int termination);
-   int fdelay_configure_output(fdelay_device_t *dev, int channel, int enable, int64_t delay_ps, int64_t width_ps, int64_t delta_ps, int rep_count);
+   int fdelay_configure_output(fdelay_device_t *dev, int channel, int enable,
+       int64_t delay_ps, int64_t width_ps, int64_t delta_ps, int rep_count);
 
    int fdelay_configure_sync(fdelay_device_t *dev, int mode);
    int fdelay_update_sync_status(fdelay_device_t *dev);
    int fdelay_set_time(fdelay_device_t *dev, const fdelay_time_t t);
-   int fdelay_configure_pulse_gen(fdelay_device_t *dev, int channel, int enable, fdelay_time_t t_start, int64_t width_ps, int64_t delta_ps, int rep_count);
+   int fdelay_configure_pulse_gen(fdelay_device_t *dev, int channel, int enable,
+       fdelay_time_t t_start, int64_t width_ps, int64_t delta_ps, int rep_count);
    int fdelay_channel_triggered(fdelay_device_t *dev, int channel);
    int fdelay_get_time(fdelay_device_t *dev, fdelay_time_t *t);
 @end smallexample
 
+This API doesn't support multiple boards but is still a useful reference
+for the feature-set we need.
 While it does everything that's needed for testing, I see some
 issues with it and would like to offer something different.
 
 This is a list of issues I find and that must be discussed before the
 code is finalized with the final public API:
 
-@table @i
+@c ==========================================================================
+@node Initialization and Cleanup
+@section Initialization and Cleanup
 
-@item Multiple boards
+The library offers the following structures and functions:
 
-	The ``fdelay_init'' just fills a pointer passed by the user,
-        which assumes there is one card only. The function should,
-        instead, pass a device id to say which one it wants to open.
+@table @code
 
-@item typedef
+@item struct fdelay_board;
 
-	I'd better not use typedefs, for the same reason the kernel
-        is avoiding them.
+	This is the ``opaque'' token that is being used by library clients.
+        If you want to see the internals define @code{FDELAY_INTERNAL}
+        and look at @i{fdelay_list.c}.
 
-@item fdelay_read
+@item int fdelay_init(void);
+@itemx void fdelay_exit(void);
 
-	This is perfect in my opinion. It resembles the @i{read}
-        system call, and it's great. We must choose what is the
-        structure being returned. I'd love it to be a control block
-        or a ZIO timestamp structure. To be decided.  But we need a
-        function to enable and disable the channel (and disable
-        may flush any pending events, with a flag).  Otherwise we'll
-        continue to enqueue events even if nobody is willing to
-        receive them.
+	The former function allocates its internal data and returns
+	the number of boards currently found on the system. The latter
+        releases any allocated data. If @i{init} fails, it returns -1 with
+        a proper @code{errno} value. If no boards are there it returns 0.
+        You should not load or unload drivers between @i{init} and @i{exit}.
 
-@item configuring output
+@item struct fdelay_board *fdelay_open(int index, int dev_id);
+@item int fdelay_close(struct fdelay_board *);
 
-	Instead of functions with many parameters I'd better pass
-        a pointer to a structure. This simplifies code at the various
-        levels and also allows a user to have two or more predefined
-        configurations and easily activate either with minimal code.
-        In practice, those structures may resemble ZIO attributes, to
-        minimize data marshalling and un-marshalling.
-
-@item asking for events
-
-	Instead of a boolean ``channel_triggered'' I'd offer a flag
-        to the various functions, similar to O_NONBLOCK for files.
-        So the read function may return EAGAIN and we save one level
-        of calls.
+	The former function opens a board and returns a token that can
+        be used in subsequent calls. The latter function undoes it.
+        You can refer to a board either by index or by
+        @code{dev_id}. Either argument (but not both) may be -1. If both
+        are different from -1 the index and dev_id must match. If a mismatch
+        is found, the function return NULL with @code{EINVAL}; if either index or
+        @code{dev_id} are not found, the function returns NULL with @code{ENODEV}.
 
 @end table
+
+The sample program @i{fdelay-list} lists the boards currently on the system,
+using @i{fdelay_init}:
+
+@smallexample
+   spusa# ./fdelay-list
+     dev_id 0200, /dev/zio/zio-fd-0200, /sys/bus/zio/devices/zio-fd-0200
+@end smallexample
+
 
 
 @c ##########################################################################
