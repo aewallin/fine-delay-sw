@@ -32,10 +32,11 @@ int main(int argc, char **argv)
 {
 	glob_t glob_buf;
 	int fd[MAXFD];
-	int i, j, maxfd = 0, last = 0;
+	int i, j, maxfd = 0, sequence, last = 0;
 	fd_set allset, curset;
 	int floatmode = 0;
 	long double t1 = 0.0, t2;
+	uint32_t *attrs;
 
 	if (argc > 1 && !strcmp(argv[1], "-f")) {
 		floatmode = 1;
@@ -93,6 +94,8 @@ int main(int argc, char **argv)
 		case 0:
 			continue;
 		}
+
+
 		for (i = 1; i < argc; i++) {
 			if (!FD_ISSET(fd[i], &curset))
 				continue;
@@ -103,14 +106,17 @@ int main(int argc, char **argv)
 					argv[0], j, sizeof(ctrl));
 				exit(1);
 			}
-			if (ctrl.attr_channel.ext_val[4] - last != 1)
+			attrs = ctrl.attr_channel.ext_val;
+			sequence = attrs[FD_ATTR_IN_SEQ];
+
+			if (sequence  - last != 1)
 				printf("%s: LOST %i events\n", argv[i],
-				       ctrl.attr_channel.ext_val[4] - last - 1);
-			last = ctrl.attr_channel.ext_val[4];
+				       sequence - last - 1);
+			last = sequence;
 			printf("%s: ", argv[i]);
 			if (floatmode) {
-				t2 = ctrl.attr_channel.ext_val[1] +
-					ctrl.attr_channel.ext_val[2]
+				t2 = attrs[FD_ATTR_IN_UTC_L] +
+					attrs[FD_ATTR_IN_COARSE]
 					* .000000008; /* 8ns */
 				if (t1) {
 					printf("%17.9Lf (delta %13.9Lf)\n",
@@ -122,11 +128,11 @@ int main(int argc, char **argv)
 				continue;
 			}
 			printf("%08x %08x %08x %08x %08x\n",
-			       ctrl.attr_channel.ext_val[0],
-			       ctrl.attr_channel.ext_val[1],
-			       ctrl.attr_channel.ext_val[2],
-			       ctrl.attr_channel.ext_val[3],
-			       ctrl.attr_channel.ext_val[4]);
+			       attrs[FD_ATTR_IN_UTC_H],
+			       attrs[FD_ATTR_IN_UTC_L],
+			       attrs[FD_ATTR_IN_COARSE],
+			       attrs[FD_ATTR_IN_FRAC],
+			       attrs[FD_ATTR_IN_SEQ]);
 		}
 	}
 	return 0;
