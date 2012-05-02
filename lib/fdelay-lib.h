@@ -12,6 +12,7 @@
 #ifndef __FDELAY_H__
 #define __FDELAY_H__
 #include <stdint.h>
+#include <fine-delay.h>
 
 /* Opaque data type used as token */
 struct fdelay_board;

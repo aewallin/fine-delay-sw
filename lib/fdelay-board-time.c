@@ -4,7 +4,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "fdelay.h"
+#include "fdelay-lib.h"
 
 int main(int argc, char **argv)
 {

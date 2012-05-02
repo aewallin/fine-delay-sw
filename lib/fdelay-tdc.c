@@ -18,9 +18,8 @@
 
 #include <linux/zio.h>
 #include <linux/zio-user.h>
-#include <fine-delay.h>
 #define FDELAY_INTERNAL
-#include "fdelay.h"
+#include "fdelay-lib.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

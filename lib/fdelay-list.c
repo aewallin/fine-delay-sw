@@ -5,7 +5,7 @@
 #include <errno.h>
 
 #define FDELAY_INTERNAL /* hack... */
-#include "fdelay.h"
+#include "fdelay-lib.h"
 
 int main(int argc, char **argv)
 {
