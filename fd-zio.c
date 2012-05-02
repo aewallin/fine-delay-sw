@@ -97,10 +97,12 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	cset = to_zio_cset(dev);
 	fd = cset->zdev->private_data;
 
-	printk("%s:%i: %i\n", __func__, __LINE__, zattr->priv.addr);
-	if (zattr->priv.addr != FD_ATTR_IN_OFFSET)
-		return 0;
-	*usr_val = fd->calib.tdc_zero_offset;
+	/*
+	 * For efficiency reasons at read_fifo() time, we store an
+	 * array of integers instead of filling attributes, so here
+	 * pick the values from our array.
+	 */
+	*usr_val = fd->tdc_attrs[FD_CSET_INDEX(zattr->priv.addr)];
 
 	return 0;
 }
@@ -168,33 +170,34 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
 	struct zio_attribute *attr;
-	uint32_t *v, reg;
+	uint32_t *v, *a, reg;
 
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
 	if (!chan->active_block)
 		return 0;
-	/*
-	 * The input data is written to attributes in the active block
-	 * and in the attribute structure too (for sysfs access)
-	 */
+	/* The input data is written to attribute values in the active block. */
 	ctrl = zio_get_ctrl(chan->active_block);
 	v = ctrl->attr_channel.ext_val;
-	attr = chan->cset->zattr_set.ext_zattr;
 	/* FIXME: use a table in some way... */
-	attr[FD_ATTR_IN_UTC_H].value = v[FD_ATTR_IN_UTC_H]
+	v[FD_ATTR_IN_UTC_H]
 		= fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	attr[FD_ATTR_IN_UTC_L].value = v[FD_ATTR_IN_UTC_L]
+	v[FD_ATTR_IN_UTC_L]
 		= fd_readl(fd, FD_REG_TSBR_SECL);
-	attr[FD_ATTR_IN_COARSE].value = v[FD_ATTR_IN_COARSE]
+	v[FD_ATTR_IN_COARSE]
 		= fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
 	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	attr[FD_ATTR_IN_FRAC].value = v[FD_ATTR_IN_FRAC]
+	v[FD_ATTR_IN_FRAC]
 		= FD_TSBR_FID_FINE_R(reg);
-	attr[FD_ATTR_IN_SEQ].value = v[FD_ATTR_IN_SEQ]
+	v[FD_ATTR_IN_SEQ]
 		= FD_TSBR_FID_SEQID_R(reg);
-	attr[FD_ATTR_IN_CHAN].value = v[FD_ATTR_IN_CHAN]
+	v[FD_ATTR_IN_CHAN]
 		= FD_TSBR_FID_CHANNEL_R(reg);
+	v[FD_ATTR_IN_OFFSET] =
+		fd->calib.tdc_zero_offset;
+
+	/* We also need a copy within the device, so sysfs can read it */
+	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));
 
 	return 0;
 }
@@ -280,6 +283,9 @@ static int fd_zio_probe(struct zio_device *zdev)
 	/* link the new device from the fd structure */
 	fd = zdev->private_data;
 	fd->zdev = zdev;
+
+	fd->tdc_attrs[FD_CSET_INDEX(FD_ATTR_IN_OFFSET)] = \
+		fd->calib.tdc_zero_offset;
 
 	/* We don't have csets at this point, so don't do anything more */
 	return 0;

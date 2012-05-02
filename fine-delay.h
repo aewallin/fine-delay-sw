@@ -23,6 +23,7 @@ enum fd_zattr_in_idx {
 	FD_ATTR_IN_CHAN,
 	FD_ATTR_IN_FLAGS, /* enable, termination, see below */
 	FD_ATTR_IN_OFFSET,
+	FD_ATTR_IN__LAST,
 };
 #define FD_ATTR_INF_ENABLE	1
 #define FD_ATTR_INF_TERM	2
@@ -84,6 +85,7 @@ struct spec_fd {
 	unsigned long next_t;
 	int temp;			/* temperature: scaled by 4 bits */
 	int verbose;
+	uint32_t tdc_attrs[FD_ATTR_IN__LAST - FD_ATTR_DEV__LAST];
 };
 /* We act on flags using atomic ops, so flag is the number, not the mask */
 enum fd_flags {
