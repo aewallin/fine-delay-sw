@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Ok, now wait for each of them to spit a timestamp */
+	setlinebuf(stdout);
 	while (1) {
 		curset = allset;
 		switch(select(maxfd + 1, &curset, NULL, NULL, NULL)) {
