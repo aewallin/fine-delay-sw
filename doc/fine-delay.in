@@ -638,14 +638,13 @@ from the parent directory) and the ZIO headers, retrieved using the
 
 @menu
 * The Previous API::            
-* Data Structures::             
-* Using the API::               
+* Initialization and Cleanup::  
+* Time Management::             
 @end menu
 
 @c ==========================================================================
 @node The Previous API
 @section The Previous API
-
 The public interface offered by the initial library, written by
 Tomasz, is as follows. It covers all device features we need to export:
 
@@ -724,7 +723,50 @@ using @i{fdelay_init}:
      dev_id 0200, /dev/zio/zio-fd-0200, /sys/bus/zio/devices/zio-fd-0200
 @end smallexample
 
+@c ==========================================================================
+@node Time Management
+@section Time Management
 
+These are the primitives the library offers for time management.
+
+@table @code
+
+@item struct fdelay_time;
+
+	The structure has the same fields as the one in the initial
+        user-space library. All but @i{utc} are unsigned 32-bit values
+        whereas they were different types in the first library.
+
+@item int fdelay_set_time(struct fdelay_board *b, struct fdelay_time *t);
+@itemx int fdelay_get_time(struct fdelay_board *b, struct fdelay_time *t);
+
+	The functions are used to set board time from a user-provided
+        time, and to retrieve the current board time to user space.
+        The functions return 0 on success. They only use the fields
+        @i{utc} and @i{coarse} of @code{struct fdelay_time}.
+
+@item int fdelay_set_host_time(struct fdelay_board *b);
+
+	The function sets board time equal to host time. The precision
+        should be in the order of 1 microsecond, but will drift over time.
+
+@end table
+
+The current API clearly lacks a function to report the offset from
+board-time and system-time.
+
+The program @i{fdelay-board-time} is a command-line front-end to the library,
+to validate the library works as expected:
+
+@smallexample
+   spusa# ./fdelay-board-time  25.5; ./fdelay-board-time get
+   25.500661824
+   spusa# ./fdelay-board-time  get
+   34.111048968
+   spusa# ./fdelay-board-time  host
+   spusa# ./fdelay-board-time  get
+   1335974946.493415600
+@end smallexample
 
 @c ##########################################################################
 @node Known bugs and missing features
@@ -810,4 +852,4 @@ where the spec driver can find it. In my case the file name is
 @c  LocalWords:  gnudd titlepage iftex texinfo CERN documentlanguage settitle
 @c  LocalWords:  documentencoding setfilename afourpaper paragraphindent FPGA
 @c  LocalWords:  setchapternewpage finalout gateware ohwr modprobe insmod cset
-@c  LocalWords:  smallexample ctrl timestamp
+@c  LocalWords:  smallexample ctrl timestamp fdelay struct spusa
