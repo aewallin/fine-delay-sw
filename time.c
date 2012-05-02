@@ -20,13 +20,14 @@
 /* If fd_time is not null, use it. if ts is not null, use it, else current */
 int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 {
-	uint32_t tcr;
+	uint32_t tcr, gcr;
 	unsigned long flags;
 	struct timespec localts;
 
 	spin_lock_irqsave(&fd->lock, flags);
 
-	fd_writel(fd, 0, FD_REG_GCR);
+	gcr = fd_readl(fd, FD_REG_GCR);
+	fd_writel(fd, 0, FD_REG_GCR); /* zero the GCR while setting time */
 	if (t) {
 		fd_writel(fd, t->utc >> 32, FD_REG_TM_SECH);
 		fd_writel(fd, t->utc & 0xffffffff, FD_REG_TM_SECL);
@@ -47,6 +48,7 @@ int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 
 	tcr = fd_readl(fd, FD_REG_TCR);
 	fd_writel(fd, tcr | FD_TCR_SET_TIME, FD_REG_TCR);
+	fd_writel(fd, gcr, FD_REG_GCR); /* Restore GCR */
 
 	spin_unlock_irqrestore(&fd->lock, flags);
 	return 0;
