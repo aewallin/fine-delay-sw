@@ -27,31 +27,6 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
-/*
- * We have a number of attributes here. For input channels they are:
- *
- * UTC-h (expected to be 0 untile 2038 a.d.),
- * UTC-l
- * coarse time
- * fractional time
- * sequential ID
- * channel
- * flags
- *
- * See the enum in "fine-delay.h"
- */
-
-static struct zio_attribute fd_zattr_input[] = {
-	ZATTR_EXT_REG("utc-h", S_IRUGO,		FD_ATTR_TDC_UTC_H, 0),
-	ZATTR_EXT_REG("utc-l", S_IRUGO,		FD_ATTR_TDC_UTC_L, 0),
-	ZATTR_EXT_REG("coarse", S_IRUGO,	FD_ATTR_TDC_COARSE, 0),
-	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
-	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
-	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
-	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_TDC_FLAGS, 0),
-	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_TDC_OFFSET, 0),
-};
-
 /* The sample size. Mandatory, device-wide */
 DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 	ZATTR_REG(zdev, ZATTR_NBITS, S_IRUGO, 0, 32), /* 32 bits. Really? */
@@ -64,8 +39,21 @@ static struct zio_attribute fd_zattr_dev[] = {
 	ZATTR_EXT_REG("utc-h", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_H, 0),
 	ZATTR_EXT_REG("utc-l", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_L, 0),
 	ZATTR_EXT_REG("coarse", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_COARSE, 0),
-	ZATTR_EXT_REG("host-time", S_IWUGO,		FD_ATTR_DEV_HOST_T, 0),
+	ZATTR_EXT_REG("command", S_IWUGO,		FD_ATTR_DEV_COMMAND, 0),
 };
+
+/* Extended attributes for the TDC (== input) cset */
+static struct zio_attribute fd_zattr_input[] = {
+	ZATTR_EXT_REG("utc-h", S_IRUGO,		FD_ATTR_TDC_UTC_H, 0),
+	ZATTR_EXT_REG("utc-l", S_IRUGO,		FD_ATTR_TDC_UTC_L, 0),
+	ZATTR_EXT_REG("coarse", S_IRUGO,	FD_ATTR_TDC_COARSE, 0),
+	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
+	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
+	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
+	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_TDC_FLAGS, 0),
+	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_TDC_OFFSET, 0),
+};
+
 
 /* This identifies if our "struct device" is device, input, output */
 enum fd_devtype {
@@ -148,18 +136,26 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	attr = zdev->zattr_set.ext_zattr;
 	fd = zdev->private_data;
 
-	/* Special case: set host time to the board */
-	if (zattr->priv.addr == FD_ATTR_DEV_HOST_T)
-		return fd_time_set(fd, NULL, NULL);
-
-	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
+	if (zattr->priv.addr == FD_ATTR_DEV_UTC_H) {
+		/* writing utc-h calls an atomic set-time */
+		t.utc = (uint64_t)attr[FD_ATTR_DEV_UTC_H].value << 32;
+		t.utc |= attr[FD_ATTR_DEV_UTC_L].value;
+		t.coarse = attr[FD_ATTR_DEV_COARSE].value;
+		fd_time_set(fd, &t, NULL);
 		return 0;
-	/* writing utc-h calls an atomic set-time */
-	t.utc = (uint64_t)attr[FD_ATTR_DEV_UTC_H].value << 32;
-	t.utc |= attr[FD_ATTR_DEV_UTC_L].value;
-	t.coarse = attr[FD_ATTR_DEV_COARSE].value;
-	fd_time_set(fd, &t, NULL);
-	return 0;
+	}
+
+	/* Not command, nothing to do */
+	if (zattr->priv.addr != FD_ATTR_DEV_COMMAND)
+		return 0;
+
+	printk("command %i\n", usr_val);
+	switch(usr_val) {
+	case FD_CMD_HOST_TIME:
+		return fd_time_set(fd, NULL, NULL);
+	default:
+		return -EINVAL;
+	}
 }
 
 /*

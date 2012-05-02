@@ -360,7 +360,8 @@ directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
 @section Device Attributes
 
 Device-wide attributes are the three time tags (@i{utc-h}, @i{utc-l},
-@i{coarse}) and a write-only @i{host-time}.  To read device time you
+@i{coarse}), a read-only @i{version} and a write-only @i{command}.
+To read device time you
 should read @i{utc-h} first.  Reading @u{utc-h} will atomically read
 all values from the card and store them in the software driver: by
 reading @i{utc-l} and @i{coarse} you'll get such cached values.
@@ -385,20 +386,25 @@ last: writing @i{utc-h} atomically programs the hardware:
    10003
 @end smallexample
 
-If you write any value to @i{host-time}, board time will be
+If you write 0 to @i{command}, board time will be
 synchronized to the current Linux clock within one microsecond
 (reading Linux time and writing to the @i{fine-delay} registers is
 done with interrupts disabled, so the actual synchronization precision
 depends on the speed of your CPU and PCI bus):
 
 @smallexample
-   spusa# cat utc-h utc-l; echo 0 > host-time; cat utc-h utc-l; date +%s
+   spusa# cat utc-h utc-l; echo 0 > command; cat utc-h utc-l; date +%s
    0
    50005
    0
    1335948116
    1335948116
 @end smallexample
+
+I chose to offer a @i{command} channel, which is opaque to the user,
+because there are several commands that you may need to send to the
+device, and we need to limit the number of attributes. The command numbers
+are enumerated in @code{fine-delay.h} 
 
 @menu
 * Reading Board Time::          
@@ -440,7 +446,7 @@ the current board time using @i{sysfs} directly:
 @b{Note:} the tool is bugged as of 2038 because it assumes utc-h is 0.
 
 No tool is there to sync the board to Linux time, because writing
-to the @i{host-time} attribute is atomic by itself.
+0 to the @i{command} attribute is atomic by itself.
 
 @c ==========================================================================
 @node The Input cset
@@ -791,8 +797,6 @@ allows:
 
 @item Output support is missing. It simply is not there at this point.
 
-@item The API for C programs is missing. This is being worked on.
-
 @item We need interrupt support. The input is performed with a kernel timer.
 Also, we need an in-driver buffer for input samples.
 
@@ -801,6 +805,8 @@ the output delay calibrated.
 
 @item There is no EEPROM support. The driver uses default calibration
 settings and no i2c support is there yet.
+
+@item Offsets for input and output timestamps are not used at this point.
 
 @item We need a module parameter to avoid probing non-fine-delay SPEC
 cards. Reading the magic number from an SPEC that is not programmed
@@ -824,6 +830,7 @@ them.
 
 @menu
 * Wrong FPGA Image::            
+* Version Mismatch::            
 @end menu
 
 @c ==========================================================================
@@ -844,6 +851,23 @@ In this case, a message like the following one is reported:
 If this happens, please put the binary image in @i{/lib/firmware}
 where the spec driver can find it. In my case the file name is
 @code{spec-B0002.bin} (refer to @i{spec-sw} documentation for details.
+
+@c ==========================================================================
+@node Version Mismatch
+@section Version Mismatch
+
+The @i{fdelay} library may report a version mismatch like this:
+
+@example
+   spusa# ./fdelay-board-time  get
+   fdelay_init: version mismatch, lib(1) != drv(2)
+   ./fdelay-board-time: fdelay_init(): Input/output error
+@end example
+
+This reports a difference in the way ZIO attributes are laid out, so user
+space may exchange wrong data in the ZIO control block, or may try to
+access inexistent files in @i{/sys}. I suggest recompiling both the kernel
+driver and user space from a single release of the source package.
 
 
 @c ##########################################################################

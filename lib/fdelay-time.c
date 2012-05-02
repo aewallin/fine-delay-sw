@@ -62,7 +62,7 @@ int fdelay_get_time(struct fdelay_board *userb, struct fdelay_time *t)
 	for (i = 0; i < ARRAY_SIZE(names); i++)
 		if (fdelay_sysfs_get(b, names[i], attrs + i) < 0)
 			return -1;
-	t->utc = attrs[0] << 32;
+	t->utc = (long long)attrs[0] << 32;
 	t->utc += attrs[1];
 	t->coarse = attrs[2];
 	return 0;
@@ -71,8 +71,8 @@ int fdelay_get_time(struct fdelay_board *userb, struct fdelay_time *t)
 int fdelay_set_host_time(struct fdelay_board *userb)
 {
 	__define_board(b, userb);
-	uint32_t i = 0;
+	uint32_t i = FD_CMD_HOST_TIME;
 
-	return fdelay_sysfs_set(b, "host-time", &i);
+	return fdelay_sysfs_set(b, "command", &i);
 }
 

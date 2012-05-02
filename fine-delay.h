@@ -17,11 +17,15 @@ enum fd_zattr_dev_idx {
 	FD_ATTR_DEV_UTC_H,
 	FD_ATTR_DEV_UTC_L,
 	FD_ATTR_DEV_COARSE,
-	FD_ATTR_DEV_HOST_T,
+	FD_ATTR_DEV_COMMAND, /* see below for commands */
 	FD_ATTR_DEV_RESERVE_5,
 	FD_ATTR_DEV_RESERVE_6,
 	FD_ATTR_DEV_RESERVE_7,
 	FD_ATTR_DEV__LAST,
+};
+
+enum fd_command {
+	FD_CMD_HOST_TIME = 0,
 };
 
 
