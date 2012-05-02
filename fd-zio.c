@@ -121,6 +121,56 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 	return 0;
 }
 
+/* TDC input attributes: the flags */
+static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
+			    uint32_t  usr_val)
+{
+	struct zio_cset *cset;
+	struct spec_fd *fd;
+	uint32_t reg;
+	int change;
+
+	cset = to_zio_cset(dev);
+	fd = cset->zdev->private_data;
+
+	if (zattr->priv.addr != FD_ATTR_TDC_FLAGS)
+		goto out;
+
+	change = zattr->value ^ usr_val; /* old xor new */
+
+	/* No need to lock, as configuration is serialized by zio-core */
+	if (change & FD_TDCF_DISABLE_INPUT) {
+		reg = fd_readl(fd, FD_REG_GCR);
+		if (usr_val & FD_TDCF_DISABLE_INPUT)
+			reg &= ~FD_GCR_INPUT_EN;
+		else
+			reg |= FD_GCR_INPUT_EN;
+		fd_writel(fd, reg, FD_REG_GCR);
+	}
+
+	if (change & FD_TDCF_DISABLE_TSTAMP) {
+		reg = fd_readl(fd, FD_REG_TSBCR);
+		if (usr_val & FD_TDCF_DISABLE_TSTAMP)
+			reg &= ~FD_TSBCR_ENABLE;
+		else
+			reg |= FD_TSBCR_ENABLE;
+		fd_writel(fd, reg, FD_REG_TSBCR);
+	}
+
+	if (change & FD_TDCF_TERM_50) {
+		if (usr_val & FD_TDCF_TERM_50)
+			fd_gpio_set(fd, FD_GPIO_TERM_EN);
+		else
+			fd_gpio_clr(fd, FD_GPIO_TERM_EN);
+	}
+out:
+	/* We need to store in the other array too (see info_tdc() above) */
+	fd->tdc_attrs[FD_CSET_INDEX(zattr->priv.addr)] = usr_val;
+
+	return 0;
+}
+
+/* conf_set dispatcher and  and device-wide attributes */
 static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 			    uint32_t  usr_val)
 {
@@ -130,7 +180,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	struct zio_attribute *attr;
 
 	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
-		return 0; /* FIXME: no support for cset attrs yet */
+		return fd_zio_conf_tdc(dev, zattr, usr_val);
 
 	zdev = to_zio_dev(dev);
 	attr = zdev->zattr_set.ext_zattr;
@@ -149,7 +199,6 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	if (zattr->priv.addr != FD_ATTR_DEV_COMMAND)
 		return 0;
 
-	printk("command %i\n", usr_val);
 	switch(usr_val) {
 	case FD_CMD_HOST_TIME:
 		return fd_time_set(fd, NULL, NULL);

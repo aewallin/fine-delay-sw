@@ -41,8 +41,10 @@ enum fd_zattr_in_idx {
 	FD_ATTR_TDC_OFFSET,
 	FD_ATTR_TDC__LAST,
 };
-#define FD_ATTR_TDCF_ENABLE	1
-#define FD_ATTR_TDCF_TERM	2
+/* Names have been chosen so that 0 is the default at load time */
+#define FD_TDCF_DISABLE_INPUT	1
+#define FD_TDCF_DISABLE_TSTAMP	2
+#define FD_TDCF_TERM_50		4
 
 /*
  * Cset attributes are concatenated to device attributes in the control
