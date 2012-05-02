@@ -26,6 +26,7 @@ enum fd_zattr_dev_idx {
 
 enum fd_command {
 	FD_CMD_HOST_TIME = 0,
+	/* FIXME: we may have cmds for FD_TSBCR_PURGE and FD_TSBCR_RST_SEQ */
 };
 
 
@@ -114,11 +115,11 @@ enum fd_flags {
 
 /* Internal time: the first three fields should be converted to zio time */
 struct fd_time {
-	int64_t utc;
-	int32_t coarse;
-	int32_t frac;
-	int channel;
-	uint16_t seq_id;
+	uint64_t utc;
+	uint32_t coarse;
+	uint32_t frac;
+	uint32_t channel;
+	uint32_t seq_id;
 };
 
 
