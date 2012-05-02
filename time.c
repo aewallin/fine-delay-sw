@@ -66,7 +66,6 @@ int fd_time_get(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 	c = fd_readl(fd, FD_REG_TM_CYCLES);
 	spin_unlock_irqrestore(&fd->lock, flags);
 
-	printk("%s: got %i %i %i\n", __func__, h, l, c);
 	if (t) {
 		t->utc = ((uint64_t)h << 32) | l;
 		t->coarse = c;
