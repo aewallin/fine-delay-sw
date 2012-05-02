@@ -49,6 +49,7 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_IN_SEQ, 0),
 	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_IN_CHAN, 0),
 	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_IN_FLAGS, 0),
+	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_IN_OFFSET, 0),
 };
 
 /* The sample size. Mandatory, device-wide */
@@ -86,7 +87,25 @@ static enum fd_devtype __fd_get_type(struct device *dev)
 	return FD_TYPE_OUTPUT;
 }
 
-/* Reading attributes needs to do nothing, only get_time is special */
+/* TDC input attributes: only the offset is special */
+static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
+			     uint32_t *usr_val)
+{
+	struct zio_cset *cset;
+	struct spec_fd *fd;
+
+	cset = to_zio_cset(dev);
+	fd = cset->zdev->private_data;
+
+	printk("%s:%i: %i\n", __func__, __LINE__, zattr->priv.addr);
+	if (zattr->priv.addr != FD_ATTR_IN_OFFSET)
+		return 0;
+	*usr_val = fd->calib.tdc_zero_offset;
+
+	return 0;
+}
+
+/* Overall and device-wide attributes: only get_time is special */
 static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 			   uint32_t *usr_val)
 {
@@ -95,6 +114,8 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 	struct spec_fd *fd;
 	struct zio_attribute *attr;
 
+	if (__fd_get_type(dev) == FD_TYPE_INPUT)
+		return fd_zio_info_tdc(dev, zattr, usr_val);
 	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
 		return 0;
 	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
@@ -248,7 +269,7 @@ static int fd_input(struct zio_cset *cset)
 }
 
 /*
- * The probe remove receives a new zio_device, which is different from
+ * The probe function receives a new zio_device, which is different from
  * what we allocated (that one is the "hardwre" device) but has the
  * same private data. So we make the link and return success.
  */
@@ -256,8 +277,11 @@ static int fd_zio_probe(struct zio_device *zdev)
 {
 	struct spec_fd *fd;
 
+	/* link the new device from the fd structure */
 	fd = zdev->private_data;
 	fd->zdev = zdev;
+
+	/* We don't have csets at this point, so don't do anything more */
 	return 0;
 }
 

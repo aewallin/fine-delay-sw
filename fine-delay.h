@@ -22,9 +22,17 @@ enum fd_zattr_in_idx {
 	FD_ATTR_IN_SEQ,
 	FD_ATTR_IN_CHAN,
 	FD_ATTR_IN_FLAGS, /* enable, termination, see below */
+	FD_ATTR_IN_OFFSET,
 };
 #define FD_ATTR_INF_ENABLE	1
 #define FD_ATTR_INF_TERM	2
+
+/*
+ * Cset attributes are concatenated to device attributes in the control
+ * structure, but they start from 0 when allocate for the individual cset
+ */
+#define FD_CSET_INDEX(i) ((i) - FD_ATTR_DEV__LAST)
+
 
 
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
