@@ -58,6 +58,8 @@ DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 
 /* Extended attributes for the device */
 static struct zio_attribute fd_zattr_dev[] = {
+	ZATTR_EXT_REG("version", S_IRUGO,		FD_ATTR_DEV_VERSION,
+		      FDELAY_VERSION),
 	ZATTR_EXT_REG("utc-h", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_H, 0),
 	ZATTR_EXT_REG("utc-l", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_L, 0),
 	ZATTR_EXT_REG("coarse", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_COARSE, 0),

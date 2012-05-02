@@ -349,10 +349,10 @@ directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
 
 @smallexample
    spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/
-   ./      enable           coarse      driver     fd-ch3/
-   ../     resolution-bits  host-time   fd-input/  fd-ch4/
-   uevent  utc-h            subsystem   fd-ch1/
-   name    utc-l            power/      fd-ch2/
+   ./      enable           utc-l       power/     fd-ch2/
+   ../     resolution-bits  coarse      driver@    fd-ch3/
+   uevent  version          host-time   fd-input/  fd-ch4/
+   name    utc-h            subsystem@  fd-ch1/
 @end smallexample
 
 @c ==========================================================================

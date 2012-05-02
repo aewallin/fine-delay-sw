@@ -3,15 +3,19 @@
 
 /* Device-wide ZIO attributes */
 enum fd_zattr_dev_idx {
-	FD_ATTR_DEV_UTC_H = 0,
+	FD_ATTR_DEV_VERSION = 0,
+	FD_ATTR_DEV_UTC_H,
 	FD_ATTR_DEV_UTC_L,
 	FD_ATTR_DEV_COARSE,
 	FD_ATTR_DEV_HOST_T,
+	FD_ATTR_DEV__LAST,
 };
+
+#define FDELAY_VERSION		1 /* Used to handle incompatibilities */
 
 /* Input ZIO attributes (actually, the internal time is represented as attrs */
 enum fd_zattr_in_idx {
-	FD_ATTR_IN_UTC_H = 0,
+	FD_ATTR_IN_UTC_H = FD_ATTR_DEV__LAST,
 	FD_ATTR_IN_UTC_L,
 	FD_ATTR_IN_COARSE,
 	FD_ATTR_IN_FRAC,
