@@ -15,8 +15,8 @@ lib: $(LIB)
 
 demos: $(DEMOS)
 
-%: %.c
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+%: %.c $(LIB)
+	$(CC) $(CFLAGS) $*.c $(LDFLAGS) -o $@
 
 $(LIB): $(LOBJ)
 	ar r $@ $^
