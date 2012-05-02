@@ -1,4 +1,5 @@
 fd-raw-input
 parport-burst
 fd-raw-gettime
+fd-raw-settime
 

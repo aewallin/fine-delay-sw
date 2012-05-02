@@ -6,6 +6,7 @@ HOSTCC ?= gcc
 
 hostprogs-y := fd-raw-input
 hostprogs-y += fd-raw-gettime
+hostprogs-y += fd-raw-settime
 hostprogs-y += parport-burst
 
 # we are not in the kernel, so we need to piggy-back on "make modules"
@@ -19,4 +20,4 @@ module_install:
 
 # we need this as we are out of the kernel
 %: %.c
-	$(HOSTCC) $(HOST_EXTRACFLAGS) -Wall $^ -o $@
+	$(HOSTCC) $(HOST_EXTRACFLAGS) -O2 -Wall $^ -o $@

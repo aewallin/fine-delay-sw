@@ -29,3 +29,18 @@ static inline int fdelay_sysfs_get(char *path, uint32_t *resp)
 	fclose(f);
 	return 0;
 }
+
+static inline int fdelay_sysfs_set(char *path, uint32_t *value)
+{
+	FILE *f = fopen(path, "w");
+
+	if (!f)
+		return -1;
+	if (fprintf(f, "%i\n", *value) < 2) {
+		fclose(f);
+		errno = EINVAL;
+		return -1;
+	}
+	fclose(f);
+	return 0;
+}
