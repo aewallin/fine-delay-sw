@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			attrs = ctrl.attr_channel.ext_val;
-			sequence = attrs[FD_ATTR_IN_SEQ];
+			sequence = attrs[FD_ATTR_TDC_SEQ];
 
 			if (sequence  - last != 1)
 				printf("%s: LOST %i events\n", argv[i],
@@ -115,8 +115,8 @@ int main(int argc, char **argv)
 			last = sequence;
 			printf("%s: ", argv[i]);
 			if (floatmode) {
-				t2 = attrs[FD_ATTR_IN_UTC_L] +
-					attrs[FD_ATTR_IN_COARSE]
+				t2 = attrs[FD_ATTR_TDC_UTC_L] +
+					attrs[FD_ATTR_TDC_COARSE]
 					* .000000008; /* 8ns */
 				if (t1) {
 					printf("%17.9Lf (delta %13.9Lf)\n",
@@ -128,11 +128,11 @@ int main(int argc, char **argv)
 				continue;
 			}
 			printf("%08x %08x %08x %08x %08x\n",
-			       attrs[FD_ATTR_IN_UTC_H],
-			       attrs[FD_ATTR_IN_UTC_L],
-			       attrs[FD_ATTR_IN_COARSE],
-			       attrs[FD_ATTR_IN_FRAC],
-			       attrs[FD_ATTR_IN_SEQ]);
+			       attrs[FD_ATTR_TDC_UTC_H],
+			       attrs[FD_ATTR_TDC_UTC_L],
+			       attrs[FD_ATTR_TDC_COARSE],
+			       attrs[FD_ATTR_TDC_FRAC],
+			       attrs[FD_ATTR_TDC_SEQ]);
 		}
 	}
 	return 0;
