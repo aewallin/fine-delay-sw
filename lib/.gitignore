@@ -1,3 +1,5 @@
 *.a
+.depend
 fdelay-list
 fdelay-board-time
+fdelay-term

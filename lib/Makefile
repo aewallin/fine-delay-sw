@@ -3,12 +3,14 @@
 LIB = libfdelay.a
 LOBJ := fdelay-init.o
 LOBJ += fdelay-time.o
+LOBJ += fdelay-tdc.o
 
 CFLAGS = -Wall -ggdb -O2 -I.. -I$(ZIO)/include
 LDFLAGS = -L. -lfdelay
 
 DEMOSRC := fdelay-list.c
 DEMOSRC += fdelay-board-time.c
+DEMOSRC += fdelay-term.c
 
 DEMOS := $(DEMOSRC:.c=)
 
