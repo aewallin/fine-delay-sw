@@ -15,9 +15,13 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/math64.h>
+#include <linux/moduleparam.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 #include "hw/acam_gpx.h"
+
+int fd_calib_period_s = 30;
+module_param_named(calib_s, fd_calib_period_s, int, 0444);
 
 /*
  * Calculation is fixed point: picoseconds and 16 decimals (i.e. ps << 16).
@@ -331,10 +335,15 @@ int fd_acam_init(struct spec_fd *fd)
 	fd_writel(fd, 3 * fd->calib.acam_start_offset, FD_REG_ASOR);
 	fd_writel(fd, fd->calib.atmcr_val, FD_REG_ATMCR);
 
+	/* Prepare the timely recalibration */
+	setup_timer(&fd->temp_timer, fd_update_calibration, (unsigned long)fd);
+	if (fd_calib_period_s)
+		mod_timer(&fd->temp_timer, jiffies + HZ * fd_calib_period_s);
+
 	return 0;
 }
 
 void fd_acam_exit(struct spec_fd *fd)
 {
-	/* nothing to do */
+	del_timer_sync(&fd->temp_timer);
 }

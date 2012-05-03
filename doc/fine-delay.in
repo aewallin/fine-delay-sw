@@ -275,6 +275,12 @@ The following parameters are used:
         polling code. The interval by default is 10ms and currently
         only one timestamp is retrieved at each timer execution.
 
+@item calib_s=
+
+	The period, in seconds, of temperature measurement to recalibrate
+        the output delays. Defaults to 30. If set to zero, the timer is
+        not activated.
+
 @end table
 
 @c ##########################################################################

@@ -304,7 +304,7 @@ static void fd_timer_fn(unsigned long arg)
 	}
 
 out:
-	mod_timer(&fd->timer, jiffies + fd_timer_period_jiffies);
+	mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 }
 
 static int fd_output(struct zio_cset *cset)
@@ -490,15 +490,15 @@ int fd_zio_init(struct spec_fd *fd)
 		return err;
 	}
 
-	setup_timer(&fd->timer, fd_timer_fn, (unsigned long)fd);
+	setup_timer(&fd->fifo_timer, fd_timer_fn, (unsigned long)fd);
 	if (fd_timer_period_ms)
-		mod_timer(&fd->timer, jiffies + fd_timer_period_jiffies);
+		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 	return 0;
 }
 
 void fd_zio_exit(struct spec_fd *fd)
 {
-	del_timer_sync(&fd->timer);
+	del_timer_sync(&fd->fifo_timer);
 	zio_unregister_device(fd->hwzdev);
 	zio_free_device(fd->hwzdev);
 }

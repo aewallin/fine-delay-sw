@@ -93,7 +93,8 @@ struct spec_fd {
 	unsigned long flags;
 	struct spec_dev *spec;
 	struct zio_device *zdev, *hwzdev;
-	struct timer_list timer;
+	struct timer_list fifo_timer;
+	struct timer_list temp_timer;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
 	unsigned char __iomem *base;	/* regs files are byte-oriented */
@@ -240,6 +241,9 @@ extern void acam_writel(struct spec_fd *fd, int val, int reg);
 
 /* Functions exported by calibrate.c, called within acam.c */
 extern int fd_calibrate_outputs(struct spec_fd *fd);
+extern void fd_update_calibration(unsigned long arg);
+extern int fd_calib_period_s;
+
 
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct spec_fd *fd);

@@ -179,25 +179,55 @@ static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
 int fd_calibrate_outputs(struct spec_fd *fd)
 {
 	int ret, ch;
-	int measured, fitted;
+	int measured, fitted, new;
 
 	acam_set_bypass(fd, 1); /* not useful */
 	fd_writel(fd, FD_TDCSR_START_EN | FD_TDCSR_STOP_EN, FD_REG_TDCSR);
 
 	if ((ret = acam_test_delay_transfer_function(fd)) < 0)
 		return ret;
-	fitted = fd_eval_polynomial(fd);
-	for (ch = FD_CH_1; ch <= FD_CH_LAST; ch++) {
-		fd_read_temp(fd, 0);
-		measured = fd_find_8ns_tap(fd, ch);
-		fd->ch[ch].frr_cur = measured;
-		fd->ch[ch].frr_offset = measured - fitted;
 
-		pr_info("%s: ch %i: 8ns @ %i (f %i, offset %i, t %i.%02i)\n",
-			__func__, FD_CH_EXT(ch),
-			fd->ch[ch].frr_cur, fitted, fd->ch[ch].frr_offset,
-			fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+	fd_read_temp(fd, 0);
+	fitted = fd_eval_polynomial(fd);
+
+	for (ch = FD_CH_1; ch <= FD_CH_LAST; ch++) {
+		measured = fd_find_8ns_tap(fd, ch);
+		new = measured;
+		fd->ch[ch].frr_offset = new - fitted;
+
+		fd_ch_writel(fd, ch, new, FD_REG_FRR);
+		fd->ch[ch].frr_cur = new;
+		if (1) {
+			pr_info("%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
+				__func__, FD_CH_EXT(ch),
+				new, fitted, fd->ch[ch].frr_offset,
+				fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+		}
 	}
 	return 0;
+}
+
+/* Called from a timer any few seconds */
+void fd_update_calibration(unsigned long arg)
+{
+	struct spec_fd *fd = (void *)arg;
+	int ch, fitted, new;
+
+	fd_read_temp(fd, 0 /* not verbose */);
+	fitted = fd_eval_polynomial(fd);
+
+	for (ch = FD_CH_1; ch <= FD_CH_LAST; ch++) {
+		new = fitted + fd->ch[ch].frr_offset;
+		fd_ch_writel(fd, ch, new, FD_REG_FRR);
+		fd->ch[ch].frr_cur = new;
+		if (0) {
+			pr_info("%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
+				__func__, FD_CH_EXT(ch),
+				new, fitted, fd->ch[ch].frr_offset,
+				fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+		}
+	}
+
+	mod_timer(&fd->temp_timer, jiffies + HZ * fd_calib_period_s);
 }
 
