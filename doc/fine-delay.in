@@ -967,16 +967,11 @@ allows:
 
 @itemize @bullet
 
-@item Most example programs only use the ``first'' board in the system.
-
 @item There is no support for White Rabbit at this time.
 
 @item Output support is missing. It simply is not there at this point.
 
 @item We need interrupt support. The input is performed with a kernel timer.
-
-@item The driver should re-measure temperature every 30s, to keep
-the output delay calibrated.
 
 @item There is no EEPROM support. The driver uses default calibration
 settings.
@@ -997,10 +992,13 @@ urgent as I write this:
 
 @item The driver should register its own ZIO trigger, or use the new
 attribute for ``greedy-input'' offered in new versions of ZIO
-(thank you Federico).
+(thank you Federico). Currently there's no buffering and reading is
+a little slow.
 
 @item We may implement commands to flush the input queue and reset the
 input sequence number.
+
+@item Most example programs only use the ``first'' board in the system.
 
 @end itemize
 
