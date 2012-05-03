@@ -181,9 +181,10 @@ when this driver is completed.
    sudo make modules_install
 @end example
 
-@b{Warning:} the commit-ID above is volatile until this driver is
-finalized, that's why the command above retrieves the @i{current}
+@b{Warning:} the commit-ID above might change in the future,
+that's why the command above retrieves the @i{current}
 branch @code{for-linux-2.6.32} if the first checkout fails.
+I don't plan to change this during May 2012, though.
 
 
 The procedure for @i{spec-sw} is similar, but the master branch will
@@ -202,9 +203,10 @@ identifier.
    sudo make modules_install
 @end example
 
-@b{Warning:} the commit-ID above is volatile until this driver is
-finalized, that's why the command above retrieves the @i{current}
+@b{Warning:} the commit-ID above might change in the future,
+that's why the command above retrieves the @i{current}
 branch @code{for-linux-2.6.32} if the first checkout fails.
+I don't plan to change this during May 2012, though.
 @c FIXME: the commit identifiers.
 
 Finally, you need to compile and install this driver, using the following
@@ -310,7 +312,9 @@ implementation (@code{fdelay_lib.h}) to avoid trying to compile older
 code with new headers.
 
 @item The @i{tools} directory includes standalone tools that access ZIO
-directly. Their name begins with @code{fd-raw-}.
+directly. Their name begins with @code{fd-raw-} (but there is a
+non-fine-delay tool to generate pulses on the parallel port, which has
+a different name pattern).
 
 @item The @i{lib} directory includes example programs for the library.
 Unfortunately sources of programs and library files both begin with
@@ -671,24 +675,114 @@ of the motherboard, the address is @code{378}):
 @node The Output cset
 @section The Output cset
 
-@b{Note:} This is not documentation at this point in time, it is
-just material for some brainstorming: the code is not there yet.
-
 The output channels need some configuration to be provided. This
 is done using attributes. Attributes can either be written in
 @i{sysfs} or can be passed in the control block that sides data.
 
-While in theory we may define the channels as zero-data ones (like the
-input channel described earlier), this would prevent a shell user to
-configure the output: attributes can be set in @i{sysfs} but then to
-fire the action you'll need to write a data block.  This would not be
-a problem for compiled code, which will just push attributes to the
-control device and would be happy with a zero-length data area.
+This driver defines the sample size as 4 bytes and the trigger should
+be configured for a 1-sample block (the library does it at open
+time). We should aim at a zero-size data block, but this would require
+a patch to ZIO, and I'd better not change version during development.
 
-The attributes to be defined are the various parameters of the output
-channel: whether it is triggered by the input or is outputting pulses
-by itself; the delay; the number of pulses, the two periods, and so
-on.
+The output is configured and activated by writing a control block
+with proper attributes set. Then a write to the data channel will
+push the block to hardware, for it to be activated.
+
+The following attributes are defined:
+
+@example
+   /* Output ZIO attributes */
+   enum fd_zattr_out_idx {
+           FD_ATTR_OUT_MODE = FD_ATTR_DEV__LAST,
+           FD_ATTR_OUT_REP,
+           /* Start (or delay) is 4 registers */
+           FD_ATTR_OUT_START_H,
+           FD_ATTR_OUT_START_L,
+           FD_ATTR_OUT_START_COARSE,
+           FD_ATTR_OUT_START_FINE,
+           /* End (start + width) is 4 registers */
+           FD_ATTR_OUT_END_H,
+           FD_ATTR_OUT_END_L,
+           FD_ATTR_OUT_END_COARSE,
+           FD_ATTR_OUT_END_FINE,
+           /* Delta is 3 registers */
+           FD_ATTR_OUT_DELTA_L,
+           FD_ATTR_OUT_DELTA_COARSE,
+           FD_ATTR_OUT_DELTA_FINE,
+           FD_ATTR_OUT__LAST,
+   };
+   enum fd_output_mode {
+           FD_OUT_MODE_DISABLED = 0,
+           FD_OUT_MODE_DELAY,
+           FD_OUT_MODE_PULSE,
+   };
+@end example
+
+So, to disable the output, just write 0 to the mode attribute.
+To configure pulse or delay all attributes must be written.
+
+@b{Note:} writing to @i{sysfs} is not working with this version of ZIO.
+While recent developments introduced more complete consistency between
+the various places where attributes live, with this version you can
+only write attributes to the control block.
+
+@menu
+* Using fd-raw-output::         
+@end menu
+
+@c --------------------------------------------------------------------------
+@node Using fd-raw-output
+@subsection Using fd-raw-output
+
+The simplest way to generate output is using @i{fd-raw-output}, part
+of the @i{tools} directory of this package.  The tool writes a control
+block to the ZIO control file, setting the block size to 1 32-bit
+sample; it then writes 4 bytes to the data file to force output of the
+attributes.
+
+The tool acts on channel 1 (the first) by default, but uses the
+environment variable @code{CHAN} if set.  All arguments on the command
+line are passed directly in the attributes.  Thus, it is quite a
+low-level tool. 
+
+To help the user, any number that begins with @code{+} is added to the
+current time (in seconds). It is thus recommended to set the card to follow
+system time.
+
+The following example sets card time to 0 and programs 10 pulses at
+the beginning of the next second.  The pulses are 8usec long and
+repeat after 16usec.  The next example runs 1s of 1kHz square wave.
+For readability, numbers are grouped as @i{(mode, delay), (start --
+utc-h, utc-l, coarse, frac), (stop -- utc-h, utc-l, coarse, frac),
+(delta - utc-l, coarse, frac)}.
+
+@smallexample
+   spusa# ./fd-raw-settime 0 0; \
+          ./fd-raw-output 2 10   0 1 0 0   0 1 1000 0   0 2000 0
+
+   spusa# ./fd-raw-settime 0 0; \
+          ./fd-raw-output 2 500   0 1 0 0   0 1 62500 0   0 125000 0
+@end smallexample 
+
+The following example sets board time to host time and programs a single
+40us pulse at the beginning of the next second (note use of @code{+})
+
+@smallexample
+   spusa# echo 0 > /sys/bus/zio/devices/zio-fd-*/command; \
+          ./fd-raw-output 2 0   0 +1 0 0   0 +1 5000 0 
+@end smallexample 
+
+The following example programs a pps pulse (1ms long) on channel 1
+and a 1MHz square wave on channel 2, assuming board time is already
+synchronized with host time:
+
+@smallexample
+   spusa# CHAN=1 ./fd-raw-output 2 -1   0 +1 0 0   0 +1 125000 0  1 0 0; \
+          CHAN=2 ./fd-raw-output 2 -1   0 +1 0 0   0 +1 64 0   0 125 0
+@end smallexample 
+
+@b{Note:} mode, that should output pulses delayed over the input, is not
+currently working.
 
 @c ##########################################################################
 @node Using the Provided API
@@ -969,14 +1063,14 @@ allows:
 
 @item There is no support for White Rabbit at this time.
 
-@item Output support is missing. It simply is not there at this point.
+@item Generation of delayed pulses is missing (it is not working)
+
+@item The API for pulse generation is not yet available.
 
 @item We need interrupt support. The input is performed with a kernel timer.
 
 @item There is no EEPROM support. The driver uses default calibration
 settings.
-
-@item Offsets for input and output timestamps are not used at this point.
 
 @item We need a module parameter to avoid probing non-fine-delay SPEC
 cards. Reading the magic number from an SPEC that is not programmed
