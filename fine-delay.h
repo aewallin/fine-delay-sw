@@ -58,6 +58,7 @@ enum fd_zattr_in_idx {
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
 #include <linux/spinlock.h>
 #include <linux/timer.h>
+#include <linux/math64.h>
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
@@ -122,6 +123,15 @@ struct fd_time {
 	uint32_t seq_id;
 };
 
+/* Split a pico value into coarse and frac */
+static inline void fd_split_pico(uint64_t pico,
+				 uint32_t *coarse, uint32_t *frac)
+{
+	/* This works for less than 1s delays */
+	BUG_ON(pico > 1000ULL * NSEC_PER_SEC);
+	*coarse = div_u64_rem(pico, 8000, frac);
+	*frac = (*frac << 12) / 8000;
+}
 
 static inline uint32_t fd_readl(struct spec_fd *fd, unsigned long reg)
 {

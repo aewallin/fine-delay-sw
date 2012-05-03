@@ -211,34 +211,59 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
  * We are over with attributes, now there's real I/O
  */
 
+static void fd_ts_sub(struct fd_time *t, uint64_t pico)
+{
+	uint32_t coarse, frac;
+
+	/* FIXME: we really need to pre-convert pico to internal repres. */
+	fd_split_pico(pico, &coarse, &frac);
+	if (t->frac >= frac) {
+		t->frac -= frac;
+	} else {
+		t->frac = 4096 + t->frac - frac;
+		coarse++;
+	}
+	if (t->coarse >= coarse) {
+		t->coarse -= coarse;
+	} else {
+		t->coarse = 125*1000*1000 + t->coarse - coarse;
+		t->utc--;
+	}
+}
+
 static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
 	uint32_t *v, reg;
+	struct fd_time t;
 
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
 	if (!chan->active_block)
 		return 0;
+
+	/* First, read input data into a local struct to fix the offset */
+	t.utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
+	t.utc <<= 32;
+	t.utc |= fd_readl(fd, FD_REG_TSBR_SECL);
+	t.coarse = fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
+	reg = fd_readl(fd, FD_REG_TSBR_FID);
+	t.frac = FD_TSBR_FID_FINE_R(reg);
+	t.channel = FD_TSBR_FID_CHANNEL_R(reg);
+	t.seq_id = FD_TSBR_FID_SEQID_R(reg);
+
+	fd_ts_sub(&t, fd->calib.tdc_zero_offset);
+
 	/* The input data is written to attribute values in the active block. */
 	ctrl = zio_get_ctrl(chan->active_block);
 	v = ctrl->attr_channel.ext_val;
-	/* FIXME: use a table in some way... */
-	v[FD_ATTR_TDC_UTC_H]
-		= fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	v[FD_ATTR_TDC_UTC_L]
-		= fd_readl(fd, FD_REG_TSBR_SECL);
-	v[FD_ATTR_TDC_COARSE]
-		= fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
-	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	v[FD_ATTR_TDC_FRAC]
-		= FD_TSBR_FID_FINE_R(reg);
-	v[FD_ATTR_TDC_SEQ]
-		= FD_TSBR_FID_SEQID_R(reg);
-	v[FD_ATTR_TDC_CHAN]
-		= FD_TSBR_FID_CHANNEL_R(reg);
-	v[FD_ATTR_TDC_OFFSET] =
-		fd->calib.tdc_zero_offset;
+	v[FD_ATTR_TDC_UTC_H]	= t.utc >> 32;
+	v[FD_ATTR_TDC_UTC_L]	= t.utc;
+	v[FD_ATTR_TDC_COARSE]	= t.coarse;
+	v[FD_ATTR_TDC_FRAC]	= t.frac;
+	v[FD_ATTR_TDC_SEQ]	= t.seq_id;
+	v[FD_ATTR_TDC_CHAN]	= t.channel;
+	v[FD_ATTR_TDC_OFFSET]	= fd->calib.tdc_zero_offset;
 
 	/* We also need a copy within the device, so sysfs can read it */
 	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));
