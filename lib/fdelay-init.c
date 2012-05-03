@@ -120,6 +120,7 @@ void fdelay_exit(void)
 struct fdelay_board *fdelay_open(int offset, int dev_id)
 {
 	struct __fdelay_board *b = NULL;
+	uint32_t nsamples = 1;
 	int i;
 
 	if (offset >= fd_nboards) {
@@ -132,7 +133,7 @@ struct fdelay_board *fdelay_open(int offset, int dev_id)
 			errno = EINVAL;
 			return NULL;
 		}
-		return (void *)b;
+		goto found;
 	}
 	if (dev_id < 0) {
 		errno = EINVAL;
@@ -140,9 +141,19 @@ struct fdelay_board *fdelay_open(int offset, int dev_id)
 	}
 	for (i = 0, b = fd_boards; i < fd_nboards; i++, b++)
 		if (b->dev_id == dev_id)
-			return (void *)b;
+			goto found;
 	errno = ENODEV;
 	return NULL;
+
+found:
+	/* Trim all block sizes to 1 sample (i.e. 4 bytes) */
+	fdelay_sysfs_set(b, "fd-input/trigger/nsamples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch1/trigger/nsamples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch2/trigger/nsamples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch3/trigger/nsamples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch4/trigger/nsamples", &nsamples);
+
+	return (void *)b;
 }
 
 int fdelay_close(struct fdelay_board *userb)
