@@ -26,6 +26,7 @@
 #include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
+#include "hw/fd_channel_regs.h"
 
 /* The sample size. Mandatory, device-wide */
 DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
@@ -52,6 +53,24 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
 	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_TDC_FLAGS, 0),
 	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_TDC_OFFSET, 0),
+};
+
+/* Extended attributes for the output csets */
+#define _RW_ (S_IRUGO | S_IWUGO)
+static struct zio_attribute fd_zattr_output[] = {
+	ZATTR_EXT_REG("mode", _RW_,		FD_ATTR_OUT_MODE, 0),
+	ZATTR_EXT_REG("rep", _RW_,		FD_ATTR_OUT_REP, 0),
+	ZATTR_EXT_REG("start-h", _RW_,		FD_ATTR_OUT_START_H, 0),
+	ZATTR_EXT_REG("start-l", _RW_,		FD_ATTR_OUT_START_L, 0),
+	ZATTR_EXT_REG("start-coarse", _RW_,	FD_ATTR_OUT_START_COARSE, 0),
+	ZATTR_EXT_REG("start-fine", _RW_,	FD_ATTR_OUT_START_FINE, 0),
+	ZATTR_EXT_REG("end-h", _RW_,		FD_ATTR_OUT_END_H, 0),
+	ZATTR_EXT_REG("end-l", _RW_,		FD_ATTR_OUT_END_L, 0),
+	ZATTR_EXT_REG("end-coarse", _RW_,	FD_ATTR_OUT_END_COARSE, 0),
+	ZATTR_EXT_REG("end-fine", _RW_,		FD_ATTR_OUT_END_FINE, 0),
+	ZATTR_EXT_REG("delta-l", _RW_,		FD_ATTR_OUT_DELTA_L, 0),
+	ZATTR_EXT_REG("delta-coarse", _RW_,	FD_ATTR_OUT_DELTA_COARSE, 0),
+	ZATTR_EXT_REG("delta-fine", _RW_,	FD_ATTR_OUT_DELTA_FINE, 0),
 };
 
 
@@ -285,6 +304,7 @@ static void fd_timer_fn(unsigned long arg)
 	struct spec_fd *fd = (void *)arg;
 	struct zio_channel *chan = NULL;
 	struct zio_device *zdev = fd->zdev;
+	int i;
 
 	if (zdev) {
 		chan = zdev->cset[0].chan;
@@ -304,14 +324,106 @@ static void fd_timer_fn(unsigned long arg)
 	}
 
 out:
+	/* Check all output channels with a pending block (FIXME: bad) */
+	for (i = 1; i < 5; i++)
+		if (test_and_clear_bit(FD_FLAG_DO_OUTPUT + i, &fd->flags)) {
+			struct zio_cset *cset = fd->zdev->cset + i;
+			cset->ti->t_op->data_done(cset);
+			printk("called data_done\n");
+		}
+
 	mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 }
 
-static int fd_output(struct zio_cset *cset)
+/* Internal output engine */
+static void __fd_zio_output(struct spec_fd *fd, int index1_4, uint32_t *attrs)
 {
-	/* FIXME: the output channels */
+	int ch = index1_4 - 1;
+	int mode = attrs[FD_ATTR_OUT_MODE];
+	int rep = attrs[FD_ATTR_OUT_REP];
+	int dcr;
 
-	return 0; /* Already done, as the trigger is hardware */
+	if (mode == FD_OUT_MODE_DISABLED) {
+		fd_gpio_clr(fd, FD_GPIO_OUTPUT_EN(index1_4));
+		return;
+	}
+
+	if (mode == FD_OUT_MODE_DELAY) {
+		/* FIXME: subtract zero offset */
+	}
+	fd_ch_writel(fd, ch, fd->ch[ch].frr_cur,  FD_REG_FRR);
+
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_START_H],      FD_REG_U_STARTH);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_START_L],      FD_REG_U_STARTL);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_START_COARSE], FD_REG_C_START);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_START_FINE],   FD_REG_F_START);
+
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_END_H],      FD_REG_U_ENDH);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_END_L],      FD_REG_U_ENDL);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_END_COARSE], FD_REG_C_END);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_END_FINE],   FD_REG_F_END);
+
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_DELTA_L],      FD_REG_U_DELTA);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_DELTA_COARSE], FD_REG_C_DELTA);
+	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_DELTA_FINE],   FD_REG_F_DELTA);
+
+	if (mode == FD_OUT_MODE_DELAY) {
+		dcr = 0;
+		fd_ch_writel(fd, ch, FD_RCR_REP_CNT_W(rep - 1)
+			     | (rep < 0 ? FD_RCR_CONT : 0), FD_REG_RCR);
+	} else {
+		dcr = FD_DCR_MODE;
+		fd_ch_writel(fd, ch, FD_RCR_REP_CNT_W(rep < 0 ? 0 : rep - 1)
+			    | (rep < 0 ? FD_RCR_CONT : 0), FD_REG_RCR);
+	}
+
+	/*
+	 * For narrowly spaced pulses, we don't have enough time to reload
+	 * the tap number into the corresponding SY89295.
+	 * Therefore, the width/spacing resolution is limited to 4 ns.
+	 * We put the threshold at 200ns ==> coarse == 25
+	 */
+
+	/* FIXME: if((delta_ps - width_ps) < 200000 ||
+	   (width_ps < 200000)) dcr = FD_DCR_NO_FINE; */
+	//dcr |= FD_DCR_NO_FINE;
+
+	fd_ch_writel(fd, ch, dcr | FD_DCR_UPDATE, FD_REG_DCR);
+	fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE, FD_REG_DCR);
+	if (mode == FD_OUT_MODE_PULSE)
+		fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE | FD_DCR_PG_ARM,
+			     FD_REG_DCR);
+
+	fd_gpio_set(fd, FD_GPIO_OUTPUT_EN(index1_4));
+}
+
+/* This is called on user write */
+static int fd_zio_output(struct zio_cset *cset)
+{
+	int i;
+	struct spec_fd *fd;
+	struct zio_control *ctrl;
+
+	fd = cset->zdev->private_data;
+	ctrl = zio_get_ctrl(cset->chan->active_block);
+
+	for (i = 0; i < 4; i++)
+		printk("triggered %i: %x (%i)\n", i,
+		       fd_ch_readl(fd, i, FD_REG_DCR),
+		       fd_ch_readl(fd, i, FD_REG_DCR) & FD_DCR_PG_TRIG ? 1: 0);
+
+	pr_info("%s: attrs: ", __func__);
+	for (i = FD_ATTR_DEV__LAST; i < FD_ATTR_OUT__LAST; i++)
+		printk("%08x%c", ctrl->attr_channel.ext_val[i],
+		       i == FD_ATTR_OUT__LAST -1 ? '\n' : ' ');
+
+	__fd_zio_output(fd, cset->index, ctrl->attr_channel.ext_val);
+	/*
+	 * There's a buglet in this version of zio: we can't
+	 * just return 0 to say "done". We need to do it later.
+	 */
+	set_bit(FD_FLAG_DO_OUTPUT + cset->index, &fd->flags);
+	return -EAGAIN;
 }
 
 /*
@@ -319,7 +431,7 @@ static int fd_output(struct zio_cset *cset)
  * asynchronous. The data_done callback is invoked when the block is
  * full.
  */
-static int fd_input(struct zio_cset *cset)
+static int fd_zio_input(struct zio_cset *cset)
 {
 	struct spec_fd *fd;
 	fd = cset->zdev->private_data;
@@ -370,7 +482,7 @@ static const struct zio_sysfs_operations fd_zio_s_op = {
 static struct zio_cset fd_cset[] = {
 	{
 		SET_OBJECT_NAME("fd-input"),
-		.raw_io =	fd_input,
+		.raw_io =	fd_zio_input,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
 		.flags =	ZIO_DIR_INPUT | ZCSET_TYPE_TIME,
@@ -381,31 +493,47 @@ static struct zio_cset fd_cset[] = {
 	},
 	{
 		SET_OBJECT_NAME("fd-ch1"),
-		.raw_io =	fd_output,
+		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
 		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.zattr_set = {
+			.ext_zattr = fd_zattr_output,
+			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
+		},
 	},
 	{
 		SET_OBJECT_NAME("fd-ch2"),
-		.raw_io =	fd_output,
+		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
 		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.zattr_set = {
+			.ext_zattr = fd_zattr_output,
+			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
+		},
 	},
 	{
 		SET_OBJECT_NAME("fd-ch3"),
-		.raw_io =	fd_output,
+		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
 		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.zattr_set = {
+			.ext_zattr = fd_zattr_output,
+			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
+		},
 	},
 	{
 		SET_OBJECT_NAME("fd-ch4"),
-		.raw_io =	fd_output,
+		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
 		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.zattr_set = {
+			.ext_zattr = fd_zattr_output,
+			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
+		},
 	},
 };
 

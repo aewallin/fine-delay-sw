@@ -8,6 +8,7 @@ hostprogs-y := fd-raw-input
 hostprogs-y += fd-raw-gettime
 hostprogs-y += fd-raw-settime
 hostprogs-y += parport-burst
+hostprogs-y += fd-raw-output
 
 # we are not in the kernel, so we need to piggy-back on "make modules"
 modules: $(hostprogs-y)

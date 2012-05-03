@@ -47,6 +47,32 @@ enum fd_zattr_in_idx {
 #define FD_TDCF_DISABLE_TSTAMP	2
 #define FD_TDCF_TERM_50		4
 
+/* Output ZIO attributes */
+enum fd_zattr_out_idx {
+	FD_ATTR_OUT_MODE = FD_ATTR_DEV__LAST,
+	FD_ATTR_OUT_REP,
+	/* Start (or delay) is 4 registers */
+	FD_ATTR_OUT_START_H,
+	FD_ATTR_OUT_START_L,
+	FD_ATTR_OUT_START_COARSE,
+	FD_ATTR_OUT_START_FINE,
+	/* End (start + width) is 4 registers */
+	FD_ATTR_OUT_END_H,
+	FD_ATTR_OUT_END_L,
+	FD_ATTR_OUT_END_COARSE,
+	FD_ATTR_OUT_END_FINE,
+	/* Delta is 3 registers */
+	FD_ATTR_OUT_DELTA_L,
+	FD_ATTR_OUT_DELTA_COARSE,
+	FD_ATTR_OUT_DELTA_FINE,
+	FD_ATTR_OUT__LAST,
+};
+enum fd_output_mode {
+	FD_OUT_MODE_DISABLED = 0,
+	FD_OUT_MODE_DELAY,
+	FD_OUT_MODE_PULSE,
+};
+
 /*
  * Cset attributes are concatenated to device attributes in the control
  * structure, but they start from 0 when allocate for the individual cset
@@ -113,6 +139,11 @@ enum fd_flags {
 	FD_FLAG_INITED = 0,
 	FD_FLAG_DO_INPUT,
 	FD_FLAG_INPUT_READY,
+	FD_FLAG_DO_OUTPUT,
+	_FD_FLAG_DO_OUTPUT1, /* use: FD_FLAG_DO_OUTPUT + cset->index */
+	_FD_FLAG_DO_OUTPUT2,
+	_FD_FLAG_DO_OUTPUT3,
+	_FD_FLAG_DO_OUTPUT4,
 };
 
 /* Internal time: the first three fields should be converted to zio time */
