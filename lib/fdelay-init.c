@@ -150,9 +150,11 @@ int fdelay_close(struct fdelay_board *userb)
 	__define_board(b, userb);
 	int j;
 
-	for (j = 0; j < ARRAY_SIZE(b->fd); j++)
+	for (j = 0; j < ARRAY_SIZE(b->fd); j++) {
 		if (b->fd[j] >= 0)
 			close(b->fd[j]);
+		b->fd[j] = -1;
+	}
 	return 0;
 
 }
