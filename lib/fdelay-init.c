@@ -68,8 +68,10 @@ int fdelay_init(void)
 		b->devbase[strlen(b->devbase) - strlen("-0-0-ctrl")] = '\0';
 		/* extract dev_id */
 		sscanf(b->sysbase, "%*[^f]fd-%x", &b->dev_id);
-		for (j = 0; j < ARRAY_SIZE(b->fd); j++)
-			b->fd[j] = -1;
+		for (j = 0; j < ARRAY_SIZE(b->fdc); j++) {
+			b->fdc[j] = -1;
+			b->fdd[j] = -1;
+		}
 		if (fdelay_is_verbose()) {
 			fprintf(stderr, "%s: %04x %s %s\n", __func__,
 				b->dev_id, b->sysbase, b->devbase);
@@ -100,9 +102,15 @@ void fdelay_exit(void)
 	int i, j, err;
 
 	for (i = 0, err = 0, b = fd_boards; i < fd_nboards; i++, b++) {
-		for (j = 0; j < ARRAY_SIZE(b->fd); j++) {
-			if (b->fd[j] >= 0) {
-				close(b->fd[j]);
+		for (j = 0; j < ARRAY_SIZE(b->fdc); j++) {
+			if (b->fdc[j] >= 0) {
+				close(b->fdc[j]);
+				b->fdc[j] = -1;
+				err++;
+			}
+			if (b->fdd[j] >= 0) {
+				close(b->fdd[j]);
+				b->fdd[j] = -1;
 				err++;
 			}
 		}
@@ -161,10 +169,13 @@ int fdelay_close(struct fdelay_board *userb)
 	__define_board(b, userb);
 	int j;
 
-	for (j = 0; j < ARRAY_SIZE(b->fd); j++) {
-		if (b->fd[j] >= 0)
-			close(b->fd[j]);
-		b->fd[j] = -1;
+	for (j = 0; j < ARRAY_SIZE(b->fdc); j++) {
+		if (b->fdc[j] >= 0)
+			close(b->fdc[j]);
+		b->fdc[j] = -1;
+		if (b->fdd[j] >= 0)
+			close(b->fdd[j]);
+		b->fdd[j] = -1;
 	}
 	return 0;
 

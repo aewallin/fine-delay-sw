@@ -56,11 +56,11 @@ int fdelay_get_config_tdc(struct fdelay_board *userb)
 static int __fdelay_open_tdc(struct __fdelay_board *b)
 {
 	char fname[128];
-	if (b->fd[0] <= 0) {
+	if (b->fdc[0] <= 0) {
 		sprintf(fname, "%s-0-0-ctrl", b->devbase);
-		b->fd[0] = open(fname, O_RDONLY | O_NONBLOCK);
+		b->fdc[0] = open(fname, O_RDONLY | O_NONBLOCK);
 	}
-	return b->fd[0];
+	return b->fdc[0];
 }
 
 int fdelay_fileno_tdc(struct fdelay_board *userb)

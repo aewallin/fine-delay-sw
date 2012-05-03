@@ -56,7 +56,8 @@ struct __fdelay_board {
 	int dev_id;
 	char *devbase;
 	char *sysbase;
-	int fd[5]; /* The 5 channels */
+	int fdc[5]; /* The 5 control channels */
+	int fdd[5]; /* The 5 data channels */
 };
 
 static inline int fdelay_is_verbose(void)
