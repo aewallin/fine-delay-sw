@@ -42,6 +42,12 @@ extern int fdelay_set_host_time(struct fdelay_board *b);
 extern int fdelay_set_config_tdc(struct fdelay_board *b, int flags);
 extern int fdelay_get_config_tdc(struct fdelay_board *b);
 
+extern int fdelay_fread(struct fdelay_board *b, struct fdelay_time *t, int n);
+extern int fdelay_fileno_tdc(struct fdelay_board *b);
+extern int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
+		       int flags);
+
+
 
 #ifdef FDELAY_INTERNAL /* Libray users should ignore what follows */
 
