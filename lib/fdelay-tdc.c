@@ -128,7 +128,7 @@ int fdelay_fread(struct fdelay_board *userb, struct fdelay_time *t, int n)
 	int i, loop;
 
 	for (i = 0; i < n; ) {
-		loop = fdelay_read(userb, t, n - i, 0);
+		loop = fdelay_read(userb, t + i, n - i, 0);
 		if (loop < 0)
 			return -1;
 		i += loop;

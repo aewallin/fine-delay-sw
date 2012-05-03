@@ -11,6 +11,8 @@ LDFLAGS = -L. -lfdelay
 DEMOSRC := fdelay-list.c
 DEMOSRC += fdelay-board-time.c
 DEMOSRC += fdelay-term.c
+DEMOSRC += fdelay-read.c
+DEMOSRC += fdelay-fread.c
 
 DEMOS := $(DEMOSRC:.c=)
 
