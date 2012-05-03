@@ -65,9 +65,10 @@ in the documentation.
 @menu
 * Driver Features::             
 * Installation::                
+* Source Code Conventions::     
 * Using the Driver Directly::   
 * Using the Provided API::      
-* Known bugs and missing features::  
+* Known Bugs and Missing Features::  
 * Troubleshooting::             
 @end menu
 
@@ -275,6 +276,41 @@ The following parameters are used:
         only one timestamp is retrieved at each timer execution.
 
 @end table
+
+@c ##########################################################################
+@node Source Code Conventions
+@chapter Source Code Conventions
+
+This is a random list of conventions I use in this package
+
+@itemize @bullet
+
+@item All internal symbols in the driver begin with @code{fd_}
+(excluding local variables like @i{i} and similar stuff). So you know
+if something is local or comes from the kernel.
+
+@item All library functions and public data begin with @code{fdelay_}.
+
+@item The board passed as a library token (@code{struct fdelay_board})
+is opaque, so the user doesn't access it.  Internally it is called
+@code{userb} because @code{b} is the real one being used. If you need
+to access library internals from a user file just define
+@code{FDELAY_INTERNAL} before including @code{fdelay-lib.h}.
+
+@item The driver header is called @code{fine-delay.h} while the user one
+is @code{fdelay-lib.h}. The latter includes the former, which user
+programs should not refer to.  Both are different from the original
+implementation (@code{fdelay_lib.h}) to avoid trying to compile older
+code with new headers.
+
+@item The @i{tools} directory includes standalone tools that access ZIO
+directly. Their name begins with @code{fd-raw-}.
+
+@item The @i{lib} directory includes example programs for the library.
+Unfortunately sources of programs and library files both begin with
+@code{fdelay-} -- this is an overlook of mine but I won't fix it.
+
+@end itemize
 
 @c ##########################################################################
 @node Using the Driver Directly
@@ -664,6 +700,9 @@ from the parent directory) and the ZIO headers, retrieved using the
 * The Previous API::            
 * Initialization and Cleanup::  
 * Time Management::             
+* Input Configuration::         
+* Reading Input Time-stamps::   
+* Output Configuration::        
 @end menu
 
 @c ==========================================================================
@@ -821,6 +860,85 @@ It just enables or disables the 50-ohm resistor.  The effect is
 usually verifiable by hooking a scope to the input signal:
 
 
+@c ==========================================================================
+@node Reading Input Time-stamps
+@section Reading Input Time-stamps
+
+The library offers the following functions deal with the input stamps:
+
+@table @code
+
+@item int fdelay_fread(struct fdelay_board *b, struct fdelay_time *t, int n);
+
+	The function behaves like @i{fread}: it tries to read all samples,
+        even if it implies sleeping several times.  Use it only if you are
+        aware that all the expected pulses will reach you.
+
+@item int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
+		       int flags);
+
+	The function behaves like @i{read}: it will wait at most once
+        and return the number of samples that it received.  The @i{flags}
+        argument is used to pass 0 or @code{O_NONBLOCK}. If a non-blocking
+        read is performed, the function may return -1 with @code{EAGAIN}
+        if nothing is pending in the hardware fifo.
+        
+@item int fdelay_fileno_tdc(struct fdelay_board *b);
+
+	This returns the file descriptor associated to the TDC device,
+        so you can @i{select} or @i{poll} before calling @i{fdelay_read}.
+
+@end table
+
+There are two example programs here: one using @i{read} and one using
+@i{fread}.
+
+Unfortunately, even if there are samples pending, @i{read}
+will only return one of them, because the ZIO device will only see the
+next sample slightly after returning the previous one. This is a buffering
+problem with our use of ZIO. Here below there were three stamps enqueued,
+1ms spaced in time:
+
+@smallexample
+   spusa# ./fdelay-read 10
+   ./fdelay-read: reading 10 pulses in blocking mode... got 1 of them
+   seq   179: time 1447.218417376 + 0ebf
+   ./fdelay-read: reading 10 pulses in non-blocking mode... got 1 of them
+   seq   180: time 1447.219415872 + 07b5
+
+   spusa# ./fdelay-read 10
+   ./fdelay-read: reading 10 pulses in blocking mode... got 1 of them
+   seq   181: time 1447.220418000 + 0187
+   ./fdelay-read: reading 10 pulses in non-blocking mode... got -1 of them
+@end smallexample
+
+This is an example with @i{fread}, where it received two bursts of 5 pulses:
+the function didn't return before getting all 10 of them:
+
+@smallexample
+   spusa# ./fdelay-fread 10
+   /fdelay-fread 10
+   ./fdelay-fread: reading 10 pulses using fread... got 10 of them
+   seq   182: time 1587.441758984 + 0a4f
+   seq   183: time 1587.442757840 + 03b1
+   seq   184: time 1587.443757712 + 08f3
+   seq   185: time 1587.444757616 + 0a71
+   seq   186: time 1587.445757344 + 0480
+   seq   187: time 1592.530255160 + 05b7
+   seq   188: time 1592.531253896 + 0173
+   seq   189: time 1592.532253704 + 0db6
+   seq   190: time 1592.533253672 + 0646
+   seq   191: time 1592.534253336 + 0752
+@end smallexample
+
+There is no example for @i{fdelay_fileno_tdc} using @i{select}.
+
+@c ==========================================================================
+@node Output Configuration
+@section Output Configuration
+
+To be done.
+
 
 
 @c ##########################################################################
@@ -843,6 +961,8 @@ allows:
 
 @itemize @bullet
 
+@item Most example programs only use the ``first'' board in the system.
+
 @item There is no support for White Rabbit at this time.
 
 @item Output support is missing. It simply is not there at this point.
@@ -853,7 +973,7 @@ allows:
 the output delay calibrated.
 
 @item There is no EEPROM support. The driver uses default calibration
-settings and no i2c support is there yet.
+settings.
 
 @item Offsets for input and output timestamps are not used at this point.
 
@@ -866,6 +986,8 @@ the host computer.
 
 Other less important issues may be dealt with over time, but are not
 urgent as I write this:
+
+@itemize 
 
 @item The driver should register its own ZIO trigger, or use the new
 attribute for ``greedy-input'' offered in new versions of ZIO
