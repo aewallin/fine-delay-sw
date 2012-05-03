@@ -1037,9 +1037,9 @@ There is no example for @i{fdelay_fileno_tdc} using @i{select}.
 @node Output Configuration
 @section Output Configuration
 
-To be done.
-
-
+The API is not implemented, nor the example programs. The header,
+however, includes a tentative API, based on structures. Please check
+the header and @i{lib/fdelay-output.c} until it is ready.
 
 @c ##########################################################################
 @node Known Bugs and Missing Features

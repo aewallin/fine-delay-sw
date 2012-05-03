@@ -4,6 +4,7 @@ LIB = libfdelay.a
 LOBJ := fdelay-init.o
 LOBJ += fdelay-time.o
 LOBJ += fdelay-tdc.o
+LOBJ += fdelay-output.o
 
 CFLAGS = -Wall -ggdb -O2 -I.. -I$(ZIO)/include
 LDFLAGS = -L. -lfdelay

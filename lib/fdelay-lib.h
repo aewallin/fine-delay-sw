@@ -25,6 +25,27 @@ struct fdelay_time {
 	uint32_t channel;
 };
 
+/* The structure used for pulse generation */
+struct fdelay_pulse {
+	/* FD_OUT_MODE_DISABLED, FD_OUT_MODE_DELAY, FD_OUT_MODE_PULSE */
+	int mode;
+	/* -1 == infinite */
+	int rep;
+
+	struct fdelay_time start;
+	struct fdelay_time end;
+	struct fdelay_time loop;
+};
+
+/* An alternative structure, internally converted to the previous one */
+struct fdelay_pulse_ps {
+	int mode;
+	int rep;
+	struct fdelay_time start;
+	uint64_t length;
+	uint64_t period;
+};
+
 /*
  * Please see the manual for the meaning of arguments and return values
  */
@@ -46,6 +67,14 @@ extern int fdelay_fread(struct fdelay_board *b, struct fdelay_time *t, int n);
 extern int fdelay_fileno_tdc(struct fdelay_board *b);
 extern int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
 		       int flags);
+
+extern void fdelay_pico_to_time(uint64_t *pico, struct fdelay_time *time);
+extern void fdelay_time_to_pico(struct fdelay_time *time, uint64_t *pico);
+
+extern int fdelay_config_pulse(struct fdelay_board *b,
+			       int channel, struct fdelay_pulse *pulse);
+extern int fdelay_config_pulse_ps(struct fdelay_board *b,
+				  int channel, struct fdelay_pulse_ps *ps);
 
 
 
