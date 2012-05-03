@@ -275,7 +275,7 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
  * We have a timer, used to poll for input samples, until the interrupt
  * is there. A timer duration of 0 selects the interrupt.
  */
-static int fd_timer_period_ms = 100;
+static int fd_timer_period_ms = 10;
 module_param_named(timer_ms, fd_timer_period_ms, int, 0444);
 
 static int fd_timer_period_jiffies; /* converted from ms at init time */
