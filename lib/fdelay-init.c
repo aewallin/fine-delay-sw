@@ -193,7 +193,7 @@ int fdelay_wr_mode(struct fdelay_board *userb, int on)
 extern int fdelay_check_wr_mode(struct fdelay_board *userb)
 {
 	__define_board(b, userb);
-	if (__fdelay_command(b, FD_CMD_WR_ENABLE) == 0)
+	if (__fdelay_command(b, FD_CMD_WR_QUERY) == 0)
 		return 0;
 	return errno;
 }
