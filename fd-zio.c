@@ -114,6 +114,27 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	return 0;
 }
 
+static int fd_wr_mode(struct spec_fd *fd, int on)
+{
+	if (on) {
+		fd_writel(fd, 0, FD_REG_GCR);
+		fd_writel(fd, FD_TCR_WR_ENABLE, FD_REG_TCR);
+		set_bit(FD_FLAG_WR_MODE, &fd->flags);
+	} else {
+		fd_writel(fd, 0, FD_REG_GCR);
+		fd_writel(fd, 0, FD_REG_TCR);
+		clear_bit(FD_FLAG_WR_MODE, &fd->flags);
+	}
+	return 0;
+}
+
+static int fd_wr_query(struct spec_fd *fd)
+{
+	/* To be filled */
+	return -EOPNOTSUPP;
+}
+
+
 /* Overall and device-wide attributes: only get_time is special */
 static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 			   uint32_t *usr_val)
@@ -221,6 +242,12 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	switch(usr_val) {
 	case FD_CMD_HOST_TIME:
 		return fd_time_set(fd, NULL, NULL);
+	case FD_CMD_WR_ENABLE:
+		return fd_wr_mode(fd, 1);
+	case FD_CMD_WR_DISABLE:
+		return fd_wr_mode(fd, 0);
+	case FD_CMD_WR_QUERY:
+		return fd_wr_query(fd);
 	default:
 		return -EINVAL;
 	}

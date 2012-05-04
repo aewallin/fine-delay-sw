@@ -26,6 +26,9 @@ enum fd_zattr_dev_idx {
 
 enum fd_command {
 	FD_CMD_HOST_TIME = 0,
+	FD_CMD_WR_ENABLE,
+	FD_CMD_WR_DISABLE,
+	FD_CMD_WR_QUERY,
 	/* FIXME: we may have cmds for FD_TSBCR_PURGE and FD_TSBCR_RST_SEQ */
 };
 
@@ -144,6 +147,7 @@ enum fd_flags {
 	_FD_FLAG_DO_OUTPUT2,
 	_FD_FLAG_DO_OUTPUT3,
 	_FD_FLAG_DO_OUTPUT4,
+	FD_FLAG_WR_MODE,
 };
 
 /* Internal time: the first three fields should be converted to zio time */

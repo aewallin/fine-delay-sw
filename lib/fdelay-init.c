@@ -181,4 +181,11 @@ int fdelay_close(struct fdelay_board *userb)
 
 }
 
-
+int fdelay_wr_mode(struct fdelay_board *userb, int on)
+{
+	__define_board(b, userb);
+	if (on)
+		return __fdelay_command(b, FD_CMD_WR_ENABLE);
+	else
+		return __fdelay_command(b, FD_CMD_WR_DISABLE);
+}
