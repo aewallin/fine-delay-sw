@@ -1161,9 +1161,45 @@ This chapters lists a few errors that may happen and how to deal with
 them.
 
 @menu
+* ZIO Doesn't Compile::         
 * Wrong FPGA Image::            
 * Version Mismatch::            
 @end menu
+
+@c ==========================================================================
+@node ZIO Doesn't Compile
+@section ZIO Doesn't Compile
+
+Compilation of ZIO ma fail with error like:
+
+@smallexample
+   zio-ad788x.c:180: error: implicit declaration of function "spi_async_locked"
+@end smallexample
+
+This happens because the function wasn't there in your older kernel
+version, and your system is configured to enable @code{CONFIG_SPI}.
+
+To fix, please just remove the @i{zio-ad788x} line from
+@code{drivers/Makefile}.
+
+@c ==========================================================================
+@node make modules_install misbehaves
+@section make modules_install misbehaves
+
+The command @i{sudo make modules_install} may place the modules in the wrong
+directory or fail with an error like:
+
+@smallexample
+   make: *** /lib/modules/2.6.37+/build: No such file or directory.
+@end smallexample
+
+This happens when you compiled by setting @code{LINUX=} and your
+@i{sudo} is not propagating the environment to its child processes.
+In this case, you should run this command instead
+
+@smallexample
+   sudo make modules_install  LINUX=$LINUX
+@end smallexample
 
 @c ==========================================================================
 @node Wrong FPGA Image
