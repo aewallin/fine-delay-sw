@@ -11,6 +11,11 @@
  * it when the layout of attributes changes in incompatible ways)
  */
 
+/*
+ * NOTE: all tuples of 4 register must be enumerated in the proper order:
+ * utc-h, utc-l, coarse, frac  __IN_THIS_ORDER__ because I make arith on them
+ */
+
 /* Device-wide ZIO attributes */
 enum fd_zattr_dev_idx {
 	FD_ATTR_DEV_VERSION = 0,
@@ -35,6 +40,7 @@ enum fd_command {
 
 /* Input ZIO attributes (i.e. TDC attributes) */
 enum fd_zattr_in_idx {
+	/* PLEASE check "NOTE:" above if you edit this*/
 	FD_ATTR_TDC_UTC_H = FD_ATTR_DEV__LAST,
 	FD_ATTR_TDC_UTC_L,
 	FD_ATTR_TDC_COARSE,
@@ -43,6 +49,7 @@ enum fd_zattr_in_idx {
 	FD_ATTR_TDC_CHAN,
 	FD_ATTR_TDC_FLAGS, /* enable, termination, see below */
 	FD_ATTR_TDC_OFFSET,
+	FD_ATTR_TDC_USER_OFF,
 	FD_ATTR_TDC__LAST,
 };
 /* Names have been chosen so that 0 is the default at load time */
@@ -54,6 +61,7 @@ enum fd_zattr_in_idx {
 enum fd_zattr_out_idx {
 	FD_ATTR_OUT_MODE = FD_ATTR_DEV__LAST,
 	FD_ATTR_OUT_REP,
+	/* PLEASE check "NOTE:" above if you edit this*/
 	/* Start (or delay) is 4 registers */
 	FD_ATTR_OUT_START_H,
 	FD_ATTR_OUT_START_L,
@@ -68,6 +76,9 @@ enum fd_zattr_out_idx {
 	FD_ATTR_OUT_DELTA_L,
 	FD_ATTR_OUT_DELTA_COARSE,
 	FD_ATTR_OUT_DELTA_FINE,
+	/* The two offsets */
+	FD_ATTR_OUT_DELAY_OFF,
+	FD_ATTR_OUT_USER_OFF,
 	FD_ATTR_OUT__LAST,
 };
 enum fd_output_mode {
@@ -97,6 +108,9 @@ struct fd_calib {
 	uint32_t acam_start_offset;	/* ACAM Start offset value */
 	uint32_t atmcr_val;		/* ATMCR register value */
 	uint32_t tdc_zero_offset;	/* Zero offset of the TDC, in ps */
+	/* The user can add a signed offset, in picoseconds */
+	int32_t tdc_user_offset;
+	int32_t ch_user_offset[4];
 };
 
 /* Channels are called 1..4 in all docs. Internally it's 0..3 */

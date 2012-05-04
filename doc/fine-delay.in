@@ -601,16 +601,21 @@ describing the cset:
 
 @smallexample
    spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/fd-input/
-   ./      enable           utc-l   chan    trigger/
-   ../     current_trigger  coarse  flags   chan0/
-   uevent  current_buffer   frac    offset
-   name    utc-h            seq     power/
+   ./      enable           utc-l   chan         power/
+   ../     current_trigger  coarse  flags        trigger/
+   uevent  current_buffer   frac    offset       chan0/
+   name    utc-h            seq     user-offset
 @end smallexample
 
 The timestamp-related values in this file reflect the last stamp that
 has been enqueued to user space (this may be the next event to be
 read by the actual reading process).  The @i{offset} attribute
-is the stamping offset, in picoseconds, for the TDC channe.
+is the stamping offset, in picoseconds, for the TDC channel.
+
+The @i{user-offset} attribute, which currently defaults to 0, is a
+signed value that users can write to represent a number of picoseconds
+to be added (or subtracted) to the hardware-reported stamps. This is
+used to account for delays induced by cabling (range: -0.2s to 0.2s).
 
 The @i{flags} attribute can be used to change three configuration
 bits, defined by the respective macros. Please note that the default
@@ -756,6 +761,9 @@ The following attributes are defined:
            FD_ATTR_OUT_DELTA_L,
            FD_ATTR_OUT_DELTA_COARSE,
            FD_ATTR_OUT_DELTA_FINE,
+           /* The two offsets */
+           FD_ATTR_OUT_DELAY_OFF,
+           FD_ATTR_OUT_USER_OFF,
            FD_ATTR_OUT__LAST,
    };
    enum fd_output_mode {
@@ -768,10 +776,43 @@ The following attributes are defined:
 So, to disable the output, just write 0 to the mode attribute.
 To configure pulse or delay all attributes must be written.
 
-@b{Note:} writing to @i{sysfs} is not working with this version of ZIO.
-While recent developments introduced more complete consistency between
-the various places where attributes live, with this version you can
-only write attributes to the control block.
+@b{Note:} writing the output configuration (mode, rep, start, end,
+delta) to @i{sysfs} is not working with this version of ZIO. And I've
+been too lazy to add code to do that.  While recent developments
+introduced more complete consistency between the various places where
+attributes live, with this version you can only write attributes to
+the control block.
+
+The @i{delay-offset} attribute represents an offset that is subtracted
+from the user-requested delay (@i{start} fields) when generating output
+pulses. It represents internal card delays.  The value can be modified
+from @i{sysfs}.
+
+@b{Note:} the @i{delay-offset} is not used for pulse-generation mode.
+
+The @i{user-offset} attribute, which currently defaults to 0, is a
+signed value that users can write to represent a number of picoseconds
+to be added (or subtracted) to the every user-command (for both delay
+and pulse generation). This is used to account for delays induced by
+cabling (range: -0.2s to 0.2s).  The value can be modified
+from @i{sysfs}.
+
+This is the unsorted content of the @i{sysfs} directory for each
+of the output csets:
+
+@smallexample
+   spusa# COLUMNS=60 ls -fF /sys/bus/zio/devices/zio-fd-0200/fd-ch1
+   ./               mode          end-l         user-offset
+   ../              rep           end-coarse    power/
+   uevent           start-h       end-fine      trigger/
+   name             start-l       delta-l       chan0/
+   enable           start-coarse  delta-coarse
+   current_trigger  start-fine    delta-fine
+   current_buffer   end-h         delay-offset
+@end smallexample
+
+As said, only @i{delay-offset} and @i{user-offset} are designed to
+be written by the user.
 
 @menu
 * Using fd-raw-output::         
@@ -1133,15 +1174,13 @@ allows:
 
 @itemize @bullet
 
-@item There is no support for White Rabbit at this time.
-
 @item Generation of delayed pulses is missing (it is not working)
 
 @item The API for pulse generation is not yet available.
 
 @item We need interrupt support. The input is performed with a kernel timer.
 
-@item There is no EEPROM support. The driver uses default calibration
+@item There is no EEPROM support. The driver uses default calibration.
 settings.
 
 @item We need a module parameter to avoid probing non-fine-delay SPEC

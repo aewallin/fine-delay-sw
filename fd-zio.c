@@ -38,7 +38,7 @@ DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 
 /* Extended attributes for the device */
 static struct zio_attribute fd_zattr_dev[] = {
-	ZATTR_EXT_REG("version", S_IRUGO,		FD_ATTR_DEV_VERSION,
+	ZATTR_EXT_REG("version", S_IRUGO,	FD_ATTR_DEV_VERSION,
 		      FDELAY_VERSION),
 	ZATTR_EXT_REG("utc-h", _RW_,		FD_ATTR_DEV_UTC_H, 0),
 	ZATTR_EXT_REG("utc-l", _RW_,		FD_ATTR_DEV_UTC_L, 0),
@@ -56,6 +56,7 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
 	ZATTR_EXT_REG("flags", _RW_,		FD_ATTR_TDC_FLAGS, 0),
 	ZATTR_EXT_REG("offset", _RW_,		FD_ATTR_TDC_OFFSET, 0),
+	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_TDC_USER_OFF, 0),
 };
 
 /* Extended attributes for the output csets */
@@ -73,6 +74,8 @@ static struct zio_attribute fd_zattr_output[] = {
 	ZATTR_EXT_REG("delta-l", _RW_,		FD_ATTR_OUT_DELTA_L, 0),
 	ZATTR_EXT_REG("delta-coarse", _RW_,	FD_ATTR_OUT_DELTA_COARSE, 0),
 	ZATTR_EXT_REG("delta-fine", _RW_,	FD_ATTR_OUT_DELTA_FINE, 0),
+	ZATTR_EXT_REG("delay-offset", _RW_,	FD_ATTR_OUT_DELAY_OFF, 0),
+	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_OUT_USER_OFF, 0),
 };
 
 
@@ -96,7 +99,7 @@ static enum fd_devtype __fd_get_type(struct device *dev)
 	return FD_TYPE_OUTPUT;
 }
 
-/* TDC input attributes: only the offset is special */
+/* TDC input attributes: only the user offset is special */
 static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 			     uint32_t *usr_val)
 {
@@ -106,6 +109,11 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	cset = to_zio_cset(dev);
 	fd = cset->zdev->private_data;
 
+	if (zattr->priv.addr == FD_ATTR_TDC_USER_OFF) {
+		*usr_val = fd->calib.tdc_user_offset;
+		return 0;
+	}
+
 	/*
 	 * For efficiency reasons at read_fifo() time, we store an
 	 * array of integers instead of filling attributes, so here
@@ -113,6 +121,29 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	 */
 	*usr_val = fd->tdc_attrs[FD_CSET_INDEX(zattr->priv.addr)];
 
+	return 0;
+}
+
+/* output channel: only the two offsets */
+static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
+			     uint32_t *usr_val)
+{
+	struct zio_cset *cset;
+	struct spec_fd *fd;
+	int ch;
+
+	cset = to_zio_cset(dev);
+	ch = cset->index - 1;
+	fd = cset->zdev->private_data;
+
+	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
+		*usr_val = fd->calib.zero_offset[ch];
+		return 0;
+	}
+	if (zattr->priv.addr == FD_ATTR_OUT_USER_OFF) {
+		*usr_val = fd->calib.ch_user_offset[ch];
+		return 0;
+	}
 	return 0;
 }
 
@@ -151,8 +182,10 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 
 	if (__fd_get_type(dev) == FD_TYPE_INPUT)
 		return fd_zio_info_tdc(dev, zattr, usr_val);
-	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
-		return 0;
+	if (__fd_get_type(dev) == FD_TYPE_OUTPUT)
+		return fd_zio_info_output(dev, zattr, usr_val);
+
+	/* following is whole-dev */
 	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
 		return 0;
 	/* reading utc-h calls an atomic get-time */
@@ -182,8 +215,10 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	switch (zattr->priv.addr) {
 	case FD_ATTR_TDC_OFFSET:
 		fd->calib.tdc_zero_offset = usr_val;
-		pr_info("%s: set new offset: %i\n", __func__,
-			fd->calib.tdc_zero_offset);
+		goto out;
+
+	case FD_ATTR_TDC_USER_OFF:
+		fd->calib.tdc_user_offset = usr_val;
 		goto out;
 
 	case FD_ATTR_TDC_FLAGS:
@@ -227,6 +262,29 @@ out:
 	return 0;
 }
 
+/* only the two offsets */
+static int fd_zio_conf_output(struct device *dev, struct zio_attribute *zattr,
+			      uint32_t  usr_val)
+{
+	struct zio_cset *cset;
+	struct spec_fd *fd;
+	int ch;
+
+	cset = to_zio_cset(dev);
+	fd = cset->zdev->private_data;
+	ch = cset->index - 1;
+
+	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
+		fd->calib.zero_offset[ch] = usr_val;
+		return 0;
+	}
+	if (zattr->priv.addr == FD_ATTR_OUT_USER_OFF) {
+		fd->calib.ch_user_offset[ch] = usr_val;
+		return 0;
+	}
+	return 0;
+}
+
 /* conf_set dispatcher and  and device-wide attributes */
 static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 			    uint32_t  usr_val)
@@ -236,9 +294,12 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	struct spec_fd *fd;
 	struct zio_attribute *attr;
 
-	if (__fd_get_type(dev) != FD_TYPE_WHOLEDEV)
+	if (__fd_get_type(dev) == FD_TYPE_INPUT)
 		return fd_zio_conf_tdc(dev, zattr, usr_val);
+	if (__fd_get_type(dev) == FD_TYPE_OUTPUT)
+		return fd_zio_conf_output(dev, zattr, usr_val);
 
+	/* Remains: wholedev */
 	zdev = to_zio_dev(dev);
 	attr = zdev->zattr_set.ext_zattr;
 	fd = zdev->private_data;
@@ -295,6 +356,64 @@ static void fd_ts_sub(struct fd_time *t, uint64_t pico)
 	}
 }
 
+/* We need to change the time in attribute tuples, so here it is */
+enum attrs {__UTC_H, __UTC_L, __COARSE, __FRAC}; /* the order of our attrs */
+
+static void fd_attr_sub(uint32_t *a, uint32_t pico)
+{
+	uint32_t coarse, frac;
+
+	fd_split_pico(pico, &coarse, &frac);
+	if (a[__FRAC] >= frac) {
+		a[__FRAC] -= frac;
+	} else {
+		a[__FRAC] += 4096;
+		a[__FRAC] -= frac;
+		coarse++;
+	}
+	if (a[__COARSE] >= coarse) {
+		a[__COARSE] -= coarse;
+	} else {
+		a[__COARSE] += 125*1000*1000;
+		a[__COARSE] -= coarse;
+		if (likely(a[__UTC_L] != 0)) {
+			a[__UTC_L]--;
+		} else {
+			a[__UTC_L] = ~0;
+			a[__UTC_H]--;
+		}
+	}
+}
+
+static void fd_attr_add(uint32_t *a, uint32_t pico)
+{
+	uint32_t coarse, frac;
+
+	fd_split_pico(pico, &coarse, &frac);
+	a[__FRAC] += frac;
+	if (a[__FRAC] >= 4096) {
+		a[__FRAC] -= 4096;
+		coarse++;
+	}
+	a[__COARSE] += coarse;
+	if (a[__COARSE] > 125*1000*1000) {
+		a[__COARSE] -= 125*1000*1000;
+		a[__UTC_L]++;
+		if (unlikely(a[__UTC_L] == 0))
+			a[__UTC_H]++;
+	}
+}
+
+static inline void __fd_apply_offset(uint32_t *a, int32_t off_pico)
+{
+	if (off_pico) {
+		if (off_pico > 0)
+			fd_attr_add(a, off_pico);
+		else
+			fd_attr_sub(a, -off_pico);
+	}
+}
+
 static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
@@ -328,6 +447,8 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 	v[FD_ATTR_TDC_SEQ]	= t.seq_id;
 	v[FD_ATTR_TDC_CHAN]	= t.channel;
 	v[FD_ATTR_TDC_OFFSET]	= fd->calib.tdc_zero_offset;
+
+	__fd_apply_offset(v + FD_ATTR_TDC_UTC_H, fd->calib.tdc_user_offset);
 
 	/* We also need a copy within the device, so sysfs can read it */
 	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));
@@ -394,30 +515,13 @@ static void __fd_zio_output(struct spec_fd *fd, int index1_4, uint32_t *attrs)
 	}
 
 	if (mode == FD_OUT_MODE_DELAY) {
-		uint32_t coarse, frac;
-		/* To use fd_ts_sub(), but I'd need to convert twice */
-
-		fd_split_pico(fd->calib.zero_offset[ch], &coarse, &frac);
-		if (attrs[FD_ATTR_OUT_START_FINE] >= frac) {
-			attrs[FD_ATTR_OUT_START_FINE] -= frac;
-		} else {
-			attrs[FD_ATTR_OUT_START_FINE] += 4096;
-			attrs[FD_ATTR_OUT_START_FINE] -= frac;
-			coarse++;
-		}
-		if (attrs[FD_ATTR_OUT_START_COARSE] >= coarse) {
-			attrs[FD_ATTR_OUT_START_COARSE] -= coarse;
-		} else {
-			attrs[FD_ATTR_OUT_START_COARSE] += 125*1000*1000;
-			attrs[FD_ATTR_OUT_START_COARSE] -= coarse;
-			if (likely(attrs[FD_ATTR_OUT_START_L] != 0)) {
-				attrs[FD_ATTR_OUT_START_L]--;
-			} else {
-				attrs[FD_ATTR_OUT_START_L] = ~0;
-				attrs[FD_ATTR_OUT_START_H]--;
-			}
-		}
+		fd_attr_sub(attrs + FD_ATTR_OUT_START_H,
+			    fd->calib.zero_offset[ch]);
 	}
+
+	__fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
+			  fd->calib.ch_user_offset[ch]);
+
 	fd_ch_writel(fd, ch, fd->ch[ch].frr_cur,  FD_REG_FRR);
 
 	fd_ch_writel(fd, ch, attrs[FD_ATTR_OUT_START_H],      FD_REG_U_STARTH);
