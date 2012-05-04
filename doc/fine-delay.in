@@ -811,8 +811,10 @@ of the output csets:
    current_buffer   end-h         delay-offset
 @end smallexample
 
-As said, only @i{delay-offset} and @i{user-offset} are designed to
-be written by the user.
+As said, only @i{delay-offset} and @i{user-offset} are designed to be
+written by the user. As of this version, the other attributes are not
+readable nor writable (they are meant to be used by writing a control
+block to @i{/dev}, instead).
 
 @menu
 * Using fd-raw-output::         

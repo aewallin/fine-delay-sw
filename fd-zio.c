@@ -59,21 +59,21 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_TDC_USER_OFF, 0),
 };
 
-/* Extended attributes for the output csets */
+/* Extended attributes for the output csets (most not-read-nor-write mode) */
 static struct zio_attribute fd_zattr_output[] = {
-	ZATTR_EXT_REG("mode", _RW_,		FD_ATTR_OUT_MODE, 0),
-	ZATTR_EXT_REG("rep", _RW_,		FD_ATTR_OUT_REP, 0),
-	ZATTR_EXT_REG("start-h", _RW_,		FD_ATTR_OUT_START_H, 0),
-	ZATTR_EXT_REG("start-l", _RW_,		FD_ATTR_OUT_START_L, 0),
-	ZATTR_EXT_REG("start-coarse", _RW_,	FD_ATTR_OUT_START_COARSE, 0),
-	ZATTR_EXT_REG("start-fine", _RW_,	FD_ATTR_OUT_START_FINE, 0),
-	ZATTR_EXT_REG("end-h", _RW_,		FD_ATTR_OUT_END_H, 0),
-	ZATTR_EXT_REG("end-l", _RW_,		FD_ATTR_OUT_END_L, 0),
-	ZATTR_EXT_REG("end-coarse", _RW_,	FD_ATTR_OUT_END_COARSE, 0),
-	ZATTR_EXT_REG("end-fine", _RW_,		FD_ATTR_OUT_END_FINE, 0),
-	ZATTR_EXT_REG("delta-l", _RW_,		FD_ATTR_OUT_DELTA_L, 0),
-	ZATTR_EXT_REG("delta-coarse", _RW_,	FD_ATTR_OUT_DELTA_COARSE, 0),
-	ZATTR_EXT_REG("delta-fine", _RW_,	FD_ATTR_OUT_DELTA_FINE, 0),
+	ZATTR_EXT_REG("mode", 0,		FD_ATTR_OUT_MODE, 0),
+	ZATTR_EXT_REG("rep", 0,			FD_ATTR_OUT_REP, 0),
+	ZATTR_EXT_REG("start-h", 0,		FD_ATTR_OUT_START_H, 0),
+	ZATTR_EXT_REG("start-l", 0,		FD_ATTR_OUT_START_L, 0),
+	ZATTR_EXT_REG("start-coarse", 0,	FD_ATTR_OUT_START_COARSE, 0),
+	ZATTR_EXT_REG("start-fine", 0,		FD_ATTR_OUT_START_FINE, 0),
+	ZATTR_EXT_REG("end-h", 0,		FD_ATTR_OUT_END_H, 0),
+	ZATTR_EXT_REG("end-l", 0,		FD_ATTR_OUT_END_L, 0),
+	ZATTR_EXT_REG("end-coarse", 0,		FD_ATTR_OUT_END_COARSE, 0),
+	ZATTR_EXT_REG("end-fine", 0,		FD_ATTR_OUT_END_FINE, 0),
+	ZATTR_EXT_REG("delta-l", 0,		FD_ATTR_OUT_DELTA_L, 0),
+	ZATTR_EXT_REG("delta-coarse", 0,	FD_ATTR_OUT_DELTA_COARSE, 0),
+	ZATTR_EXT_REG("delta-fine", 0,		FD_ATTR_OUT_DELTA_FINE, 0),
 	ZATTR_EXT_REG("delay-offset", _RW_,	FD_ATTR_OUT_DELAY_OFF, 0),
 	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_OUT_USER_OFF, 0),
 };
