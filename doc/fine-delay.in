@@ -458,6 +458,37 @@ are enumerated in @code{fine-delay.h}
 @end menu
 
 @c --------------------------------------------------------------------------
+@node List of Commands to the Device
+@subsection List of Commands to the Device
+
+The following commands are currently supported for the @code{command}
+write-only file in @i{sysfs}:
+
+@table @code
+
+@item 0 = FD_CMD_HOST_TIME
+
+	Set board time equal to host time.
+
+@item 1 = FD_CMD_WR_ENABLE
+
+	Enable White-Rabbit mode.
+
+@item 2 = FD_CMD_WR_DISABLE
+
+	Disable White-Rabbit mode.
+
+@item 3 = FD_CMD_WR_QUERY
+
+	Tell the user the status of White-Rabbit mode. This is a hack, as
+        the return value is reported using error codes. Success means
+        White-Rabbit is synchronized.  @code{ENODEV} means there is
+        WR mode activa, @code{EAGAIN} means it is not synchronized yet.
+        The error is returned to the @i{write} system call.
+
+@end table
+
+@c --------------------------------------------------------------------------
 @node Reading Board Time
 @subsection Reading Board Time
 
@@ -1040,6 +1071,30 @@ There is no example for @i{fdelay_fileno_tdc} using @i{select}.
 The API is not implemented, nor the example programs. The header,
 however, includes a tentative API, based on structures. Please check
 the header and @i{lib/fdelay-output.c} until it is ready.
+
+@c ==========================================================================
+@node White-Rabbit Configuration
+@section White-Rabbit Configuration
+
+@b{Note:} these functions have not been tested yet, although the low-level
+command works.
+
+The following functions are offered
+
+@table @code
+
+@item int fdelay_wr_mode(struct fdelay_board *b, int on);
+
+	The function receives 0 to disable WR mode or non-0 to enable it.
+        It is expected to never fail if the driver is loaded.
+
+@item int fdelay_check_wr_mode(struct fdelay_board *b);
+
+	The function returns 0 if the WR slave is synchronized, @code{EAGAIN}
+        (an integer) if it is enabled by not yet synchronized and @code{ENODEV}
+        if WR-mode is currently disabled.
+
+@end table
 
 @c ##########################################################################
 @node Known Bugs and Missing Features

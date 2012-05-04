@@ -77,6 +77,7 @@ extern int fdelay_config_pulse_ps(struct fdelay_board *b,
 				  int channel, struct fdelay_pulse_ps *ps);
 
 extern int fdelay_wr_mode(struct fdelay_board *b, int on);
+extern int fdelay_check_wr_mode(struct fdelay_board *b);
 
 #ifdef FDELAY_INTERNAL /* Libray users should ignore what follows */
 

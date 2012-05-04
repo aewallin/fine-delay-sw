@@ -130,8 +130,13 @@ static int fd_wr_mode(struct spec_fd *fd, int on)
 
 static int fd_wr_query(struct spec_fd *fd)
 {
-	/* To be filled */
-	return -EOPNOTSUPP;
+	int ena = test_bit(FD_FLAG_WR_MODE, &fd->flags);
+
+	if (!ena)
+		return -ENODEV;
+	if (fd_readl(fd, FD_REG_TCR) & FD_TCR_WR_LOCKED)
+		return 0;
+	return -EAGAIN;
 }
 
 
