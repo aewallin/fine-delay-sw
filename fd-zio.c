@@ -28,6 +28,9 @@
 #include "hw/fd_main_regs.h"
 #include "hw/fd_channel_regs.h"
 
+#define _RW_ (S_IRUGO | S_IWUGO) /* I want 80-col lines so this lazy thing */
+
+
 /* The sample size. Mandatory, device-wide */
 DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 	ZATTR_REG(zdev, ZATTR_NBITS, S_IRUGO, 0, 32), /* 32 bits. Really? */
@@ -37,10 +40,10 @@ DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
 static struct zio_attribute fd_zattr_dev[] = {
 	ZATTR_EXT_REG("version", S_IRUGO,		FD_ATTR_DEV_VERSION,
 		      FDELAY_VERSION),
-	ZATTR_EXT_REG("utc-h", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_H, 0),
-	ZATTR_EXT_REG("utc-l", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_UTC_L, 0),
-	ZATTR_EXT_REG("coarse", S_IRUGO | S_IWUGO,	FD_ATTR_DEV_COARSE, 0),
-	ZATTR_EXT_REG("command", S_IWUGO,		FD_ATTR_DEV_COMMAND, 0),
+	ZATTR_EXT_REG("utc-h", _RW_,		FD_ATTR_DEV_UTC_H, 0),
+	ZATTR_EXT_REG("utc-l", _RW_,		FD_ATTR_DEV_UTC_L, 0),
+	ZATTR_EXT_REG("coarse", _RW_,		FD_ATTR_DEV_COARSE, 0),
+	ZATTR_EXT_REG("command", S_IWUGO,	FD_ATTR_DEV_COMMAND, 0),
 };
 
 /* Extended attributes for the TDC (== input) cset */
@@ -51,12 +54,11 @@ static struct zio_attribute fd_zattr_input[] = {
 	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
 	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
 	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
-	ZATTR_EXT_REG("flags", S_IRUGO|S_IWUGO,	FD_ATTR_TDC_FLAGS, 0),
-	ZATTR_EXT_REG("offset", S_IRUGO,	FD_ATTR_TDC_OFFSET, 0),
+	ZATTR_EXT_REG("flags", _RW_,		FD_ATTR_TDC_FLAGS, 0),
+	ZATTR_EXT_REG("offset", _RW_,		FD_ATTR_TDC_OFFSET, 0),
 };
 
 /* Extended attributes for the output csets */
-#define _RW_ (S_IRUGO | S_IWUGO)
 static struct zio_attribute fd_zattr_output[] = {
 	ZATTR_EXT_REG("mode", _RW_,		FD_ATTR_OUT_MODE, 0),
 	ZATTR_EXT_REG("rep", _RW_,		FD_ATTR_OUT_REP, 0),
@@ -178,9 +180,21 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	cset = to_zio_cset(dev);
 	fd = cset->zdev->private_data;
 
-	if (zattr->priv.addr != FD_ATTR_TDC_FLAGS)
+
+	switch (zattr->priv.addr) {
+	case FD_ATTR_TDC_OFFSET:
+		fd->calib.tdc_zero_offset = usr_val;
+		pr_info("%s: set new offset: %i\n", __func__,
+			fd->calib.tdc_zero_offset);
 		goto out;
 
+	case FD_ATTR_TDC_FLAGS:
+		break; /* code below */
+	default:
+		goto out;
+	}
+
+	/* This code is only about FD_ATTR_TDC_FLAGS */
 	change = zattr->value ^ usr_val; /* old xor new */
 
 	/* No need to lock, as configuration is serialized by zio-core */
