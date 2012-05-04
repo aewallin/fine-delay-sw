@@ -70,8 +70,6 @@ int fdelay_get_time(struct fdelay_board *userb, struct fdelay_time *t)
 int fdelay_set_host_time(struct fdelay_board *userb)
 {
 	__define_board(b, userb);
-	uint32_t i = FD_CMD_HOST_TIME;
-
-	return fdelay_sysfs_set(b, "command", &i);
+	return __fdelay_command(b, FD_CMD_HOST_TIME);
 }
 

@@ -146,6 +146,12 @@ static inline int fdelay_sysfs_set(struct __fdelay_board *b, char *name,
 	return __fdelay_sysfs_set(pathname, value);
 }
 
+static inline int __fdelay_command(struct __fdelay_board *b, uint32_t cmd)
+{
+	return fdelay_sysfs_set(b, "command", &cmd);
+}
+
+
 
 #endif /* FDELAY_INTERNAL */
 #endif /* __FDELAY_H__ */
