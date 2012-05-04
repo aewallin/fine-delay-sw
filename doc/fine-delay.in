@@ -196,7 +196,7 @@ identifier.
        git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
    cd spec-sw
    export SPEC_SW=$(/bin/pwd)
-   git checkout 8be5e1b || 
+   git checkout cd7e94e || 
        git checkout origin/for-linux-2.6.32
    cd kernel
    make
@@ -206,16 +206,9 @@ identifier.
 @b{Warning:} the commit-ID above might change in the future,
 that's why the command above retrieves the @i{current}
 branch @code{for-linux-2.6.32} if the first checkout fails.
-I don't plan to change this during May 2012, though.
+I don't plan to change this again during May 2012, though -- but it happened
+already.
 @c FIXME: the commit identifiers.
-
-Finally, you need to compile and install this driver, using the following
-commands, from the @i{master} branch:
-
-@example
-   make
-   sudo make modules_install
-@end example
 
 At this point all the software modules are ready to be loaded.
 Actually, the right set will be auto-loaded when you @i{modprobe} for
@@ -453,6 +446,7 @@ device, and we need to limit the number of attributes. The command numbers
 are enumerated in @code{fine-delay.h} 
 
 @menu
+* List of Commands to the Device::  
 * Reading Board Time::          
 * Writing Board Time::          
 @end menu
@@ -834,6 +828,7 @@ from the parent directory) and the ZIO headers, retrieved using the
 * Input Configuration::         
 * Reading Input Time-stamps::   
 * Output Configuration::        
+* White-Rabbit Configuration::  
 @end menu
 
 @c ==========================================================================
@@ -1162,6 +1157,7 @@ them.
 
 @menu
 * ZIO Doesn't Compile::         
+* make modules_install misbehaves::  
 * Wrong FPGA Image::            
 * Version Mismatch::            
 @end menu
