@@ -99,6 +99,10 @@ card.
 This driver has been developed from the FPGA binary included in the
 package as @code{binaries/spec_top.bin}.
 
+As an alternative, you can use a fuller White-Rabbit-enabled version,
+includes as @code{binaries/spec_top_wr.bin}. In this case please use
+@code{binarsies/wrc.bin} as well.
+
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
 @c @code{http://www.ohwr.org/projects/fmc-delay-1ns-8cha/files} (direct
@@ -121,8 +125,21 @@ need to place the @code{.bin} file, properly renamed, in
 If you have several @i{fine-delay} cards in the same host, you can
 install several copies of the binary, renamed to match the bus and
 slot number of the various SPEC cards, or you can use the default
-filename if there are no other SPEC cards (i.e. cards hosting
+filename if there are no other SPEC cards (i.e. no cards hosting
 something else than the @i{fine-delay} module).
+
+If you use the White-Rabbit version of the firmware, you also need
+the @code{wrc.bin} file, renamed as @i{spec-sw} looks for it.
+In my system, where the @i{fine-delay} card is at bus 2 slot 0, I use
+the following two files in @i{/lib/firmware}:
+
+@smallexample
+   -rw------- 1 root   root    58628 May  4 21:15 spec-B0002-cpu.bin
+   -rw------- 1 root   root  1485788 May  4 21:14 spec-B0002.bin
+@end smallexample
+
+Also, please note that if you use the White-Rabbit gatware, you must
+pass the parameter @code{lm32=0xc0000} to the @i{spec.ko} module.
 
 @c ==========================================================================
 @node Software Dependencies
@@ -213,6 +230,11 @@ already.
 At this point all the software modules are ready to be loaded.
 Actually, the right set will be auto-loaded when you @i{modprobe} for
 @code{spec-fine-delay} if you installed everything.
+
+@b{Note:} if you are using the White-Rabbit version of the firmware,
+you should pass the argument @code{lm32=0xc000} to the @i{spec.ko}
+module.  The script used by Tomasz is available as
+@code{tools/load.sh} for your reference.
 
 This is an example of the kernel messages you'll get back over
 a few seconds (initializing the fine-delay card above, takes almost
