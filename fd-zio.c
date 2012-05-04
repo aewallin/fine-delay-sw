@@ -274,6 +274,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
  * We are over with attributes, now there's real I/O
  */
 
+/* Subtract an offset (used for the input timestamp) */
 static void fd_ts_sub(struct fd_time *t, uint64_t pico)
 {
 	uint32_t coarse, frac;
@@ -393,7 +394,29 @@ static void __fd_zio_output(struct spec_fd *fd, int index1_4, uint32_t *attrs)
 	}
 
 	if (mode == FD_OUT_MODE_DELAY) {
-		/* FIXME: subtract zero offset */
+		uint32_t coarse, frac;
+		/* To use fd_ts_sub(), but I'd need to convert twice */
+
+		fd_split_pico(fd->calib.zero_offset[ch], &coarse, &frac);
+		if (attrs[FD_ATTR_OUT_START_FINE] >= frac) {
+			attrs[FD_ATTR_OUT_START_FINE] -= frac;
+		} else {
+			attrs[FD_ATTR_OUT_START_FINE] += 4096;
+			attrs[FD_ATTR_OUT_START_FINE] -= frac;
+			coarse++;
+		}
+		if (attrs[FD_ATTR_OUT_START_COARSE] >= coarse) {
+			attrs[FD_ATTR_OUT_START_COARSE] -= coarse;
+		} else {
+			attrs[FD_ATTR_OUT_START_COARSE] += 125*1000*1000;
+			attrs[FD_ATTR_OUT_START_COARSE] -= coarse;
+			if (likely(attrs[FD_ATTR_OUT_START_L] != 0)) {
+				attrs[FD_ATTR_OUT_START_L]--;
+			} else {
+				attrs[FD_ATTR_OUT_START_L] = ~0;
+				attrs[FD_ATTR_OUT_START_H]--;
+			}
+		}
 	}
 	fd_ch_writel(fd, ch, fd->ch[ch].frr_cur,  FD_REG_FRR);
 
