@@ -1,6 +1,6 @@
 # user-space tools for spec-fine-delay
 
-HOST_EXTRACFLAGS += -I$(M) -I$(ZIO)/include -Wno-trigraphs
+HOST_EXTRACFLAGS += -I$(M) -I$(ZIO)/include -Wno-trigraphs -Wall -ggdb
 
 HOSTCC ?= gcc
 
