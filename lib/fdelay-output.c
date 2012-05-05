@@ -45,8 +45,72 @@ void fdelay_time_to_pico(struct fdelay_time *time, uint64_t *pico)
 	*pico = p;
 }
 
-extern int fdelay_config_pulse(struct fdelay_board *b,
-			       int channel, struct fdelay_pulse *pulse);
+static  int __fdelay_get_ch_fd(struct __fdelay_board *b,
+			       int channel, int *fdc, int *fdd)
+{
+	int ch14 = channel + 1;
+	char fname[128];
+
+	if (channel < 0 || channel > 3) {
+		errno = -EINVAL;
+		return -1;
+	}
+	if (b->fdc[ch14] <= 0) {
+		sprintf(fname, "%s-%i-0-ctrl", b->devbase, ch14);
+		b->fdc[ch14] = open(fname, O_WRONLY | O_NONBLOCK);
+		if (b->fdc[ch14] < 0)
+			return -1;
+	}
+	if (b->fdd[ch14] <= 0) {
+		sprintf(fname, "%s-%i-0-data", b->devbase, ch14);
+		b->fdd[ch14] = open(fname, O_WRONLY | O_NONBLOCK);
+		if (b->fdd[ch14] < 0)
+			return -1;
+	}
+	*fdc = b->fdc[ch14];
+	*fdd = b->fdd[ch14];
+	return 0;
+}
+
+extern int fdelay_config_pulse(struct fdelay_board *userb,
+			       int channel, struct fdelay_pulse *pulse)
+{
+	__define_board(b, userb);
+	struct zio_control ctrl = {0,};
+	uint32_t *a;
+	int fdc, fdd;
+
+	if (__fdelay_get_ch_fd(b, channel, &fdc, &fdd) < 0)
+		return -1; /* errno already set */
+
+	a = ctrl.attr_channel.ext_val;
+	a[FD_ATTR_OUT_MODE] = pulse->mode;
+	a[FD_ATTR_OUT_REP] = pulse->rep;
+
+	a[FD_ATTR_OUT_START_H] = pulse->start.utc >> 32;
+	a[FD_ATTR_OUT_START_L] = pulse->start.utc;
+	a[FD_ATTR_OUT_START_COARSE] = pulse->start.coarse;
+	a[FD_ATTR_OUT_START_FINE] = pulse->start.frac;
+
+	a[FD_ATTR_OUT_END_H] = pulse->end.utc >> 32;
+	a[FD_ATTR_OUT_END_L] = pulse->end.utc;
+	a[FD_ATTR_OUT_END_COARSE] = pulse->end.coarse;
+	a[FD_ATTR_OUT_END_FINE] = pulse->end.frac;
+
+	a[FD_ATTR_OUT_DELTA_L] = pulse->loop.utc; /* only 0..f */
+	a[FD_ATTR_OUT_DELTA_COARSE] = pulse->loop.coarse; /* only 0..f */
+	a[FD_ATTR_OUT_DELTA_FINE] = pulse->loop.frac; /* only 0..f */
+
+	/* we need to fill the nsample field of the control */
+	ctrl.attr_trigger.std_val[1] = 1;
+	ctrl.nsamples = 1;
+	ctrl.ssize = 4;
+	ctrl.nbits = 32;
+
+	write(fdc, &ctrl, sizeof(ctrl));
+	write(fdd, "1234", 4); /* we need to write data to push it out */
+	return 0;
+}
 
 /* The "pulse_ps" function relies on the previous one */
 int fdelay_config_pulse_ps(struct fdelay_board *b,
