@@ -27,12 +27,15 @@
 
 enum {MODE_HEX, MODE_FLOAT, MODE_PICO};
 
+int expect;
+
 void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 	uint64_t *p1)
 {
 	int sequence = a[FD_ATTR_TDC_SEQ];
 	long double t2;
 	int64_t p2, delta;
+	static int64_t guess;
 
 	if (*seq != -1) {
 		if (sequence  != ((*seq + 1) & 0xffff)) {
@@ -74,10 +77,19 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 		if (delta < 0)
 			delta += 1000LL * 1000 * 1000 * 1000;
 		if (*p1) {
-			printf("%012lli - delta %012lli\n", p2, delta);
+			printf("%012lli - delta %012lli", p2, delta);
+			if (expect) {
+				guess += expect;
+				if (guess > 1000LL * 1000 * 1000 * 1000)
+					guess -= 1000LL * 1000 * 1000 * 1000;
+				printf(" - error %6i", (int)(p2 - guess));
+			}
+			putchar('\n');
 		}
 		else {
 			printf("%012lli\n", p2);
+			if (expect)
+				guess = p2;
 		}
 		*p1 = p2;
 		break;
@@ -97,6 +109,9 @@ int main(int argc, char **argv)
 	long double t1[MAXFD] = {0.0,};
 	uint64_t p1[MAXFD] = {0LL,};
 	uint32_t *attrs;
+
+	if (getenv("EXPECTED_RATE"))
+		expect = atoi(getenv("EXPECTED_RATE"));
 
 	if (argc > 1 && !strcmp(argv[1], "-f")) {
 		mode = MODE_FLOAT;
