@@ -25,21 +25,86 @@
 #include <linux/zio-user.h>
 #include <fine-delay.h>
 
+enum {MODE_HEX, MODE_FLOAT, MODE_PICO};
+
+void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
+	uint64_t *p1)
+{
+	int sequence = a[FD_ATTR_TDC_SEQ];
+	long double t2;
+	int64_t p2, delta;
+
+	if (*seq != -1) {
+		if (sequence  != ((*seq + 1) & 0xffff)) {
+			printf("%s: LOST %i events\n", name,
+			       (sequence - (*seq + 1)) & 0xffff);
+			*t1 = 0.0;
+			*p1 = 0LL;
+		}
+	}
+	*seq = sequence;
+
+	printf("%s: ", name);
+	switch(mode) {
+	case MODE_HEX:
+		printf("%08x %08x %08x %08x %08x\n",
+		       a[FD_ATTR_TDC_UTC_H],
+		       a[FD_ATTR_TDC_UTC_L],
+		       a[FD_ATTR_TDC_COARSE],
+		       a[FD_ATTR_TDC_FRAC],
+		       a[FD_ATTR_TDC_SEQ]);
+		break;
+
+	case MODE_FLOAT:
+		t2 = a[FD_ATTR_TDC_UTC_L] + a[FD_ATTR_TDC_COARSE]
+			* .000000008; /* 8ns */
+		if (*t1) {
+			printf("%17.9Lf (delta %13.9Lf)\n",
+			       t2, t2 - *t1);
+		} else {
+			printf("%17.9Lf\n", t2);
+		}
+		*t1 = t2;
+		break;
+
+	case MODE_PICO:
+		p2 = a[FD_ATTR_TDC_COARSE] * 8000LL
+			+ a[FD_ATTR_TDC_FRAC] * 4096LL / 8000;
+		delta = p2 - *p1;
+		if (delta < 0)
+			delta += 1000LL * 1000 * 1000 * 1000;
+		if (*p1) {
+			printf("%012lli - delta %012lli\n", p2, delta);
+		}
+		else {
+			printf("%012lli\n", p2);
+		}
+		*p1 = p2;
+		break;
+	}
+}
+
 #define MAXFD 16
 struct zio_control ctrl;
 
 int main(int argc, char **argv)
 {
 	glob_t glob_buf;
+	int i, j, maxfd = 0;
 	int fd[MAXFD], seq[MAXFD];
-	int i, j, maxfd = 0, sequence, last = 0;
 	fd_set allset, curset;
-	int floatmode = 0;
-	long double t1 = 0.0, t2;
+	int mode = MODE_HEX;
+	long double t1[MAXFD] = {0.0,};
+	uint64_t p1[MAXFD] = {0LL,};
 	uint32_t *attrs;
 
 	if (argc > 1 && !strcmp(argv[1], "-f")) {
-		floatmode = 1;
+		mode = MODE_FLOAT;
+		argv[1] = argv[0];
+		argv++, argc--;
+	}
+	if (argc > 1 && !strcmp(argv[1], "-p")) {
+		mode = MODE_PICO;
 		argv[1] = argv[0];
 		argv++, argc--;
 	}
@@ -108,33 +173,7 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			attrs = ctrl.attr_channel.ext_val;
-			sequence = attrs[FD_ATTR_TDC_SEQ];
-			if (seq[i] != -1) {
-				if (sequence  - seq[i] != 1)
-					printf("%s: LOST %i events\n", argv[i],
-					       sequence - seq[i] - 1);
-			}
-			seq[i] = sequence;
-			printf("%s: ", argv[i]);
-			if (floatmode) {
-				t2 = attrs[FD_ATTR_TDC_UTC_L] +
-					attrs[FD_ATTR_TDC_COARSE]
-					* .000000008; /* 8ns */
-				if (t1) {
-					printf("%17.9Lf (delta %13.9Lf)\n",
-					       t2, t2 - t1);
-				} else {
-					printf("%17.9Lf\n", t2);
-				}
-				t1 = t2;
-				continue;
-			}
-			printf("%08x %08x %08x %08x %08x\n",
-			       attrs[FD_ATTR_TDC_UTC_H],
-			       attrs[FD_ATTR_TDC_UTC_L],
-			       attrs[FD_ATTR_TDC_COARSE],
-			       attrs[FD_ATTR_TDC_FRAC],
-			       attrs[FD_ATTR_TDC_SEQ]);
+			event(attrs, argv[i], seq + i, mode, t1 + i, p1 + i);
 		}
 	}
 	return 0;
