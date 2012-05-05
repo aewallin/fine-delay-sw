@@ -34,6 +34,7 @@
 struct fd_perf {
 	/* sequence is 16-bits, do the same here */
 	uint16_t first, prev; /* sequence numbers: -1 == "not in a burst" */
+	struct timeval tv;
 	uint nev;
 	uint64_t pico_tot, micro_tot;
 	int64_t pico_prev, pico_min, pico_max, pico_avg;
@@ -51,13 +52,12 @@ static void perf_clean(struct fd_perf *p)
 
 static void perf_one(struct fd_perf *p, uint32_t *a /* attrs */)
 {
-	struct timeval tv;
 	int64_t pico, micro, diff;
 
-	gettimeofday(&tv, NULL);
+	gettimeofday(&p->tv, NULL);
 	pico = a[FD_ATTR_TDC_COARSE] * 8000LL
 		+ (a[FD_ATTR_TDC_FRAC] << 12) / 8000;
-	micro = tv.tv_usec;
+	micro = p->tv.tv_usec;
 
 	if (!p->nev) {
 		p->first = a[FD_ATTR_TDC_SEQ];
@@ -130,6 +130,10 @@ int main(int argc, char **argv)
 	struct fd_perf perf = {0,};
 	int floatmode = 0;
 	uint32_t *attrs;
+	int step = 0;
+
+	if (getenv("PERF_STEP"))
+		step = atoi(getenv("PERF_STEP"));
 
 	if (argc > 1 && !strcmp(argv[1], "-f")) {
 		floatmode = 1;
@@ -208,6 +212,16 @@ int main(int argc, char **argv)
 			}
 			attrs = ctrl.attr_channel.ext_val;
 			perf_one(&perf, attrs);
+		}
+
+		if (step && perf.nev) {
+			static time_t t;
+			/* don't make an extra system call, use perf.tv */
+			if (perf.nev == 1)
+				t = perf.tv.tv_sec;
+			else
+				if (perf.tv.tv_sec - t >= step)
+					perf_report_clean(&perf);
 		}
 	}
 	return 0;
