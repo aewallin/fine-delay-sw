@@ -76,6 +76,32 @@ in the documentation.
 @node Driver Features
 @chapter Driver Features
 
+This driver is based on ZIO and @i{spec-sw}.  It supports initial
+setup of the board, setting and reading time, run-time continuos
+calibration, input timestamping and output pulse generation.  It has
+support for user-defined offsets, so our users can tell the driver
+about channel-specific delays (for example, to account for wiring) and
+ignore the issue in application code.
+
+For each feature offered the driver (and documentation) tries to offer:
+
+@itemize @bullet
+@item A description of how the features works at low level;
+
+@item A low-level user-space program to test the actual mechanism;
+
+@item A C-language API to access the feature with data structures;
+
+@item An example program based on that API.
+@end itemize
+
+Sometimes the API and associated program is missing, lor lack of time.
+
+This package is currently available from
+@code{git://gnudd.com/fine-delay.git}, with snapshots on the ``Files''
+and ``Documents'' tabs of the @code{ohwr} project for the related
+hardware and gateware.
+
 @c ##########################################################################
 @node Installation
 @chapter Installation
@@ -1161,15 +1187,38 @@ The following functions are offered
 @chapter Known Bugs and Missing Features
 
 This package is still work in progress, and unfortunately the same
-applies to the packages it depends on.  The current package set (i.e.,
-@i{zio}, @i{spec-sw} and this one) has
+applies to the packages it depends on -- ZIO and @i{spec-sw}.
+
+@menu
+* Bugs in Related Packages::    
+* Bugs in This Package::        
+* Wish List::                   
+@end menu
+
+@c ==========================================================================
+@node Bugs in Related Packages
+@section Bugs in Related Packaged
+
+The current package set (i.e., @i{zio}, @i{spec-sw} and this one) has
 the following known issues exposed by @i{fine-delay}:
 
 @itemize @bullet
 @item The auto-loading of @i{spec} submodules is not really working:
 the @i{modprobe} command will be stuck sleeping if you try to use it.
 Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
+
+@item The @i{user} trigger of ZIO is really user-driven, so the driver
+can't push stuff to the buffer until asked to. Also, a related buglet
+prevents to return data immediately when asked. This will be fixed,
+but it currently results in the @i{read} function only returning one
+sample, and an immediately-following non-blocking @i{read} will say
+nothing is there, yet.
+
 @end itemize
+
+@c ==========================================================================
+@node Bugs in This Package
+@section Bugs in This Package
 
 This is the list of known bugs and missing features over what hardware
 allows:
@@ -1192,13 +1241,17 @@ the host computer.
 
 @end itemize
 
+@c ==========================================================================
+@node Wish List
+@section Wish List
+
 Other less important issues may be dealt with over time, but are not
 urgent as I write this:
 
 @itemize 
 
 @item The driver should register its own ZIO trigger, or use the new
-attribute for ``greedy-input'' offered in new versions of ZIO
+attribute for ``greedy-input'' planned in new versions of ZIO
 (thank you Federico). Currently there's no buffering and reading is
 a little slow.
 
@@ -1208,7 +1261,6 @@ input sequence number.
 @item Most example programs only use the ``first'' board in the system.
 
 @end itemize
-
 
 
 @c ##########################################################################
