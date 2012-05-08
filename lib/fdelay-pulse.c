@@ -43,14 +43,22 @@ static int parse_time(struct fdelay_board *b, char *s, struct fdelay_time *t)
 int main(int argc, char **argv)
 {
 	struct fdelay_board *b;
-	int i, devid, channel;
+	int i, devid, channel, needwait = 0;
 	struct fdelay_pulse p;
 	char *rest;
 
 	if (argc < 7)
 		exiterr(argc, argv);
 
-	/* Optional argv[1] is a number */
+	/* Optional argv[1] is "-w" */
+	if (!strcmp(argv[1], "-w")) {
+		needwait++;
+		argv[1] = argv[0];
+		argv++;
+		argc--;
+	}
+
+	/* Next optional argv[1] is a number */
 	rest = strdup(argv[1]);
 	if (sscanf(argv[1], "%x%s", &devid, rest) != 1) {
 		devid = 0;
@@ -60,6 +68,9 @@ int main(int argc, char **argv)
 		argc--;
 	}
 	free(rest);
+
+	if (argc < 7) /* again: we ate some arguments */
+		exiterr(argc, argv);
 
 	/* Crappy parser */
 	if (!strcmp(argv[1], "disable"))
@@ -141,6 +152,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "%s: fdelay_cofig_pulse(): %s\n",
 			argv[0], strerror(errno));
 		exit(1);
+	}
+
+	while (needwait) {
+		usleep(10 * 1000);
+		i = fdelay_has_triggered(b, channel);
+		if (i < 0) {
+			fprintf(stderr, "%s: waiting for trigger: %s\n",
+				argv[0], strerror(errno));
+			exit(1);
+		}
+		needwait = !i;
 	}
 
 	fdelay_close(b);
