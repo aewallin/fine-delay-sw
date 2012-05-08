@@ -113,7 +113,7 @@ extern int fdelay_config_pulse(struct fdelay_board *userb,
 }
 
 /* The "pulse_ps" function relies on the previous one */
-int fdelay_config_pulse_ps(struct fdelay_board *b,
+int fdelay_config_pulse_ps(struct fdelay_board *userb,
 			   int channel, struct fdelay_pulse_ps *ps)
 {
 	struct fdelay_pulse p;
@@ -124,8 +124,19 @@ int fdelay_config_pulse_ps(struct fdelay_board *b,
 	p.end = ps->start;
 	// fdelay_add_ps(&p.end, ps->length);
 	fdelay_pico_to_time(&ps->period, &p.loop);
-	return fdelay_config_pulse(b, channel, &p);
+	return fdelay_config_pulse(userb, channel, &p);
 }
 
+int fdelay_has_triggered(struct fdelay_board *userb, int channel)
+{
+	__define_board(b, userb);
+	char s[32];
+	uint32_t mode;
+
+	sprintf(s,"fd-ch%i/mode", channel + 1);
+	if (fdelay_sysfs_get(b, s, &mode) < 0)
+		return -1; /* errno already set */
+	return (mode & 0x80) != 0;
+}
 
 
