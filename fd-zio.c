@@ -61,7 +61,7 @@ static struct zio_attribute fd_zattr_input[] = {
 
 /* Extended attributes for the output csets (most not-read-nor-write mode) */
 static struct zio_attribute fd_zattr_output[] = {
-	ZATTR_EXT_REG("mode", 0,		FD_ATTR_OUT_MODE, 0),
+	ZATTR_EXT_REG("mode", S_IRUGO,		FD_ATTR_OUT_MODE, 0),
 	ZATTR_EXT_REG("rep", 0,			FD_ATTR_OUT_REP, 0),
 	ZATTR_EXT_REG("start-h", 0,		FD_ATTR_OUT_START_H, 0),
 	ZATTR_EXT_REG("start-l", 0,		FD_ATTR_OUT_START_L, 0),
@@ -142,6 +142,12 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 	}
 	if (zattr->priv.addr == FD_ATTR_OUT_USER_OFF) {
 		*usr_val = fd->calib.ch_user_offset[ch];
+		return 0;
+	}
+	/* Reading the mode tells wether it triggered or not */
+	if (zattr->priv.addr == FD_ATTR_OUT_MODE) {
+		int t = fd_ch_readl(fd, ch, FD_REG_DCR) & FD_DCR_PG_TRIG;
+		*usr_val = t ? 0x80 : 0; /* low bits will return mode */
 		return 0;
 	}
 	return 0;
