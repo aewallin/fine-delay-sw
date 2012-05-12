@@ -374,9 +374,17 @@ void handle_readout(struct board_def *bdef)
 {
     int64_t t_ps;
     struct fdelay_time t;
+    static time_t start;
+    int done;
 
     while(fdelay_read(bdef->b, &t, 1, O_NONBLOCK) == 1)
     {	    
+
+	if (!start) start = time(NULL);
+	if (!done) {
+	    done = time(NULL) - start > 1;
+	    if (!done) continue;
+	}
 	t_ps = (t.coarse * 8000LL) + ((t.frac * 8000LL) >> 12);
 	printf("seq %5i: time %lli s, %lli.%03lli ns [%x]\n",   t.seq_id, t.utc, t_ps / 1000LL, t_ps % 1000LL, t.coarse);
 	log_write(&t, bdef->hw_index);
