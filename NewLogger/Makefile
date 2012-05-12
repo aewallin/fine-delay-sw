@@ -1,7 +1,7 @@
 CFLAGS=-I../lib -I.. -g
 LDFLAGS=-L../lib -lfdelay
 
-all:	fdelay-gs fdelay-dumplog fdelay-gs.ru fdelay-gs.rusleep
+all:	fdelay-gs fdelay-dumplog
 
 fdelay-gs: fdelay-gs.o
 	gcc -o $@ $^ $(LDFLAGS)
