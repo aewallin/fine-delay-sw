@@ -300,7 +300,7 @@ static struct fdelay_time ts_add(struct fdelay_time a, struct fdelay_time b)
 	a.coarse++;
     }
     a.coarse += b.coarse;
-    if(b.coarse >= 125000000)
+    if(a.coarse >= 125000000)
     {
         a.coarse -= 125000000;
 	a.utc ++;
