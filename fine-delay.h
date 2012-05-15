@@ -236,6 +236,7 @@ enum fd_acam_modes {
 #define ACAM_MASK		((1<<29) - 1) /* 28 bits */
 
 /* SPI Bus chip selects */
+#define FD_CS_NONE	0	/* Nothing */
 #define FD_CS_PLL	1	/* AD9516 PLL */
 #define FD_CS_GPIO	2	/* MCP23S17 GPIO */
 
