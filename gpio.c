@@ -37,18 +37,19 @@ static int gpio_readl(struct spec_fd *fd, int reg)
 static int gpio_writel_with_retry(struct spec_fd *fd, int val, int reg)
 {
 	int retries = SPI_RETRIES, rv;
- 	while(retries--)
- 	{
- 		gpio_writel(fd, val, reg);
- 		rv = gpio_readl(fd, reg);
- 		if(rv >= 0 && (rv == val))
- 		{
- 			if(SPI_RETRIES-1-retries > 0)
- 				printk("gpio_writel_with_retry: succeded after %d retries\n", SPI_RETRIES-1-retries);
- 			return 0;
- 		}
- 	}
- 	return -EIO;
+	while(retries--)
+	{
+		gpio_writel(fd, val, reg);
+		rv = gpio_readl(fd, reg);
+		if(rv >= 0 && (rv == val))
+		{
+			if(SPI_RETRIES-1-retries > 0)
+				printk("%s: succeded after %d retries\n",
+				       __func__, SPI_RETRIES - 1 - retries);
+			return 0;
+		}
+	}
+	return -EIO;
 }
 
 void fd_gpio_dir(struct spec_fd *fd, int mask, int dir)
