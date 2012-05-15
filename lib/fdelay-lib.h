@@ -81,6 +81,10 @@ extern int fdelay_wr_mode(struct fdelay_board *b, int on);
 extern int fdelay_check_wr_mode(struct fdelay_board *b);
 
 #ifdef FDELAY_INTERNAL /* Libray users should ignore what follows */
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 /* Internal structure */
 struct __fdelay_board {
@@ -105,9 +109,11 @@ static inline int __fdelay_sysfs_get(char *path, uint32_t *resp)
 
 	if (!f)
 		return -1;
+	errno = 0;
 	if (fscanf(f, "%i", resp) != 1) {
 		fclose(f);
-		errno = EINVAL;
+		if (!errno)
+			errno = EINVAL;
 		return -1;
 	}
 	fclose(f);
@@ -116,17 +122,21 @@ static inline int __fdelay_sysfs_get(char *path, uint32_t *resp)
 
 static inline int __fdelay_sysfs_set(char *path, uint32_t *value)
 {
-	FILE *f = fopen(path, "w");
+	char s[16];
+	int fd, ret, len;
 
-	if (!f)
+	len = sprintf(s, "%i\n", *value);
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
 		return -1;
-	if (fprintf(f, "%i\n", *value) < 2) {
-		fclose(f);
-		errno = EINVAL;
+	ret = write(fd, s, len);
+	close(fd);
+	if (ret < 0)
 		return -1;
-	}
-	fclose(f);
-	return 0;
+	if (ret == len)
+		return 0;
+	errno = EINVAL;
+	return -1;
 }
 
 /* And these two for the board structure */

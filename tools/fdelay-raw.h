@@ -32,15 +32,19 @@ static inline int fdelay_sysfs_get(char *path, uint32_t *resp)
 
 static inline int fdelay_sysfs_set(char *path, uint32_t *value)
 {
-	FILE *f = fopen(path, "w");
+	char s[16];
+	int fd, ret, len;
 
-	if (!f)
+	len = sprintf(s, "%i\n", *value);
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
 		return -1;
-	if (fprintf(f, "%i\n", *value) < 2) {
-		fclose(f);
-		errno = EINVAL;
+	ret = write(fd, s, len);
+	close(fd);
+	if (ret < 0)
 		return -1;
-	}
-	fclose(f);
-	return 0;
+	if (ret == len)
+		return 0;
+	errno = EINVAL;
+	return -1;
 }
