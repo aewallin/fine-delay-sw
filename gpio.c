@@ -14,6 +14,8 @@
 #include <linux/io.h>
 #include "fine-delay.h"
 
+#define SPI_RETRIES 100
+
 static int gpio_writel(struct spec_fd *fd, int val, int reg)
 {
 	return fd_spi_xfer(fd, FD_CS_GPIO, 24,
@@ -32,35 +34,41 @@ static int gpio_readl(struct spec_fd *fd, int reg)
 	return ret & 0xff;
 }
 
+static int gpio_writel_with_retry(struct spec_fd *fd, int val, int reg)
+{
+	int retries = SPI_RETRIES, rv;
+ 	while(retries--)
+ 	{
+ 		gpio_writel(fd, val, reg);
+ 		rv = gpio_readl(fd, reg);
+ 		if(rv >= 0 && (rv == val))
+ 		{
+ 			if(SPI_RETRIES-1-retries > 0)
+ 				printk("gpio_writel_with_retry: succeded after %d retries\n", SPI_RETRIES-1-retries);
+ 			return 0;
+ 		}
+ 	}
+ 	return -EIO;
+}
+
 void fd_gpio_dir(struct spec_fd *fd, int mask, int dir)
 {
-	int addr, val;
-
-	/* if mask is bits 8..15 use the next address */
-	addr = FD_MCP_IODIR;
-	if (mask & 0xff00) {
-		mask >>= 8;
-		addr++;
-	}
-	val = gpio_readl(fd, addr) & ~mask;
+	fd->mcp_iodir &= ~mask;
 	if (dir == FD_GPIO_IN)
-		val |= mask;
-	gpio_writel(fd, val, addr);
+		fd->mcp_iodir |= mask;
+
+	gpio_writel_with_retry(fd, (fd->mcp_iodir & 0xff), FD_MCP_IODIR);
+	gpio_writel_with_retry(fd, (fd->mcp_iodir >> 8), FD_MCP_IODIR+1);
 }
 
 void fd_gpio_val(struct spec_fd *fd, int mask, int values)
 {
-	int addr, reg;
 
-	/* if mask is bits 8..15 use the next address */
-	addr = FD_MCP_OLAT;
-	if (mask & 0xff00) {
-		mask >>= 8;
-		values >>= 8;
-		addr++;
-	}
-	reg = gpio_readl(fd, addr) & ~mask;
-	gpio_writel(fd, reg | values, addr);
+	fd->mcp_olat &= ~mask;
+	fd->mcp_olat |= values;
+
+	gpio_writel_with_retry(fd, (fd->mcp_olat & 0xff), FD_MCP_OLAT);
+	gpio_writel_with_retry(fd, (fd->mcp_olat >> 8), FD_MCP_OLAT+1);
 }
 
 void fd_gpio_set_clr(struct spec_fd *fd, int mask, int set)
@@ -74,6 +82,9 @@ void fd_gpio_set_clr(struct spec_fd *fd, int mask, int set)
 int fd_gpio_init(struct spec_fd *fd)
 {
 	int i, val;
+
+	fd->mcp_iodir = 0xffff;
+	fd->mcp_olat = 0;
 
 	pr_debug("%s\n",__func__);
 	if (gpio_writel(fd, 0x00, FD_MCP_IOCON) < 0)

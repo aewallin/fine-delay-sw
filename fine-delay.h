@@ -150,7 +150,9 @@ struct spec_fd {
 	int temp;			/* temperature: scaled by 4 bits */
 	int verbose;
 	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
+	uint16_t mcp_iodir, mcp_olat;
 };
+
 /* We act on flags using atomic ops, so flag is the number, not the mask */
 enum fd_flags {
 	FD_FLAG_INITED = 0,
