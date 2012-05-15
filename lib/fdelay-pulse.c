@@ -1,5 +1,6 @@
 /* Simple demo that acts on the time of the first board */
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
