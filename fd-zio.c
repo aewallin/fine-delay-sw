@@ -234,7 +234,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	}
 
 	/* This code is only about FD_ATTR_TDC_FLAGS */
-	change = zattr->value ^ usr_val; /* old xor new */
+	change = fd->calib.tdc_flags ^ usr_val; /* old xor new */
 
 	/* No need to lock, as configuration is serialized by zio-core */
 	if (change & FD_TDCF_DISABLE_INPUT) {
@@ -262,8 +262,8 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 			fd_gpio_clr(fd, FD_GPIO_TERM_EN);
 	}
 out:
-	/* We need to store in the other array too (see info_tdc() above) */
-	fd->tdc_attrs[FD_CSET_INDEX(zattr->priv.addr)] = usr_val;
+	/* We need to store in the local array too (see info_tdc() above) */
+	fd->calib.tdc_flags = usr_val;
 
 	return 0;
 }
@@ -463,9 +463,9 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 	v[FD_ATTR_TDC_FRAC]	= t.frac;
 	v[FD_ATTR_TDC_SEQ]	= t.seq_id;
 	v[FD_ATTR_TDC_CHAN]	= t.channel;
+	v[FD_ATTR_TDC_FLAGS]	= fd->calib.tdc_flags;
 	v[FD_ATTR_TDC_OFFSET]	= fd->calib.tdc_zero_offset;
-
-
+	v[FD_ATTR_TDC_USER_OFF]	= fd->calib.tdc_user_offset;
 
 	__fd_apply_offset(v + FD_ATTR_TDC_UTC_H, fd->calib.tdc_user_offset);
 

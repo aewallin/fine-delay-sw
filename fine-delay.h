@@ -111,6 +111,7 @@ struct fd_calib {
 	/* The user can add a signed offset, in picoseconds */
 	int32_t tdc_user_offset;
 	int32_t ch_user_offset[4];
+	int32_t tdc_flags;
 };
 
 /* Channels are called 1..4 in all docs. Internally it's 0..3 */
