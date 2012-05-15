@@ -429,7 +429,7 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
 	if (!chan->active_block)
-		return 0;
+		return -EAGAIN;
 
 	/* First, read input data into a local struct to fix the offset */
 	t.utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
