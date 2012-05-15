@@ -443,13 +443,11 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 
 	/* The coarse count may be negative, because of how it works */
 	if (t.coarse & (1<<27)) { // coarse is 28 bits
-		printk("%i (%x)\n", t.coarse, t.coarse);
 		/* we may get 0xfff.ffef..0xffff.ffff -- 125M == 0x773.5940 */
 		t.coarse += 125000000;
 		t.coarse &= 0xfffffff;
 		t.utc--;
 	} else if(t.coarse > 125000000) {
-		printk("%i (%x)\n", t.coarse, t.coarse);
 		t.coarse -= 125000000;
 		t.utc++;
 	}
