@@ -126,3 +126,13 @@ void fd_gpio_exit(struct spec_fd *fd)
 	/* nothing to do */
 }
 
+int fd_dump_mcp(struct spec_fd *fd)
+{
+	pr_debug("MCP23S17 register dump\n");
+	pr_debug("IOCON: 0x%02x\n", gpio_readl(fd, FD_MCP_IOCON));
+	pr_debug("IODIRA: 0x%02x\n", gpio_readl(fd, FD_MCP_IODIR));
+	pr_debug("IODIRB: 0x%02x\n", gpio_readl(fd, FD_MCP_IODIR+1));
+	pr_debug("OLATA: 0x%02x\n", gpio_readl(fd, FD_MCP_OLAT));
+	pr_debug("OLATB: 0x%02x\n", gpio_readl(fd, FD_MCP_OLAT+1));
+	return 0;
+}

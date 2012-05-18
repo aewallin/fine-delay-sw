@@ -34,6 +34,7 @@ enum fd_command {
 	FD_CMD_WR_ENABLE,
 	FD_CMD_WR_DISABLE,
 	FD_CMD_WR_QUERY,
+	FD_CMD_DUMP_MCP,
 	/* FIXME: we may have cmds for FD_TSBCR_PURGE and FD_TSBCR_RST_SEQ */
 };
 
@@ -304,6 +305,7 @@ extern void fd_gpio_exit(struct spec_fd *fd);
 extern void fd_gpio_dir(struct spec_fd *fd, int pin, int dir);
 extern void fd_gpio_val(struct spec_fd *fd, int pin, int val);
 extern void fd_gpio_set_clr(struct spec_fd *fd, int pin, int set);
+extern int fd_dump_mcp(struct spec_fd *fd);
 #define fd_gpio_set(fd, pin) fd_gpio_set_clr((fd), (pin), 1)
 #define fd_gpio_clr(fd, pin) fd_gpio_set_clr((fd), (pin), 0)
 

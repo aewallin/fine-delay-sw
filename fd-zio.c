@@ -332,6 +332,8 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 		return fd_wr_mode(fd, 0);
 	case FD_CMD_WR_QUERY:
 		return fd_wr_query(fd);
+	case FD_CMD_DUMP_MCP:
+		return fd_dump_mcp(fd);
 	default:
 		return -EINVAL;
 	}
