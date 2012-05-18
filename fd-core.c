@@ -39,12 +39,12 @@ static struct fd_calib fd_default_calib = {
 		[1] =     -29825595LL,
 		[2] = 3801939743082LL,
 	},
-	.tdc_zero_offset = 35600,
+	.tdc_zero_offset = 35600 -63100,
 	.atmcr_val =  2 | (1000 << 4),
 	.adsfr_val = 56648,
 	.acam_start_offset = 10000,
 	.zero_offset = {
-		50000, 50000, 50000, 50000
+		14400, 14400, 14400, 14400
 	},
 };
 
