@@ -35,7 +35,7 @@ enum fd_command {
 	FD_CMD_WR_DISABLE,
 	FD_CMD_WR_QUERY,
 	FD_CMD_DUMP_MCP,
-	/* FIXME: we may have cmds for FD_TSBCR_PURGE and FD_TSBCR_RST_SEQ */
+	FD_CMD_PURGE_FIFO = 5,
 };
 
 

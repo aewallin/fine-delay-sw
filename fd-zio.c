@@ -334,6 +334,11 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 		return fd_wr_query(fd);
 	case FD_CMD_DUMP_MCP:
 		return fd_dump_mcp(fd);
+	case FD_CMD_PURGE_FIFO:
+		fd_writel(fd, FD_TSBCR_PURGE | FD_TSBCR_RST_SEQ
+			  | FD_TSBCR_CHAN_MASK_W(1) | FD_TSBCR_ENABLE,
+			  FD_REG_TSBCR);
+		return 0;
 	default:
 		return -EINVAL;
 	}
