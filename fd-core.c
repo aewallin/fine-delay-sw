@@ -40,7 +40,7 @@ static struct fd_calib fd_default_calib = {
 		[2] = 3801939743082LL,
 	},
 	.tdc_zero_offset = 35600 -63100,
-	.atmcr_val =  2 | (1000 << 4),
+	.atmcr_val =  4 | (1500 << 4),
 	.adsfr_val = 56648,
 	.acam_start_offset = 10000,
 	.zero_offset = {
