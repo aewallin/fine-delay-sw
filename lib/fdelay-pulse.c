@@ -22,22 +22,37 @@ static int exiterr(int argc, char **argv)
 static int parse_time(struct fdelay_board *b, char *s, struct fdelay_time *t)
 {
 	unsigned long u, m = 0, p = 0;
-	double d = 0.0;
-	int relative = 0;
+	char smicro[32];
+	int i, relative = 0;
 
-	if (sscanf(s, "+%ld%lf+%ld", &u, &d, &p) > 0) {
+	/*
+	 * Hairy: if we scan "%ld%lf", the 0.009999 will become 9998 micro.
+	 * Thus, scan as integer and string, so we can count leading zeros
+	 */
+	if (s[0] == '+') {
 		relative = 1;
-	} else if (sscanf(s, "%ld%lf+%ld", &u, &d, &p) < 1) {
+		s++;
+	}
+	if (sscanf(s, "%ld.%ld+%ld", &u, &m, &p) < 1) {
 		return -1;
 	}
-	m = d * 1000 * 1000; /* turn float to micro */
+	if (m) { /* micro is not zero, check how long it is and scale*/
+		sscanf(s, "%ld.%[0-9]", &u, smicro);
+		i = strlen(smicro);
+		if (i > 6)
+			return -1;
+		while (i < 6) {
+			m *= 10;
+			i++;
+		}
+	}
 	t->utc = 0;
 	if (relative)
 		if (fdelay_get_time(b, t))
 			return -1;
 	t->utc += u;
 	t->coarse = m * 1000 / 8 + p / 8000;
-	t->frac = (p % 8000) << 12 / 8000;
+	t->frac = ((p % 8000) << 12) / 8000;
 	return 0;
 }
 
