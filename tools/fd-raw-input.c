@@ -17,6 +17,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
+#include <sys/time.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -28,6 +30,7 @@
 enum {MODE_HEX, MODE_FLOAT, MODE_PICO};
 
 int expect;
+int show_time;
 
 void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 	uint64_t *p1)
@@ -47,7 +50,24 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 	}
 	*seq = sequence;
 
-	printf("%s: ", name);
+	if (show_time) {
+		static struct timeval tv, otv;
+		int deltamicro;
+
+		gettimeofday(&tv, NULL);
+		if (otv.tv_sec) {
+			deltamicro = (tv.tv_sec - otv.tv_sec) * 1000 * 1000
+				+ tv.tv_usec - otv.tv_usec;
+			printf("+ %i.%06i: ", deltamicro / 1000 / 1000,
+			       deltamicro % (1000*1000));
+		} else {
+			printf("%03i.%06i: ", tv.tv_sec % 1000, tv.tv_usec);
+		}
+		otv = tv;
+	} else {
+		/* time works with one file only, avoid the fname */
+		printf("%s: ", name);
+	}
 	switch(mode) {
 	case MODE_HEX:
 		printf("%08x %08x %08x %08x %08x\n",
@@ -110,8 +130,10 @@ int main(int argc, char **argv)
 	uint64_t p1[MAXFD] = {0LL,};
 	uint32_t *attrs;
 
-	if (getenv("EXPECTED_RATE"))
-		expect = atoi(getenv("EXPECTED_RATE"));
+	if (getenv("FD_EXPECTED_RATE"))
+		expect = atoi(getenv("FD_EXPECTED_RATE"));
+	if (getenv("FD_SHOW_TIME"))
+		show_time = 1;
 
 	if (argc > 1 && !strcmp(argv[1], "-f")) {
 		mode = MODE_FLOAT;
