@@ -61,7 +61,7 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 			printf("+ %i.%06i: ", deltamicro / 1000 / 1000,
 			       deltamicro % (1000*1000));
 		} else {
-			printf("%03i.%06i: ", tv.tv_sec % 1000, tv.tv_usec);
+			printf("%03li.%06li: ", tv.tv_sec % 1000, tv.tv_usec);
 		}
 		otv = tv;
 	} else {
