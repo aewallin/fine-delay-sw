@@ -438,6 +438,9 @@ static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
 	if (!chan->active_block)
 		return -EAGAIN;
 
+	/* Advance to the next fifo entry */
+	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
+
 	/* First, read input data into a local struct to fix the offset */
 	t.utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
 	t.utc <<= 32;
