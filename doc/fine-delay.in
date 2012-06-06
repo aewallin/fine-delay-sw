@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month May 2012
+@set update-month June 2012
 
 @finalout
 
@@ -95,7 +95,11 @@ For each feature offered the driver (and documentation) tries to offer:
 @item An example program based on that API.
 @end itemize
 
-Sometimes the API and associated program is missing, lor lack of time.
+Sometimes the API and associated program is missing, for lack of time.
+
+Additionally, the @code{NewLogger} directory includes the
+(uncommented, undocumented) program that has been used (at least for a
+while) in the Gran Sasso labs to log neutrino catches).
 
 This package is currently available from
 @code{git://gnudd.com/fine-delay.git}, with snapshots on the ``Files''
@@ -123,11 +127,8 @@ card.
 @section Gateware Dependencies
 
 This driver has been developed from the FPGA binary included in the
-package as @code{binaries/spec_top.bin}.
-
-As an alternative, you can use a fuller White-Rabbit-enabled version,
-includes as @code{binaries/spec_top_wr.bin}. In this case please use
-@code{binarsies/wrc.bin} as well.
+package as @code{binaries/spec_top.bin}, which is White-Rabbit-enabled.
+You should use it with @code{binarsies/wrc.bin}.
 
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
@@ -164,18 +165,19 @@ the following two files in @i{/lib/firmware}:
    -rw------- 1 root   root  1485788 May  4 21:14 spec-B0002.bin
 @end smallexample
 
-Also, please note that if you use the White-Rabbit gatware, you must
-pass the parameter @code{lm32=0xc0000} to the @i{spec.ko} module.
+Also, please note that you must pass the parameter @code{lm32=0xc0000}
+to the @i{spec.ko} module, because the default address (0x80000) is not
+appropriate to the gateware of this device.
 
 @c ==========================================================================
 @node Software Dependencies
 @section Software Dependencies
 
 The kernel I used during development is version 2.6.32, because this
-is the one where installed boards are going to run first.  
+is the one where installed boards have been running.
 
 The driver, then is based on the ZIO framework, available from
-@code{ohw.org}. The version being used during development is a development
+@code{ohwr.org}. The version being used during development is a development
 version, back-ported to Linux-2.6.32.
 Similarly, this is a sub-module for the SPEC board, and thus relies
 on code from the @i{spec-sw} package, again from @code{ohwr.org}.
@@ -227,8 +229,7 @@ when this driver is completed.
 @b{Warning:} the commit-ID above might change in the future,
 that's why the command above retrieves the @i{current}
 branch @code{for-linux-2.6.32} if the first checkout fails.
-I don't plan to change this during May 2012, though.
-
+I don't plan to change this any time soon, though.
 
 The procedure for @i{spec-sw} is similar, but the master branch will
 work in this case. Again, the command shows the exact commit
@@ -249,8 +250,7 @@ identifier.
 @b{Warning:} the commit-ID above might change in the future,
 that's why the command above retrieves the @i{current}
 branch @code{for-linux-2.6.32} if the first checkout fails.
-I don't plan to change this again during May 2012, though -- but it happened
-already.
+I don't plan to change this any time soon, though.
 @c FIXME: the commit identifiers.
 
 At this point all the software modules are ready to be loaded.
@@ -272,17 +272,19 @@ a few seconds (initializing the fine-delay card above, takes almost
    spec 0000:02:00.0: PCI INT A -> GSI 18 (level, low) -> IRQ 18
    spec_load_files
    spec 0000:02:00.0: firmware: requesting spec-B0002.bin
-   spec_load_fpga: got binary file "spec-B0002.bin", 1484404 (0x16a674) bytes
+   spec_load_fpga: got binary file "spec-B0002.bin", 1485788 (0x16abdc) bytes
    spec 0000:02:00.0: firmware: requesting spec-B0002-cpu.bin
-   spec 0000:02:00.0: Can't load program "spec-B0002-cpu.bin" - -2
+   spec_load_lm32: got program file "spec-B0002-cpu.bin", 59568 (0xe8b0) bytes
+   LM32 has been restarted
    spec_load_submodule: load "spec-B0002": 256
-   fd_onewire_init: Found DS18xx sensor: 28:13:f2:06:03:00:00:d4
-   fd_read_temp: Scratchpad: eb:04:4b:46:7f:ff:05:10:12
-   fd_read_temp: Temperature 0x4eb (12 bits: 78.687)
-   fd_calibrate_outputs: ch 1: 8ns @ 837 (f 815, offset 22, t 78.81)
-   fd_calibrate_outputs: ch 2: 8ns @ 1022 (f 815, offset 207, t 78.81)
-   fd_calibrate_outputs: ch 3: 8ns @ 827 (f 815, offset 12, t 78.81)
-   fd_calibrate_outputs: ch 4: 8ns @ 837 (f 815, offset 22, t 78.87)
+   fd_onewire_init: Found DS18xx sensor: 28:85:8c:61:03:00:00:0e
+   fd_read_temp: Scratchpad: 12:05:4b:46:7f:ff:0e:10:42
+   fd_read_temp: Temperature 0x512 (12 bits: 81.125)
+   fd_calibrate_outputs: ch1: 8ns @@846 (f 811, off 35, t 81.12)
+   fd_calibrate_outputs: ch2: 8ns @@854 (f 811, off 43, t 81.12)
+   fd_calibrate_outputs: ch3: 8ns @@842 (f 811, off 31, t 81.12)
+   fd_calibrate_outputs: ch4: 8ns @@846 (f 811, off 35, t 81.12)
+   spec_fine_delay: Found i2c device at 0x50
 @end smallexample
 
 @c ==========================================================================
@@ -387,12 +389,11 @@ project).
 @node The device
 @section The device
 
-@b{Note:} This is not real documentation at this point in time, it is
-more material for some brainstorming: the code is not complete yet.
-
-The overall device includes a few device attributes and the csets.
+The overall device includes a few device attributes and a few attributes
+specific to the csets (some attributes for input and some attributes for
+output).
 The attributes allow to read and write the internal timing of the
-card, as well as other stuff that may be identified later. Since ZIO
+card, as well as other internal parameters, documented below. Since ZIO
 has no support for @i{ioctl}, all the attributes appear in @i{sysfs}.
 For multi-valued attributes (like a time tag, which is more than 32
 bits) the order of reading and writing is mandated by the driver
@@ -419,15 +420,17 @@ The actual pathnames depend on the version of @i{udev}, and the support
 library tries both names (the new one shown above, and the older one).
 Also, please note that a still-newer version of @i{udev} obeys device
 permissions, so you'll have read-only and write-only device files.
-Cset 0 is input, and csets 1..4 are for the output channels.
 
-If more than one board is probed for, you'll have two similar
+In this drivers, cset 0 is for the input signal, and csets 1..4 are
+for the output channels.
+
+If more than one board is probed for, you'll have two or more similar
 sets of devices, differing in the @i{dev_id} field, i.e. the
 @code{0200} that follows the device name @code{zio-fd} in the
 stanza above. The @i{dev_id} field is built using the PCI bus
 and the @i{devfn} octet; the example above refers to slot 0 of bus 2.
 
-For remotely-controlled (e.g. Etherbone) devices the problem will need
+For remotely-controlled devices (e.g. Etherbone) the problem will need
 to be solved differently.
 
 Device (and channel) attributes can be accessed in the proper @i{sysfs}
@@ -450,7 +453,7 @@ Device-wide attributes are the three time tags (@i{utc-h}, @i{utc-l},
 @i{coarse}), a read-only @i{version} and a write-only @i{command}.
 To read device time you
 should read @i{utc-h} first.  Reading @u{utc-h} will atomically read
-all values from the card and store them in the software driver: by
+all values from the card and store them in the software driver: when
 reading @i{utc-l} and @i{coarse} you'll get such cached values.
 
 Example:
@@ -488,10 +491,13 @@ depends on the speed of your CPU and PCI bus):
    1335948116
 @end smallexample
 
+However, please note that the times will diverge over time. Also, if
+you are using White-Rabbit mode, host time is irrelevant to the board.
+
 I chose to offer a @i{command} channel, which is opaque to the user,
 because there are several commands that you may need to send to the
 device, and we need to limit the number of attributes. The command numbers
-are enumerated in @code{fine-delay.h} 
+are enumerated in @code{fine-delay.h} and described here below.
 
 @menu
 * List of Commands to the Device::  
@@ -525,8 +531,17 @@ write-only file in @i{sysfs}:
 	Tell the user the status of White-Rabbit mode. This is a hack, as
         the return value is reported using error codes. Success means
         White-Rabbit is synchronized.  @code{ENODEV} means there is
-        WR mode activa, @code{EAGAIN} means it is not synchronized yet.
+        WR mode active, @code{EAGAIN} means it is not synchronized yet.
         The error is returned to the @i{write} system call.
+
+@item 4 = FD_CMD_DUMP_MCP
+
+	Force dumping to log messages (using a plain @i{printk} the
+        GPIO registers in the MCP23S17 device.
+
+@item 5 = FD_CMD_PURGE_FIFO
+
+	Empty the input fifo and reset the sequence number.
 
 @end table
 
@@ -546,7 +561,7 @@ the current board time using @i{sysfs} directly:
 In the example above the time has never been set, so the epoch if FPGA
 load time.
 
-@b{Note:} the tool is bugged as of 2038 because it assumes utc-h is 0.
+@b{Note:} the tool is bugged as of year 2038 because it assumes utc-h is 0.
 
 @c --------------------------------------------------------------------------
 @node Writing Board Time
@@ -562,10 +577,11 @@ the current board time using @i{sysfs} directly:
    123.500570096
 @end smallexample
 
-@b{Note:} the tool is bugged as of 2038 because it assumes utc-h is 0.
+@b{Note:} the tool is bugged as of year 2038 because it assumes utc-h is 0.
 
 No tool is there to sync the board to Linux time, because writing
-0 to the @i{command} attribute is atomic by itself.
+0 to the @i{command} attribute is atomic by itself, but there is an
+example program using the official API (see @ref{Time Management}).
 
 @c ==========================================================================
 @node The Input cset
@@ -576,26 +592,29 @@ control block (the meta-information associated to data). This is
 suboptimal, but it is a ``good enough'' first implementation until
 time permits to refine it.
 
-Currently, no input timestamp is returned until some process calls
+Currently, no input timestamp is collected until some process calls
 the @i{read} function on the control or data char device.
 
 In a perfect world we would have a custom @i{trigger} module that
-stuffs the timestamp information directly in the proper place.  This
-version of the code uses the default ZIO trigger, which is user-driven.
-In other words, data is only requested to hardware if a user process
-is actually reading.  This ``software'' trigger sticks a software
-timestamp in the control block
+stuffs the timestamp information directly in the proper place within
+the ZIO control block.  This version of the code uses the default ZIO
+trigger, which is user-driven.  In other words, data is only requested
+to hardware if a user process is actually reading.  This ``software''
+trigger sticks a software timestamp in the control block, so the hardware
+timestamp must be provided elsewhere.
 
 The hardware timestamp and other information is returned as @i{channel
-attributes}, which you can look at using @code{zio-dump} or
+attributes}, which you can look at using @i{zio-dump} (part of the ZIO
+package) or
 @i{tools/fd-raw-input} which is part of this package.
 
 @menu
 * Input Device Attributes::     
 * Reading with zio-dump::       
 * Reading with fd-raw-input::   
+* Using fd-raw-perf::           
 * Configuring the Input Channel::  
-* Generating Bursts by Software::  
+* Pulsing from the Parallel Port::  
 @end menu
 
 @c --------------------------------------------------------------------------
@@ -615,6 +634,8 @@ is defined in @i{fine-delay.h} for libraries/applications to use them:
            FD_ATTR_TDC_CHAN,
            FD_ATTR_TDC_FLAGS,
            FD_ATTR_TDC_OFFSET,
+           FD_ATTR_TDC_USER_OFF,
+
    }; 
    /* Names have been chosen so that 0 is the default at load time */
    #define FD_TDCF_DISABLE_INPUT	1
@@ -622,7 +643,7 @@ is defined in @i{fine-delay.h} for libraries/applications to use them:
    #define FD_TDCF_TERM_50		4
 @end example
 
-The attributes are also visibile in @i{/sys}, in the directory
+The attributes are also visible in @i{/sys}, in the directory
 describing the cset:
 
 @smallexample
@@ -635,25 +656,30 @@ describing the cset:
 
 The timestamp-related values in this file reflect the last stamp that
 has been enqueued to user space (this may be the next event to be
-read by the actual reading process).  The @i{offset} attribute
-is the stamping offset, in picoseconds, for the TDC channel.
+read by the actual reading process).
 
+The @i{offset} attribute
+is the stamping offset, in picoseconds, for the TDC channel.
 The @i{user-offset} attribute, which currently defaults to 0, is a
 signed value that users can write to represent a number of picoseconds
 to be added (or subtracted) to the hardware-reported stamps. This is
-used to account for delays induced by cabling (range: -0.2s to 0.2s).
+used to account for delays induced by cabling (range: -2ms to 2ms).
 
 The @i{flags} attribute can be used to change three configuration
 bits, defined by the respective macros. Please note that the default
-at module load time is zero, so some of the flags bits are inverted
-over the hardware counterpart.
+at module load time is zero: some of the flags bits are inverted
+over the hardware counterpart, but the @code{DISABLE} in flag names
+is there to avoid potential errors.
 
 @c --------------------------------------------------------------------------
 @node Reading with zio-dump
 @subsection Reading with zio-dump
 
-This is an example read sequence using @i{zio-dump}. Data must be ignored
-and only the first 6 extended attributes are meaningful.
+This is an example read sequence using @i{zio-dump}: data must be ignored
+and only the first few extended attributes are meaningful. This can
+be used to see low-level details, but please note
+that the programs in @code{tools/} and @code{lib/} in this package are
+in general a better choice to timestamp input pulses.
 
 @smallexample
    spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
@@ -676,10 +702,13 @@ and only the first 6 extended attributes are meaningful.
 @node Reading with fd-raw-input
 @subsection Reading with fd-raw-input
 
-The @i{tools/fd-raw-input} program, part of this package, only reads
-the control devices associated to @i{fine-delay} cards. It can receive
-file names on the command line, but if called with no arguments it
-will look for filenames in @i{/dev} using @i{glob} patterns (also
+The @i{tools/fd-raw-input} program, part of this package, is a low-level
+program to read input events. It reads
+the control devices associated to @i{fine-delay} cards, ignoring the
+data devices which are known to not return useful information.
+The program can receive
+file names on the command line, but reads all fine-delay devices by
+default -- it looks for filenames in @i{/dev} using @i{glob} patterns (also
 called ``wildcards'').
 
 This is an example run:
@@ -692,9 +721,9 @@ This is an example run:
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 03e23c26 000006ce 00000003
 @end smallexample
 
-The program also has a ``float'' mode, that reports floating point
-time differences between two samples (this doesn't use the fine delay,
-though, only the integer second and the coarse 8ns timer).
+The program offers a ``float'' mode, that reports floating point
+time differences between two samples (this doesn't use the @i{frac} delay
+value, though, but only the integer second and the coarse 8ns timer).
 
 This is an example while listening to a software-generated 1kHz signal:
 
@@ -721,21 +750,88 @@ The tool reports lost events using the sequence number (attribute number
    /dev/zio/zio-fd-0200-0-0-ctrl:    1958.412804184 (delta   0.000009376)
 @end smallexample
 
+The ``pico'' mode of the program (command line argument @code{-p}) is
+used to get input time stamps with picosecond precision. In this mode
+the program doesn't report the ``second'' part of the stamp. This is
+an example run of the program, fed by 1kHz generated from the board
+itself:
+
+@smallexample
+   spusa.root# ./fd-raw-input -p | head -5
+   /dev/zio/zio-fd-0800-0-0-ctrl: 642705121635
+   /dev/zio/zio-fd-0800-0-0-ctrl: 643705121647 - delta 001000000012
+   /dev/zio/zio-fd-0800-0-0-ctrl: 644705121656 - delta 001000000009
+   /dev/zio/zio-fd-0800-0-0-ctrl: 645705121647 - delta 000999999991
+   /dev/zio/zio-fd-0800-0-0-ctrl: 646705121664 - delta 001000000017
+@end smallexample
+
+Finally, the program uses two environment variables, if set to any value:
+@code{FD_SHOW_TIME} make the tool report the time difference between
+sequential reads, which is mainly useful to debug the driver workings;
+@code{FD_EXPECTED_RATE} makes the tool report the difference from the
+expected data rate, relative to the first sample collected:
+
+@smallexample
+   spusa.root# FD_EXPECTED_RATE=1000000000 ./fd-raw-input -p | head -5
+   /dev/zio/zio-fd-0800-0-0-ctrl: 139705121668
+   /dev/zio/zio-fd-0800-0-0-ctrl: 140705121699 - delta 001000000031 - error  31
+   /dev/zio/zio-fd-0800-0-0-ctrl: 141705121661 - delta 000999999962 - error  -7
+   /dev/zio/zio-fd-0800-0-0-ctrl: 142705121671 - delta 001000000010 - error   3
+   /dev/zio/zio-fd-0800-0-0-ctrl: 143705121689 - delta 001000000018 - error  21
+@end smallexample
+
+Please note that the expected rate is a 32-bit integer, so it is limited
+to 4ms; moreover it is only used in ``picosecond'' mode.
+
+@c --------------------------------------------------------------------------
+@node Using fd-raw-perf
+@subsection Using fd-raw-perf
+
+The program @i{tools/fd-raw-perf} gives trivial performance figures for
+a train of input pulses. It samples all input events and reports some
+statistics when a burst completes (i.e., no pulse is received for at
+least 300ms):
+
+@smallexample
+   spusa#  ./fd-raw-perf
+   59729 pulses (0 lost)
+      hw: 1000000000ps (1.000000kHz) -- min 999999926 max 1000000089 delta 163
+      sw: 983us (1.017294kHz) -- min 7 max 18992 delta 18985
+@end smallexample
+
+The program uses the environment variable @code{PERF_STEP}, if set, to
+report information every that many seconds, even if the burst is still
+running:
+
+spusa.root# PERF_STEP=5 ./fd-raw-perf
+@smallexample
+   4999 pulses (0 lost)
+      hw: 1000000000ps (1.000000kHz) -- min 999999933 max 1000000067 delta 134
+      sw: 1000us (1.000000kHz) -- min 8 max 10001 delta 9993
+
+   4999 pulses (0 lost)
+      hw: 1000000000ps (1.000000kHz) -- min 999999926 max 1000000081 delta 155
+      sw: 1000us (1.000000kHz) -- min 7 max 18995 delta 18988
+@end smallexample
+
 @c --------------------------------------------------------------------------
 @node Configuring the Input Channel
 @subsection Configuring the Input Channel
 
-There is no support in @i{tools/} to change channel configuration.
+There is no support in @i{tools/} to change channel configuration
+(but see @ref{Input Configuration} for the official API).
 The user is expected to write values in the @i{flags} file directly.
 For example, to enable the termination resistors, write 4 to the
 @i{flags} file in @i{sysfs}.
 
 @c --------------------------------------------------------------------------
-@node Generating Bursts by Software
-@subsection Generating Bursts by Software
+@node Pulsing from the Parallel Port
+@subsection Pulsing from the Parallel Port
 
-For my tests, as shown above, I generate bursts of pulses with a program.
-To do so, I connect a pin of a parallel port plugged on the PCI bus to
+For my initial tests, some of which are shown above, I generated bursts
+of pulses with a software
+program (later I used the board itself, for a much better precision).
+To do so, I connected a pin of a parallel port plugged on the PCI bus to
 the input channel of the @i{fine-delay} card.
 
 The program @i{tools/parport-burst}, part of this package, generates a
@@ -755,7 +851,7 @@ of the motherboard, the address is @code{378}):
 
 The output channels need some configuration to be provided. This
 is done using attributes. Attributes can either be written in
-@i{sysfs} or can be passed in the control block that sides data.
+@i{sysfs} or can be passed in the control block that accompanies data.
 
 This driver defines the sample size as 4 bytes and the trigger should
 be configured for a 1-sample block (the library does it at open
@@ -766,7 +862,7 @@ The output is configured and activated by writing a control block
 with proper attributes set. Then a write to the data channel will
 push the block to hardware, for it to be activated.
 
-The following attributes are defined:
+The driver defines the following attributes:
 
 @example
    /* Output ZIO attributes */
@@ -799,14 +895,15 @@ The following attributes are defined:
    };
 @end example
 
-So, to disable the output, just write 0 to the mode attribute.
-To configure pulse or delay all attributes must be written.
+To disable the output, you must assign 0 to the mode attribute and
+other attributes are ignored.  To configure pulse or delay, all
+attributes must be set to valied values.
 
 @b{Note:} writing the output configuration (mode, rep, start, end,
 delta) to @i{sysfs} is not working with this version of ZIO. And I've
-been too lazy to add code to do that.  While recent developments
+been too lazy to add code to do that.  While recent developments in ZIO
 introduced more complete consistency between the various places where
-attributes live, with this version you can only write attributes to
+attributes live, with this version you can only write these attributes to
 the control block.
 
 The @i{delay-offset} attribute represents an offset that is subtracted
@@ -814,20 +911,21 @@ from the user-requested delay (@i{start} fields) when generating output
 pulses. It represents internal card delays.  The value can be modified
 from @i{sysfs}.
 
-@b{Note:} the @i{delay-offset} is not used for pulse-generation mode.
+@b{Note:} the @i{delay-offset} is used for delay mode but not
+for pulse-generation mode.
 
 The @i{user-offset} attribute, which currently defaults to 0, is a
 signed value that users can write to represent a number of picoseconds
 to be added (or subtracted) to the every user-command (for both delay
 and pulse generation). This is used to account for delays induced by
-cabling (range: -0.2s to 0.2s).  The value can be modified
+cabling (range: -2ms to 2ms).  The value can be modified
 from @i{sysfs}.
 
 This is the unsorted content of the @i{sysfs} directory for each
 of the output csets:
 
 @smallexample
-   spusa# COLUMNS=60 ls -fF /sys/bus/zio/devices/zio-fd-0200/fd-ch1
+   spusa# ls -fF /sys/bus/zio/devices/zio-fd-0200/fd-ch1
    ./               mode          end-l         user-offset
    ../              rep           end-coarse    power/
    uevent           start-h       end-fine      trigger/
@@ -838,9 +936,11 @@ of the output csets:
 @end smallexample
 
 As said, only @i{delay-offset} and @i{user-offset} are designed to be
-written by the user. As of this version, the other attributes are not
-readable nor writable (they are meant to be used by writing a control
-block to @i{/dev}, instead).
+read and written by the user. Additionally, @i{mode} can be read to
+know whether the channel output or delay event  has triggered.
+As of this version, the other attributes are not
+readable nor writable in @i{sysfs} --  they are meant to be used
+in the control block written to @i{/dev}.
 
 @menu
 * Using fd-raw-output::         
@@ -897,7 +997,7 @@ synchronized with host time:
           CHAN=2 ./fd-raw-output 2 -1   0 +1 0 0   0 +1 64 0   0 125 0
 @end smallexample 
 
-@b{Note:} mode, that should output pulses delayed over the input, is not
+@b{Note:} delay mode, that should output pulses delayed over the input, is not
 currently working.
 
 @c ##########################################################################
@@ -1081,7 +1181,7 @@ usually verifiable by hooking a scope to the input signal:
 @node Reading Input Time-stamps
 @section Reading Input Time-stamps
 
-The library offers the following functions deal with the input stamps:
+The library offers the following functions that deal with the input stamps:
 
 @table @code
 
@@ -1098,7 +1198,7 @@ The library offers the following functions deal with the input stamps:
         and return the number of samples that it received.  The @i{flags}
         argument is used to pass 0 or @code{O_NONBLOCK}. If a non-blocking
         read is performed, the function may return -1 with @code{EAGAIN}
-        if nothing is pending in the hardware fifo.
+        if nothing is pending in the hardware FIFO.
         
 @item int fdelay_fileno_tdc(struct fdelay_board *b);
 
@@ -1154,18 +1254,128 @@ There is no example for @i{fdelay_fileno_tdc} using @i{select}.
 @node Output Configuration
 @section Output Configuration
 
-The API is not implemented, nor the example programs. The header,
-however, includes a tentative API, based on structures. Please check
-the header and @i{lib/fdelay-output.c} until it is ready.
+The library offers the following functions for output configuration:
+
+@table @code
+
+@item int fdelay_config_pulse(board, channel, pulse_cfg);
+@itemx int fdelay_config_pulse_ps(board, channel, pulse_ps_cfg);
+
+	The two functions configure the channel (numbered 0..3)
+        for pulse of delay mode. The former function receives
+        @code{struct fdelay_pulse} (with split utc/coarse/frac times)
+        while the latter receives @code{struct fdelay_pulse_ps}, with
+        picosecond-based time values. The functions return 0 on success, -1
+        and an error code in @code{errno} in case of failure.
+
+@item int fdelay_has_triggered(struct fdelay_board *b, int channel);
+
+	The funcion returns 1 of the output channel (numbered 0..3) has
+        triggered since the last configuration request, 0 otherwise.
+
+@end table
+
+The configuration functions receive a time configuration. The
+starting time is passed as @code{struct fdelay_time}, while the
+pulse end and loop period are passed using either the same structure
+or a scalar number of picoseconds. These are the relevant structures:
+
+@example
+   struct fdelay_time {
+           uint64_t utc;
+           uint32_t coarse;    uint32_t frac;
+           uint32_t seq_id;    uint32_t channel;
+   };
+
+   struct fdelay_pulse {
+           int mode;           int rep;    /* -1 == infinite */
+           struct fdelay_time start, end, loop;
+   };
+
+   struct fdelay_pulse_ps {
+           int mode;          int rep;
+           struct fdelay_time start;
+           uint64_t length, period;
+   };
+@end example
+
+The @code{rep} field represents the repetition count, to output a
+train of pulses. The mode field is one of @code{FD_OUT_MODE_DISABLED},
+@code{FD_OUT_MODE_DELAY}, @code{FD_OUT_MODE_PULSE}.
+
+The example program to test output generation is called
+@code{lib/fdelay-pulse}, and receives several arguments. The
+invocation pattern is the following:
+
+@example
+   fdelay-pulse [-w] [<dev>] <mode> <ch> <rep> <t1> <t2> <t3>"
+@end example
+
+The meaning of the arguments is as follows:
+
+@table @code
+@item [-w]
+
+	The switch requests the program to wait for the trigger to
+	happen before it returns. If missing, the program returns immediately.
+
+@item [<dev>]
+
+	The optional device number is needed if more than one card is
+        plugged in the computer. The form is @code{0200} (bus 02, slot 00).
+
+@item <mode>
+
+	A string: @code{disable}, @code{pulse} or @code{delay}.
+
+@item <ch>
+
+	The channel number: 0 though 3.
+
+@item <rep>
+
+	The repetition count: how many pulses to output: -1 means forever.
+
+@item <t1>
+@itemx <t2>
+@itemx <t3>
+
+	The three times specifying the pulse burst: @i{t1} is the
+        starting time, @i{t2} is the pulse length and @i{t3} is the period
+        of the square wave (thus, @i{t1} is absolute and the others are
+        relative times.
+
+@end table
+
+The syntax to specify times is of the form @code{second.micro+pico},
+where the @i{seconds.micro} part resembles a floating point number and
+@i{pico} is scalar. This syntax has been chosen to split the decimal
+part in two fields of 6 digits and ease readability. If the
+@i{seconds} field begins with @code{+}, the current host utc seconds
+are added to the number.
+
+The following example programs a pps pulse (1ms long) on channel 0
+and a 1MHz square wave on channel 1, assuming board time is already
+synchronized with host time:
+
+@smallexample
+   spusa# fdelay-pulse  pulse 0 -1  +2.0  0.001    1.0        ;  \
+          fdelay-pulse  pulse 1 -1  +2.0  0.0+500  0.000001
+@end smallexample
+
+This example outputs a train of pulses, 100us long
+every 1ms - 10ps:
+
+@smallexample
+   fdelay-pulse  pulse 0 -1  +2.0  0.0001 0.000999+999990
+@end smallexample 
+
 
 @c ==========================================================================
 @node White-Rabbit Configuration
 @section White-Rabbit Configuration
 
-@b{Note:} these functions have not been tested yet, although the low-level
-command works.
-
-The following functions are offered
+The following functions are offered:
 
 @table @code
 
@@ -1197,7 +1407,7 @@ applies to the packages it depends on -- ZIO and @i{spec-sw}.
 
 @c ==========================================================================
 @node Bugs in Related Packages
-@section Bugs in Related Packaged
+@section Bugs in Related Packages
 
 The current package set (i.e., @i{zio}, @i{spec-sw} and this one) has
 the following known issues exposed by @i{fine-delay}:
@@ -1229,7 +1439,8 @@ allows:
 
 @item The API for pulse generation is not yet available.
 
-@item We need interrupt support. The input is performed with a kernel timer.
+@item We need interrupt support. The input is currently performed with
+a kernel timer.
 
 @item There is no EEPROM support. The driver uses default calibration.
 settings.
@@ -1237,7 +1448,6 @@ settings.
 @item We need a module parameter to avoid probing non-fine-delay SPEC
 cards. Reading the magic number from an SPEC that is not programmed
 (or likely that is programmed with a different gateware) may lock up
-the host computer.
 
 @end itemize
 
@@ -1253,10 +1463,7 @@ urgent as I write this:
 @item The driver should register its own ZIO trigger, or use the new
 attribute for ``greedy-input'' planned in new versions of ZIO
 (thank you Federico). Currently there's no buffering and reading is
-a little slow.
-
-@item We may implement commands to flush the input queue and reset the
-input sequence number.
+slower than it could be.
 
 @item Most example programs only use the ``first'' board in the system.
 
