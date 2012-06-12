@@ -92,7 +92,7 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 
 	case MODE_PICO:
 		p2 = a[FD_ATTR_TDC_COARSE] * 8000LL
-			+ a[FD_ATTR_TDC_FRAC] * 4096LL / 8000;
+			+ a[FD_ATTR_TDC_FRAC] * 8000LL / 4096;
 		delta = p2 - *p1;
 		if (delta < 0)
 			delta += 1000LL * 1000 * 1000 * 1000;
