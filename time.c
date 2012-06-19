@@ -81,8 +81,10 @@ int fd_time_get(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 
 int fd_time_init(struct spec_fd *fd)
 {
-	/* nothing to do */
-	return 0;
+	struct timespec ts = {0,0};
+
+	/* Set the time to zero, so internal stuff resyncs */
+	return fd_time_set(fd, NULL, &ts);
 }
 
 void fd_time_exit(struct spec_fd *fd)
