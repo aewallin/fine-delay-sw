@@ -27,12 +27,16 @@
 #include <linux/zio-user.h>
 #include <fine-delay.h>
 
-enum {MODE_HEX, MODE_FLOAT, MODE_PICO};
+enum {
+	MODE_HEX = 1,
+	MODE_FLOAT = 2,
+	MODE_PICO = 4
+};
 
 int expect;
 int show_time;
 
-void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
+void event(uint32_t *a, char *name, int *seq, int modemask, long double *t1,
 	uint64_t *p1)
 {
 	int sequence = a[FD_ATTR_TDC_SEQ];
@@ -58,46 +62,43 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 		if (otv.tv_sec) {
 			deltamicro = (tv.tv_sec - otv.tv_sec) * 1000 * 1000
 				+ tv.tv_usec - otv.tv_usec;
-			printf("+ %i.%06i: ", deltamicro / 1000 / 1000,
+			printf("+ %i.%06i:", deltamicro / 1000 / 1000,
 			       deltamicro % (1000*1000));
 		} else {
-			printf("%03li.%06li: ", tv.tv_sec % 1000, tv.tv_usec);
+			printf("%03li.%06li:", tv.tv_sec % 1000, tv.tv_usec);
 		}
 		otv = tv;
 	} else {
 		/* time works with one file only, avoid the fname */
-		printf("%s: ", name);
+		printf("%s:", name);
 	}
-	switch(mode) {
-	case MODE_HEX:
-		printf("%08x %08x %08x %08x %08x\n",
+	if (modemask & MODE_HEX) {
+		printf(" %08x %08x %08x %08x %08x\n",
 		       a[FD_ATTR_TDC_UTC_H],
 		       a[FD_ATTR_TDC_UTC_L],
 		       a[FD_ATTR_TDC_COARSE],
 		       a[FD_ATTR_TDC_FRAC],
 		       a[FD_ATTR_TDC_SEQ]);
-		break;
-
-	case MODE_FLOAT:
+	}
+	if (modemask & MODE_FLOAT) {
 		t2 = a[FD_ATTR_TDC_UTC_L] + a[FD_ATTR_TDC_COARSE]
 			* .000000008; /* 8ns */
 		if (*t1) {
-			printf("%17.9Lf (delta %13.9Lf)\n",
+			printf(" %17.9Lf (delta %13.9Lf)\n",
 			       t2, t2 - *t1);
 		} else {
-			printf("%17.9Lf\n", t2);
+			printf(" %17.9Lf\n", t2);
 		}
 		*t1 = t2;
-		break;
-
-	case MODE_PICO:
+	}
+	if (modemask & MODE_PICO) {
 		p2 = a[FD_ATTR_TDC_COARSE] * 8000LL
 			+ a[FD_ATTR_TDC_FRAC] * 8000LL / 4096;
 		delta = p2 - *p1;
 		if (delta < 0)
 			delta += 1000LL * 1000 * 1000 * 1000;
 		if (*p1) {
-			printf("%012lli - delta %012lli", p2, delta);
+			printf(" %012lli - delta %012lli", p2, delta);
 			if (expect) {
 				guess += expect;
 				if (guess > 1000LL * 1000 * 1000 * 1000)
@@ -107,12 +108,11 @@ void event(uint32_t *a, char *name, int *seq, int mode, long double *t1,
 			putchar('\n');
 		}
 		else {
-			printf("%012lli\n", p2);
+			printf(" %012lli\n", p2);
 			if (expect)
 				guess = p2;
 		}
 		*p1 = p2;
-		break;
 	}
 }
 
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 	int i, j, maxfd = 0;
 	int fd[MAXFD], seq[MAXFD];
 	fd_set allset, curset;
-	int mode = MODE_HEX;
+	int modemask = MODE_HEX;
 	long double t1[MAXFD] = {0.0,};
 	uint64_t p1[MAXFD] = {0LL,};
 	uint32_t *attrs;
@@ -135,16 +135,27 @@ int main(int argc, char **argv)
 	if (getenv("FD_SHOW_TIME"))
 		show_time = 1;
 
-	if (argc > 1 && !strcmp(argv[1], "-f")) {
-		mode = MODE_FLOAT;
-		argv[1] = argv[0];
-		argv++, argc--;
+	while ((i = getopt(argc, argv, "fprh")) != -1) {
+
+		switch(i) {
+		case 'f':
+			modemask &= ~MODE_HEX;
+			modemask |= MODE_FLOAT;
+			break;
+		case 'p':
+			modemask &= ~MODE_HEX;
+			modemask |= MODE_PICO;
+			break;
+		case 'r':
+		case 'h':
+			modemask |= MODE_HEX;
+			break;
+		}
 	}
-	if (argc > 1 && !strcmp(argv[1], "-p")) {
-		mode = MODE_PICO;
-		argv[1] = argv[0];
-		argv++, argc--;
-	}
+	/* adjust for consumed arguments */
+	argv[optind - 1] = argv[0];
+	argc -= (optind - 1);
+	argv += (optind - 1);
 
 	if (argc < 2) {
 		/* rebuild argv using globbing */
@@ -210,7 +221,8 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			attrs = ctrl.attr_channel.ext_val;
-			event(attrs, argv[i], seq + i, mode, t1 + i, p1 + i);
+			event(attrs, argv[i], seq + i, modemask,
+			      t1 + i, p1 + i);
 		}
 	}
 	return 0;
