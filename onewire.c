@@ -14,6 +14,7 @@
 #include <linux/jiffies.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/delay.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
