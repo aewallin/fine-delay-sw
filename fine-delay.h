@@ -99,7 +99,17 @@ enum fd_output_mode {
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
 #include <linux/spinlock.h>
 #include <linux/timer.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,25)
 #include <linux/math64.h>
+#else
+/* Hack to compile under 2.6.24: this comes from 2418f4f2 (Roman Zippel) */
+static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
+{
+	*remainder = do_div(dividend, divisor);
+	return dividend;
+}
+#endif
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
