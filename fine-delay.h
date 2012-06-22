@@ -125,6 +125,13 @@ struct fd_calib {
 	int32_t tdc_flags;
 };
 
+struct fd_calib_on_eeprom {
+	u32 hash;
+	u16 size;
+	u16 version;
+	struct fd_calib calib;
+};
+
 /* Channels are called 1..4 in all docs. Internally it's 0..3 */
 #define FD_CH_1		0
 #define FD_CH_LAST	3
@@ -341,9 +348,9 @@ extern void fd_spec_exit(void);
 extern int fd_i2c_init(struct spec_fd *fd);
 extern void fd_i2c_exit(struct spec_fd *fd);
 extern int fd_eerom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
-			 uint8_t *buf, size_t size);
+			 void *buf, size_t size);
 extern int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
-			uint8_t *buf, size_t size);
+			void *buf, size_t size);
 
 
 

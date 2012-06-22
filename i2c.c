@@ -11,10 +11,48 @@
  * option, any later version.
  */
 
+#include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/time.h>
+#include <linux/pci.h>
+#include <linux/slab.h>
+#include <linux/random.h>
+#include <linux/firmware.h>
+#include <linux/jhash.h>
+#include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
+
+/* The eeprom is at address 0x50, and the structure lives at 6kB */
+#define I2C_ADDR 0x50
+#define I2C_OFFSET (6*1024)
+
+/* At factory config time, it's possible to load a file and/or write eeprom */
+static char *calibration_load;
+static int calibration_save;
+static int calibration_check;
+static int calibration_default;
+
+module_param(calibration_load, charp, 0444);
+module_param(calibration_default, int, 0444);
+module_param(calibration_save, int, 0444);
+module_param(calibration_check, int, 0444);
+
+/* Stupid dumping tool */
+static void dumpstruct(char *name, void *ptr, int size)
+{
+	int i;
+	unsigned char *p = ptr;
+
+	printk("%s: (size 0x%x)\n", name, size);
+	for (i = 0; i < size; ) {
+		printk("%02x", p[i]);
+		i++;
+		printk(i & 3 ? " " : i & 0xf ? "  " : "\n");
+	}
+	if (i & 0xf)
+		printk("\n");
+}
 
 static void set_sda(struct spec_fd *fd, int val)
 {
@@ -113,7 +151,7 @@ void mi2c_scan(struct spec_fd *fd)
 	for(i = 0; i < 256; i += 2) {
 		mi2c_start(fd);
 		if(!mi2c_put_byte(fd, i))
-			printk("%s: Found i2c device at 0x%x\n",
+			pr_info("%s: Found i2c device at 0x%x\n",
 			       KBUILD_MODNAME, i >> 1);
 		mi2c_stop(fd);
 	}
@@ -121,9 +159,10 @@ void mi2c_scan(struct spec_fd *fd)
 
 /* FIXME: this is very inefficient: read several bytes in a row instead */
 int fd_eeprom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
-		uint8_t *buf, size_t size)
+		void *buf, size_t size)
 {
 	int i;
+	uint8_t *buf8 = buf;
 	unsigned char c;
 
 	for(i = 0; i < size; i++) {
@@ -140,16 +179,17 @@ int fd_eeprom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
 		mi2c_start(fd);
 		mi2c_put_byte(fd, (i2c_addr << 1) | 1);
 		mi2c_get_byte(fd, &c, 0);
-		*buf++ = c;
+		*buf8++ = c;
 		mi2c_stop(fd);
 	}
 	return size;
 }
 
 int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
-		 uint8_t *buf, size_t size)
+		 void *buf, size_t size)
 {
 	int i, busy;
+	uint8_t *buf8 = buf;
 
 	for(i = 0; i < size; i++) {
 		mi2c_start(fd);
@@ -160,7 +200,7 @@ int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
 		}
 		mi2c_put_byte(fd, (offset >> 8) & 0xff);
 		mi2c_put_byte(fd, offset & 0xff);
-		mi2c_put_byte(fd, *buf++);
+		mi2c_put_byte(fd, *buf8++);
 		offset++;
 		mi2c_stop(fd);
 
@@ -173,10 +213,127 @@ int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
 	return size;
 }
 
+/* The user requested to load the configuration from file */
+static void fd_i2c_load_calib(struct spec_fd *fd,
+			      struct fd_calib_on_eeprom *cal_ee)
+{
+	const struct firmware *fw;
+	struct pci_dev *pdev = fd->spec->pdev;
+	char *newname, *fwname;
+	int err;
+
+	/* the calibration_load string is known to be valid */
+
+	fwname = calibration_load;
+	err = request_firmware(&fw, calibration_load, &pdev->dev);
+	if (err < 0) {
+
+		dev_warn(&pdev->dev, "can't load \"%s\"\n",
+			    calibration_load);
+		newname = kasprintf(GFP_KERNEL, "%s-%02x%02x\n",
+				    calibration_load,
+				    pdev->bus->number, pdev->devfn);
+		err = request_firmware(&fw, calibration_load, &pdev->dev);
+		if (err < 0) {
+			dev_warn(&pdev->dev, "can't load \"%s\"\n",
+				    newname);
+		}
+		fwname = newname;
+	}
+	if (err < 0) {
+		kfree(newname);
+		return;
+	}
+	if (fw->size != sizeof(cal_ee->calib)) {
+		dev_warn(&pdev->dev, "File \"%s\" has wrong size\n",
+			    fwname);
+	} else {
+		memcpy(&cal_ee->calib, fw->data, fw->size);
+		dev_info(&pdev->dev, "calibration data loaded from \"%s\"\n",
+			 fwname);
+	}
+	release_firmware(fw);
+	kfree(newname);
+	return;
+}
+
+
+
 int fd_i2c_init(struct spec_fd *fd)
 {
+	struct fd_calib_on_eeprom *cal_ee;
+	u32 hash;
+	int i;
+
 	mi2c_scan(fd);
-	/* FIXME: read calibration parameters from 0x50*/
+
+	if (0) {
+		/* Temporary - testing: read and write some stuff */
+		u8 buf[8];
+		int i;
+
+		fd_eeprom_read(fd, I2C_ADDR, I2C_OFFSET, buf, 8);
+		printk("read: ");
+		for (i = 0; i < 8; i++)
+			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
+
+		get_random_bytes(buf, 8);
+		printk("write: ");
+		for (i = 0; i < 8; i++)
+			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
+		fd_eeprom_write(fd, I2C_ADDR, I2C_OFFSET, buf, 8);
+	}
+
+	/* Retrieve and validate the calibration */
+	cal_ee = kzalloc(sizeof(*cal_ee), GFP_KERNEL);
+	if (!cal_ee)
+		return -ENOMEM;
+	i = fd_eeprom_read(fd, I2C_ADDR, I2C_OFFSET, cal_ee, sizeof(*cal_ee));
+	if (i != sizeof(*cal_ee)) {
+		pr_err("%s: cannot read_eeprom\n", __func__);
+		goto load;
+	}
+	if (calibration_check)
+		dumpstruct("Calibration data from eeprom:", cal_ee,
+			   sizeof(*cal_ee));
+
+	hash = jhash(&cal_ee->calib, sizeof(cal_ee->calib), 0);
+
+	/* FIXME: this is original-endian only (little endian I fear) */
+	if ((cal_ee->size != sizeof(cal_ee->calib))
+	    || (cal_ee->hash != hash)
+	    || (cal_ee->version != 1)) {
+		pr_err("%s: calibration on eeprom is invalid\n", __func__);
+		goto load;
+	}
+	if (!calibration_default)
+		fd->calib = cal_ee->calib; /* override compile-time default */
+
+load:
+	cal_ee->calib = fd->calib;
+
+	if (calibration_load)
+		fd_i2c_load_calib(fd, cal_ee);
+
+	/* Fix the local copy, for verification and maybe saving */
+	cal_ee->hash = jhash(&cal_ee->calib, sizeof(cal_ee->calib), 0);
+	cal_ee->size = sizeof(cal_ee->calib);
+	cal_ee->version = 1;
+
+	if (calibration_save) {
+		i = fd_eeprom_write(fd, I2C_ADDR, I2C_OFFSET, cal_ee,
+				    sizeof(*cal_ee));
+		if (i != sizeof(*cal_ee)) {
+			pr_err("%s: error in writing calibration to eeprom\n",
+			       __func__);
+		} else {
+			pr_info("%s: saved calibration to eeprom\n", __func__);
+		}
+	}
+	if (calibration_check)
+		dumpstruct("Current calibration data:", cal_ee,
+			   sizeof(*cal_ee));
+	kfree(cal_ee);
 	return 0;
 }
 
