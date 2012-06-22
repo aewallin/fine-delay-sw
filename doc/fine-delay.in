@@ -77,13 +77,15 @@ in the documentation.
 @chapter Driver Features
 
 This driver is based on ZIO and @i{spec-sw}.  It supports initial
-setup of the board, setting and reading time, run-time continuos
-calibration, input timestamping and output pulse generation.  It has
-support for user-defined offsets, so our users can tell the driver
+setup of the board, setting and reading time, run-time continuous
+calibration, input timestamping and output pulse generation.  It
+supports user-defined offsets, so our users can tell the driver
 about channel-specific delays (for example, to account for wiring) and
 ignore the issue in application code.
 
-For each feature offered the driver (and documentation) tries to offer:
+For each feature offered the driver (and documentation) tries to offer
+the following items; sometimes however one of them is missing for a specific
+driver functionality, if considered unneeded.
 
 @itemize @bullet
 @item A description of how the features works at low level;
@@ -95,14 +97,14 @@ For each feature offered the driver (and documentation) tries to offer:
 @item An example program based on that API.
 @end itemize
 
-Sometimes the API and associated program is missing, for lack of time.
-
 Additionally, the @code{NewLogger} directory includes the
 (uncommented, undocumented) program that has been used (at least for a
 while) in the Gran Sasso labs to log neutrino catches).
 
 This package is currently available from
-@code{git://gnudd.com/fine-delay.git}, with snapshots on the ``Files''
+@code{git://gnudd.com/fine-delay.git}, as well as
+@code{git://gitorious.org/fine-delay/fine-delay.git}.
+Snapshots are released on the ``Files''
 and ``Documents'' tabs of the @code{ohwr} project for the related
 hardware and gateware.
 
@@ -128,7 +130,7 @@ card.
 
 This driver has been developed from the FPGA binary included in the
 package as @code{binaries/spec_top.bin}, which is White-Rabbit-enabled.
-You should use it with @code{binarsies/wrc.bin}.
+You should use it with @code{binaries/wrc.bin}.
 
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
@@ -138,7 +140,8 @@ You should use it with @code{binarsies/wrc.bin}.
 
 If the gateware is updated, I'll take care to always include in this
 package the exact binary the software is developed and verified
-against.
+against, until the @i{spec-sw} package will offer a hash-based approach
+and this package will use it.
 
 @c ==========================================================================
 @node Gateware Installation
@@ -173,12 +176,13 @@ appropriate to the gateware of this device.
 @node Software Dependencies
 @section Software Dependencies
 
-The kernel I used during development is version 2.6.32, because this
-is the one where installed boards have been running.
+The kernel versions I used during development are 2.6.32 and 2.6.24 (in
+its @i{preempt-rt} incantation), because these are the ones
+where installed boards have been running.
 
 The driver, then is based on the ZIO framework, available from
 @code{ohwr.org}. The version being used during development is a development
-version, back-ported to Linux-2.6.32.
+version, back-ported to Linux-2.6.32 and 2.6.24.
 Similarly, this is a sub-module for the SPEC board, and thus relies
 on code from the @i{spec-sw} package, again from @code{ohwr.org}.
 
@@ -207,8 +211,7 @@ them are assumed to be already set when running the commands shown.
 @end table
 
 To install ZIO you should download it and install the branch called
-``for-linux-2.6.32'' (this is the only kernel version this
-driver has been tested against so far).
+``for-linux-2.6.24'' (which also works for 2.6.32).
 
 The commands here are reported without prompt for easy cut-and-paste,
 and the exact version number is used in the checkout command in order
@@ -220,38 +223,24 @@ when this driver is completed.
    test -d zio/.git || git clone git://ohwr.org/misc/zio.git
    cd zio
    export ZIO=$(/bin/pwd)
-   git checkout zio-beta3-117-g97387e8 || \
-       git checkout origin/for-linux-2.6.32
+   git checkout origin/for-linux-2.6.24
    make
    sudo make modules_install
 @end example
 
-@b{Warning:} the commit-ID above might change in the future,
-that's why the command above retrieves the @i{current}
-branch @code{for-linux-2.6.32} if the first checkout fails.
-I don't plan to change this any time soon, though.
-
-The procedure for @i{spec-sw} is similar, but the master branch will
-work in this case. Again, the command shows the exact commit
-identifier.
+The procedure for @i{spec-sw} is similar, and again the branch
+is called ``for-linux-2.6.24'':
 
 @example
    test -d spec-sw/.git || \
        git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
    cd spec-sw
    export SPEC_SW=$(/bin/pwd)
-   git checkout cd7e94e || 
-       git checkout origin/for-linux-2.6.32
+   git checkout origin/for-linux-2.6.24
    cd kernel
    make
    sudo make modules_install
 @end example
-
-@b{Warning:} the commit-ID above might change in the future,
-that's why the command above retrieves the @i{current}
-branch @code{for-linux-2.6.32} if the first checkout fails.
-I don't plan to change this any time soon, though.
-@c FIXME: the commit identifiers.
 
 At this point all the software modules are ready to be loaded.
 Actually, the right set will be auto-loaded when you @i{modprobe} for
@@ -765,6 +754,12 @@ itself:
    /dev/zio/zio-fd-0800-0-0-ctrl: 646705121664 - delta 001000000017
 @end smallexample
 
+If is possible, for diagnostics purposes, to run several modes
+at the same time: while @code{-f} and @code{-p} disable raw/hex mode,
+the equivalent options @code{-r} and @code{-h} reinstantiate it.
+If the input event is reported in more than one format, the filename
+is only printed once, and later lines begin with a single blank space.
+
 Finally, the program uses two environment variables, if set to any value:
 @code{FD_SHOW_TIME} make the tool report the time difference between
 sequential reads, which is mainly useful to debug the driver workings;
@@ -1204,6 +1199,8 @@ The library offers the following functions that deal with the input stamps:
 
 	This returns the file descriptor associated to the TDC device,
         so you can @i{select} or @i{poll} before calling @i{fdelay_read}.
+        If access fails (e.g., for permission problems), the functions
+        returns -1 with @code{errno} properly set.
 
 @end table
 
@@ -1415,7 +1412,8 @@ the following known issues exposed by @i{fine-delay}:
 @itemize @bullet
 @item The auto-loading of @i{spec} submodules is not really working:
 the @i{modprobe} command will be stuck sleeping if you try to use it.
-Run `@code{insmod spec-fine-delay}'' (or @i{modprobe} by hand instead.
+Run `@code{insmod spec-fine-delay}'' (or @i{modprobe}) by hand instead.
+@i{This will be addressed in an upcoming release of spec-sw}.
 
 @item The @i{user} trigger of ZIO is really user-driven, so the driver
 can't push stuff to the buffer until asked to. Also, a related buglet
@@ -1435,11 +1433,7 @@ allows:
 
 @itemize @bullet
 
-@item Generation of delayed pulses is missing (it is not working)
-
-@item The API for pulse generation is not yet available.
-
-@item We need interrupt support. The input is currently performed with
+@item We should use interrupts. The input is currently performed with
 a kernel timer.
 
 @item There is no EEPROM support. The driver uses default calibration.
@@ -1448,6 +1442,8 @@ settings.
 @item We need a module parameter to avoid probing non-fine-delay SPEC
 cards. Reading the magic number from an SPEC that is not programmed
 (or likely that is programmed with a different gateware) may lock up
+the system.  @i{Actually, this is going to be addressed by a new
+approach to loading gateware, set forth in the upcoming spec-sw}.
 
 @end itemize
 
