@@ -1390,6 +1390,66 @@ The following functions are offered:
 @end table
 
 @c ##########################################################################
+@node Calibration
+@chapter Calibration
+
+Calibration data for a fine-delay card is stored in the I2C FMC EEPROM
+device. The FMC standard reserves the initial part of the memory for
+its own data structures, so our calibration is stored at offset 0x1800
+(6kB over a size of 8kB).
+
+Future releases of this driver are expected to use SDB for describe
+flash layout, but the offset of 6kB will be retained for compatibility.
+
+The driver automatically loads calibration data from the flash at
+initialization time, but only uses it if its has is valid. The
+calibration data is in @code{struct fd_calib} and the on-eeprom structure
+is @code{fd_calib_on_eeprom}; both are on show in @file{fine-delay.h}.
+
+If the hash of the data structure found on eeprom is not valid, the
+driver will use the compile-time default values.  You can act on
+this configuration using a number of module parameters; please note
+that changing calibration data is only expected to happen at production
+time.
+
+@table @code
+
+@item calibration_check
+
+This integer parameter, if not zero, makes the driver dump the binary
+structure of calibration data in a few places during initialization.
+It is mainly a debug tool.
+
+@item calibration_default
+
+The user can set this integer parameter to tell the driver to ignore
+calibration data found on the EEPROM, thus enacting the compile-time
+defaults.
+
+@item calibration_load
+
+This parameter is a string. The name is used to ask the @i{firmware loader}
+to retrieve a file from @file{/lib/firmware}.  The driver tries both
+the name it receives, and if that fails a name with bus and @i{devfn}
+number appended -- so you can reconfigure a card even if more than one
+of them is plugged on the same host.  The data, once read, is used only
+if the size is correct (0x54 == 84).
+
+@item calibration_save
+
+The integer parameter is used to request saving calibration data to EEPROM,
+whatever values are active after the other parameters have been used.
+You can thus save the compiled-in default, the content of the firmware
+file just loaded, or the value you just read from EEPROM -- not useful,
+but not denied either.
+
+@end table
+
+This package offers no tool to generate the binary file (the 84 bytes
+of calibration).
+
+
+@c ##########################################################################
 @node Known Bugs and Missing Features
 @chapter Known Bugs and Missing Features
 
@@ -1436,8 +1496,9 @@ allows:
 @item We should use interrupts. The input is currently performed with
 a kernel timer.
 
-@item There is no EEPROM support. The driver uses default calibration.
-settings.
+@item Calibration information in the EEPROM is not fixed for
+endianness, so it only works on hosts of the same endiannes as the
+one where it has been programmed.
 
 @item We need a module parameter to avoid probing non-fine-delay SPEC
 cards. Reading the magic number from an SPEC that is not programmed
@@ -1462,6 +1523,14 @@ attribute for ``greedy-input'' planned in new versions of ZIO
 slower than it could be.
 
 @item Most example programs only use the ``first'' board in the system.
+
+@item Kernel messages are not very consistent: the code uses both
+@i{dev_info} and plain @i{kern_info}.
+
+@item There is clear inconsistency between the various uses of bus
+and @i{devfn} numbers, in firmware naming and @i{sysfs} naming. The
+inconsistency is mainly between this driver and the SPEC driver, but
+this one is more correct.
 
 @end itemize
 
