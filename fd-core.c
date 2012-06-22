@@ -135,7 +135,6 @@ int fd_probe(struct spec_dev *dev)
 	struct spec_fd *fd;
 	int i, ret;
 
-	pr_debug("%s\n",__func__);
 	fd = kzalloc(sizeof(*fd), GFP_KERNEL);
 	if (!fd) {
 		pr_err("%s: can't allocate device\n", __func__);
@@ -212,7 +211,6 @@ void fd_remove(struct spec_dev *dev)
 	if (!test_bit(FD_FLAG_INITED, &fd->flags))
 		return; /* No init, no exit */
 
-	pr_debug("%s\n",__func__);
 	while (--i >= 0) {
 		m = mods + i;
 		if (m->exit)
@@ -224,7 +222,6 @@ static int fd_init(void)
 {
 	int ret;
 
-	pr_debug("%s\n",__func__);
 	ret = fd_zio_register();
 	if (ret < 0)
 		return ret;

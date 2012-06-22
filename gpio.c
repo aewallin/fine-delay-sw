@@ -53,7 +53,7 @@ static int gpio_writel_with_retry(struct spec_fd *fd, int val, int reg)
 		if(rv >= 0 && (rv == val))
 		{
 			if(SPI_RETRIES-1-retries > 0)
-				printk("%s: succeded after %d retries\n",
+				pr_info("%s: succeded after %d retries\n",
 				       __func__, SPI_RETRIES - 1 - retries);
 			return 0;
 		}
@@ -96,7 +96,6 @@ int fd_gpio_init(struct spec_fd *fd)
 	fd->mcp_iodir = 0xffff;
 	fd->mcp_olat = 0;
 
-	pr_debug("%s\n",__func__);
 	if (gpio_writel(fd, 0x00, FD_MCP_IOCON) < 0)
 		goto out;
 

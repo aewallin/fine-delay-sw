@@ -40,7 +40,6 @@ int fd_pll_init(struct spec_fd *fd)
 	unsigned long j;
 	const struct ad9516_reg *r;
 
-	pr_debug("%s\n",__func__);
 	if (pll_writel(fd, 0x99, 0x000) < 0)
 		goto out;
 	if (pll_writel(fd, 0x01, 0x232) < 0)
@@ -93,10 +92,7 @@ int fd_pll_init(struct spec_fd *fd)
 	if (pll_writel(fd, 0x01, 0x232) < 0)
 		goto out;
 
-	pr_debug("success!\n");
 	return 0;
-
-
 
 out:
 	pr_err("%s: Error in SPI communication\n", KBUILD_MODNAME);

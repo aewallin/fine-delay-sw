@@ -524,7 +524,7 @@ out:
 		if (test_and_clear_bit(FD_FLAG_DO_OUTPUT + i, &fd->flags)) {
 			struct zio_cset *cset = fd->zdev->cset + i;
 			cset->ti->t_op->data_done(cset);
-			printk("called data_done\n");
+			pr_debug("called data_done\n");
 		}
 
 	mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
@@ -607,16 +607,13 @@ static int fd_zio_output(struct zio_cset *cset)
 	fd = cset->zdev->private_data;
 	ctrl = zio_get_ctrl(cset->chan->active_block);
 
-	for (i = 0; i < 4; i++)
-		printk("triggered %i: %x (%i)\n", i,
-		       fd_ch_readl(fd, i, FD_REG_DCR),
-		       fd_ch_readl(fd, i, FD_REG_DCR) & FD_DCR_PG_TRIG ? 1: 0);
-
-	pr_info("%s: attrs: ", __func__);
-	for (i = FD_ATTR_DEV__LAST; i < FD_ATTR_OUT__LAST; i++)
-		printk("%08x%c", ctrl->attr_channel.ext_val[i],
-		       i == FD_ATTR_OUT__LAST -1 ? '\n' : ' ');
-
+	if (fd->verbose > 1) {
+		for (i = 0; i < 4; i++)
+			pr_info("%s: attrs: ", __func__);
+		for (i = FD_ATTR_DEV__LAST; i < FD_ATTR_OUT__LAST; i++)
+			printk("%08x%c", ctrl->attr_channel.ext_val[i],
+			       i == FD_ATTR_OUT__LAST -1 ? '\n' : ' ');
+	}
 	__fd_zio_output(fd, cset->index, ctrl->attr_channel.ext_val);
 	/*
 	 * There's a buglet in this version of zio: we can't

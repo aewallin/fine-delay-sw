@@ -7,7 +7,7 @@ KBUILD_EXTRA_SYMBOLS := $(ZIO)/Module.symvers $(SPEC_SW)/kernel/Module.symvers
 
 ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$M
 
-ccflags-y += -DDEBUG # temporary
+#ccflags-y += -DDEBUG
 
 subdirs-ccflags-y = $(ccflags-y)
 

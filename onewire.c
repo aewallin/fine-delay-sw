@@ -233,10 +233,11 @@ int fd_onewire_init(struct spec_fd *fd)
 	if(ds18x_read_serial(fd) < 0)
 		return -EIO;
 
-	pr_info("%s: Found DS18xx sensor: ", __func__);
-	for (i = 0; i < 8; i++)
-		printk("%02x%c", fd->ds18_id[i], i == 7 ? '\n' : ':');
-
+	if (fd->verbose) {
+		pr_info("%s: Found DS18xx sensor: ", __func__);
+		for (i = 0; i < 8; i++)
+			printk("%02x%c", fd->ds18_id[i], i == 7 ? '\n' : ':');
+	}
 	/* read the temperature once, to ensure it works, and print it */
 	fd_read_temp(fd, 2);
 

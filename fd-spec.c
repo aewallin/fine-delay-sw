@@ -24,7 +24,6 @@
 static int fd_is_valid(int bus, int devfn)
 {
 	/* FIXME: restrict to some of the spec devices with moduleparam */
-	pr_debug("%s: %x %x\n", __func__, bus, devfn);
 	return 1;
 }
 
