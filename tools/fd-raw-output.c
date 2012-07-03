@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 	uint32_t *attrs;
 
 	/* glob to find the device; use the first */
-	glob("/dev/zio-fd-*-1-0-ctrl", 0, NULL, &glob_buf);
-	glob("/dev/zio/zio-fd-*-1-0-ctrl", GLOB_APPEND, NULL, &glob_buf);
+	glob("/dev/fd-*-1-0-ctrl", 0, NULL, &glob_buf);
+	glob("/dev/zio/fd-*-1-0-ctrl", GLOB_APPEND, NULL, &glob_buf);
 
 	if (glob_buf.gl_pathc != 1) {
 		fprintf(stderr, "%s: found %i devices, need 1 only\n",

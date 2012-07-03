@@ -8,7 +8,7 @@ static inline int fdelay_get_sysnames(char *result[])
 	glob_t glob_buf = {0,};
 	int i;
 
-	glob("/sys/bus/zio/devices/zio-fd-*",0 , NULL, &glob_buf);
+	glob("/sys/bus/zio/devices/fd-*",0 , NULL, &glob_buf);
 	for (i = 0; i < glob_buf.gl_pathc; i++)
 		result[i] = strdup(glob_buf.gl_pathv[i]);
 	globfree(&glob_buf);

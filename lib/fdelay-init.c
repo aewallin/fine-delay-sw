@@ -41,11 +41,11 @@ int fdelay_init(void)
 	uint32_t v;
 
 	/* Look for boards in /dev: old and new pathnames: only one matches */
-	glob("/dev/zio-fd-*-0-0-ctrl", 0, NULL, &glob_dev);
-	glob("/dev/zio/zio-fd-*-0-0-ctrl", GLOB_APPEND, NULL, &glob_dev);
+	glob("/dev/fd-*-0-0-ctrl", 0, NULL, &glob_dev);
+	glob("/dev/zio/fd-*-0-0-ctrl", GLOB_APPEND, NULL, &glob_dev);
 
 	/* And look in /sys as well */
-        glob("/sys/bus/zio/devices/zio-fd-*",0 , NULL, &glob_sys);
+        glob("/sys/bus/zio/devices/fd-*",0 , NULL, &glob_sys);
 	assert(glob_dev.gl_pathc == glob_sys.gl_pathc);
 
 	/* Allocate as needed */
