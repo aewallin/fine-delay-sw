@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month June 2012
+@set update-month July 2012
 
 @finalout
 
@@ -68,6 +68,7 @@ in the documentation.
 * Source Code Conventions::     
 * Using the Driver Directly::   
 * Using the Provided API::      
+* Calibration::                 
 * Known Bugs and Missing Features::  
 * Troubleshooting::             
 @end menu
@@ -99,7 +100,7 @@ driver functionality, if considered unneeded.
 
 Additionally, the @code{NewLogger} directory includes the
 (uncommented, undocumented) program that has been used (at least for a
-while) in the Gran Sasso labs to log neutrino catches).
+while) in the Gran Sasso labs to log neutrino catches.
 
 This package is currently available from
 @code{git://gnudd.com/fine-delay.git}, as well as
@@ -172,6 +173,10 @@ Also, please note that you must pass the parameter @code{lm32=0xc0000}
 to the @i{spec.ko} module, because the default address (0x80000) is not
 appropriate to the gateware of this device.
 
+@b{Note:} in local CERN installations, the pathnames for the firmware
+loaded in @i{spec-sw} have been changed to load from
+@code{/lib/firmware/fmc/} instead of @code{/lib/firmware}.
+
 @c ==========================================================================
 @node Software Dependencies
 @section Software Dependencies
@@ -213,11 +218,7 @@ them are assumed to be already set when running the commands shown.
 To install ZIO you should download it and install the branch called
 ``for-linux-2.6.24'' (which also works for 2.6.32).
 
-The commands here are reported without prompt for easy cut-and-paste,
-and the exact version number is used in the checkout command in order
-to ensure you are running the same version that has been used during
-development.  We plan to place a permanent tag in the ZIO repository
-when this driver is completed.
+The commands here are reported without prompt for easy cut-and-paste.
 
 @example
    test -d zio/.git || git clone git://ohwr.org/misc/zio.git
@@ -246,9 +247,9 @@ At this point all the software modules are ready to be loaded.
 Actually, the right set will be auto-loaded when you @i{modprobe} for
 @code{spec-fine-delay} if you installed everything.
 
-@b{Note:} if you are using the White-Rabbit version of the firmware,
-you should pass the argument @code{lm32=0xc000} to the @i{spec.ko}
-module.  The script used by Tomasz is available as
+@b{Note:} When loading @code{spec.ko}
+you @b{must} pass the argument @code{lm32=0xc000}.
+The script used by Tomasz is available as
 @code{tools/load.sh} for your reference.
 
 This is an example of the kernel messages you'll get back over
@@ -393,24 +394,25 @@ The device appears in @i{/dev} as a set of char devices:
 
 @smallexample
    spusa# ls -l /dev/zio/*
-   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-ctrl
-   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-data
-   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-ctrl
-   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-data
-   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-ctrl
-   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-data
-   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-ctrl
-   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-data
-   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-ctrl
-   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-data
+   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/fd-0200-0-0-ctrl
+   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/fd-0200-0-0-data
+   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/fd-0200-1-0-ctrl
+   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/fd-0200-1-0-data
+   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/fd-0200-2-0-ctrl
+   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/fd-0200-2-0-data
+   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/fd-0200-3-0-ctrl
+   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/fd-0200-3-0-data
+   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/fd-0200-4-0-ctrl
+   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/fd-0200-4-0-data
 @end smallexample
 
 The actual pathnames depend on the version of @i{udev}, and the support
-library tries both names (the new one shown above, and the older one).
+library tries both names (the new one shown above, and the older one,
+without a @code{zio} subdirectory).
 Also, please note that a still-newer version of @i{udev} obeys device
 permissions, so you'll have read-only and write-only device files.
 
-In this drivers, cset 0 is for the input signal, and csets 1..4 are
+In this drivers, @i{cset} 0 is for the input signal, and @i{csets} 1..4 are
 for the output channels.
 
 If more than one board is probed for, you'll have two or more similar
@@ -424,10 +426,10 @@ to be solved differently.
 
 Device (and channel) attributes can be accessed in the proper @i{sysfs}
 directory. For a card in slot 0 of bus 2 (like shown above), the
-directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
+directory is @i{/sys/bus/zio/devices/fd-0200}:
 
 @smallexample
-   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/
+   spusa# ls -Ff /sys/bus/zio/devices/fd-0200/
    ./      enable           utc-l       power/     fd-ch2/
    ../     resolution-bits  coarse      driver     fd-ch3/
    uevent  version          command     fd-input/  fd-ch4/
@@ -447,7 +449,7 @@ reading @i{utc-l} and @i{coarse} you'll get such cached values.
 
 Example:
 @smallexample
-   spusa# cd /sys/bus/zio/devices/zio-fd-0200/
+   spusa# cd /sys/bus/zio/devices/fd-0200/
    spusa# cat coarse coarse utc-h coarse
    75136756
    75136756
@@ -519,8 +521,8 @@ write-only file in @i{sysfs}:
 
 	Tell the user the status of White-Rabbit mode. This is a hack, as
         the return value is reported using error codes. Success means
-        White-Rabbit is synchronized.  @code{ENODEV} means there is
-        WR mode active, @code{EAGAIN} means it is not synchronized yet.
+        White-Rabbit is synchronized.  @code{ENODEV} means WR mode is inactive,
+        @code{EAGAIN} means it is not synchronized yet.
         The error is returned to the @i{write} system call.
 
 @item 4 = FD_CMD_DUMP_MCP
@@ -542,7 +544,7 @@ The program @i{fd-raw-gettime}, part of this package, allows reading
 the current board time using @i{sysfs} directly:
 
 @smallexample
-   spusa# ./fd-raw-gettime ; sleep 1; ./fd-raw-gettime
+   spusa# ./tools/fd-raw-gettime ; sleep 1; ./tools/fd-raw-gettime
    3303.076543536
    3304.082016080
 @end smallexample
@@ -560,9 +562,9 @@ The program @i{fd-raw-settime}, part of this package, allows setting
 the current board time using @i{sysfs} directly:
 
 @smallexample
-   spusa# ./fd-raw-settime  123; ./fd-raw-gettime
+   spusa# ./tools/fd-raw-settime  123; ./tools/fd-raw-gettime
    123.000541696
-   spusa# ./fd-raw-settime  123 500000000; ./fd-raw-gettime
+   spusa# ./tools/fd-raw-settime  123 500000000; ./tools/fd-raw-gettime
    123.500570096
 @end smallexample
 
@@ -636,7 +638,7 @@ The attributes are also visible in @i{/sys}, in the directory
 describing the cset:
 
 @smallexample
-   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/fd-input/
+   spusa# ls -Ff /sys/bus/zio/devices/fd-0200/fd-input/
    ./      enable           utc-l   chan         power/
    ../     current_trigger  coarse  flags        trigger/
    uevent  current_buffer   frac    offset       chan0/
@@ -671,7 +673,7 @@ that the programs in @code{tools/} and @code{lib/} in this package are
 in general a better choice to timestamp input pulses.
 
 @smallexample
-   spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
+   spusa# zio-dump /dev/zio/fd-0200-0-0-*
    Ctrl: version 0.5, trigger user, dev fd, cset 0, chan 0
    Ctrl: seq 1, n 16, size 4, bits 32, flags 01000001 (little-endian)
    Ctrl: stamp 1335737285.312696982 (0)
@@ -703,7 +705,7 @@ called ``wildcards'').
 This is an example run:
 
 @smallexample
-   spusa# ./fd-raw-input
+   spusa# ./tools/fd-raw-input
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001a 00b9be2b 00000bf2 00000000
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 00e7f5c2 0000097d 00000001
    /dev/zio/zio-fd-0200-0-0-ctrl: 00000000 0000001b 02c88901 00000035 00000002
@@ -717,7 +719,7 @@ value, though, but only the integer second and the coarse 8ns timer).
 This is an example while listening to a software-generated 1kHz signal:
 
 @smallexample
-   spusa# ./fd-raw-input -f
+   spusa# ./tools/fd-raw-input -f
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.903957552 (delta   0.001007848)
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.904971384 (delta   0.001013832)
    /dev/zio/zio-fd-0200-0-0-ctrl:    1825.905968648 (delta   0.000997264)
@@ -746,7 +748,7 @@ an example run of the program, fed by 1kHz generated from the board
 itself:
 
 @smallexample
-   spusa.root# ./fd-raw-input -p | head -5
+   spusa.root# ./tools/fd-raw-input -p | head -5
    /dev/zio/zio-fd-0800-0-0-ctrl: 642705121635
    /dev/zio/zio-fd-0800-0-0-ctrl: 643705121647 - delta 001000000012
    /dev/zio/zio-fd-0800-0-0-ctrl: 644705121656 - delta 001000000009
@@ -758,7 +760,9 @@ If is possible, for diagnostics purposes, to run several modes
 at the same time: while @code{-f} and @code{-p} disable raw/hex mode,
 the equivalent options @code{-r} and @code{-h} reinstantiate it.
 If the input event is reported in more than one format, the filename
-is only printed once, and later lines begin with a single blank space.
+is only printed once, and later lines begin with a single blank space
+(you may see more blanks because they are part of normal output,
+for alignment purposes).
 
 Finally, the program uses two environment variables, if set to any value:
 @code{FD_SHOW_TIME} make the tool report the time difference between
@@ -767,7 +771,7 @@ sequential reads, which is mainly useful to debug the driver workings;
 expected data rate, relative to the first sample collected:
 
 @smallexample
-   spusa.root# FD_EXPECTED_RATE=1000000000 ./fd-raw-input -p | head -5
+   spusa.root# FD_EXPECTED_RATE=1000000000 ./tools/fd-raw-input -p | head -5
    /dev/zio/zio-fd-0800-0-0-ctrl: 139705121668
    /dev/zio/zio-fd-0800-0-0-ctrl: 140705121699 - delta 001000000031 - error  31
    /dev/zio/zio-fd-0800-0-0-ctrl: 141705121661 - delta 000999999962 - error  -7
@@ -788,7 +792,7 @@ statistics when a burst completes (i.e., no pulse is received for at
 least 300ms):
 
 @smallexample
-   spusa#  ./fd-raw-perf
+   spusa#  ./tools/fd-raw-perf
    59729 pulses (0 lost)
       hw: 1000000000ps (1.000000kHz) -- min 999999926 max 1000000089 delta 163
       sw: 983us (1.017294kHz) -- min 7 max 18992 delta 18985
@@ -798,7 +802,7 @@ The program uses the environment variable @code{PERF_STEP}, if set, to
 report information every that many seconds, even if the burst is still
 running:
 
-spusa.root# PERF_STEP=5 ./fd-raw-perf
+spusa.root# PERF_STEP=5 ./tools/fd-raw-perf
 @smallexample
    4999 pulses (0 lost)
       hw: 1000000000ps (1.000000kHz) -- min 999999933 max 1000000067 delta 134
@@ -945,7 +949,12 @@ in the control block written to @i{/dev}.
 @node Using fd-raw-output
 @subsection Using fd-raw-output
 
-The simplest way to generate output is using @i{fd-raw-output}, part
+The simplest way to generate output is using the tools in @code{lib/}.
+You are therefore urged to skip this section and read @ref{Output
+Configuration} instead.
+
+For the bravest people, the low
+level way to generate output is using @i{fd-raw-output}, part
 of the @i{tools} directory of this package.  The tool writes a control
 block to the ZIO control file, setting the block size to 1 32-bit
 sample; it then writes 4 bytes to the data file to force output of the
@@ -968,19 +977,19 @@ utc-h, utc-l, coarse, frac), (stop -- utc-h, utc-l, coarse, frac),
 (delta - utc-l, coarse, frac)}.
 
 @smallexample
-   spusa# ./fd-raw-settime 0 0; \
-          ./fd-raw-output 2 10   0 1 0 0   0 1 1000 0   0 2000 0
+   spusa# ./tools/fd-raw-settime 0 0; \
+          ./tools/fd-raw-output 2 10   0 1 0 0   0 1 1000 0   0 2000 0
 
-   spusa# ./fd-raw-settime 0 0; \
-          ./fd-raw-output 2 500   0 1 0 0   0 1 62500 0   0 125000 0
+   spusa# ./tools/fd-raw-settime 0 0; \
+          ./tools/fd-raw-output 2 500   0 1 0 0   0 1 62500 0   0 125000 0
 @end smallexample 
 
 The following example sets board time to host time and programs a single
 40us pulse at the beginning of the next second (note use of @code{+})
 
 @smallexample
-   spusa# echo 0 > /sys/bus/zio/devices/zio-fd-*/command; \
-          ./fd-raw-output 2 0   0 +1 0 0   0 +1 5000 0 
+   spusa# echo 0 > /sys/bus/zio/devices/fd-*/command; \
+          ./tools/fd-raw-output 2 0   0 +1 0 0   0 +1 5000 0 
 @end smallexample 
 
 The following example programs a pps pulse (1ms long) on channel 1
@@ -988,12 +997,9 @@ and a 1MHz square wave on channel 2, assuming board time is already
 synchronized with host time:
 
 @smallexample
-   spusa# CHAN=1 ./fd-raw-output 2 -1   0 +1 0 0   0 +1 125000 0  1 0 0; \
-          CHAN=2 ./fd-raw-output 2 -1   0 +1 0 0   0 +1 64 0   0 125 0
+   spusa# CHAN=1 ./tools/fd-raw-output 2 -1   0 +1 0 0   0 +1 125000 0  1 0 0; \
+          CHAN=2 ./tools/fd-raw-output 2 -1   0 +1 0 0   0 +1 64 0   0 125 0
 @end smallexample 
-
-@b{Note:} delay mode, that should output pulses delayed over the input, is not
-currently working.
 
 @c ##########################################################################
 @node Using the Provided API
@@ -1008,7 +1014,6 @@ from the parent directory) and the ZIO headers, retrieved using the
 @code{ZIO} environment variable).
 
 @menu
-* The Previous API::            
 * Initialization and Cleanup::  
 * Time Management::             
 * Input Configuration::         
@@ -1016,39 +1021,6 @@ from the parent directory) and the ZIO headers, retrieved using the
 * Output Configuration::        
 * White-Rabbit Configuration::  
 @end menu
-
-@c ==========================================================================
-@node The Previous API
-@section The Previous API
-The public interface offered by the initial library, written by
-Tomasz, is as follows. It covers all device features we need to export:
-
-@smallexample
-   typedef struct fdelay_device { ... } fdelay_device_t;
-   typedef struct { ... } fdelay_time_t;
-
-   fdelay_time_t fdelay_from_picos(const uint64_t ps);
-   int64_t fdelay_to_picos(const fdelay_time_t t);
-
-   int fdelay_init(fdelay_device_t *dev);
-   int fdelay_release(fdelay_device_t *dev);
-   int fdelay_read(fdelay_device_t *dev, fdelay_time_t *timestamps, int how_many);
-   int fdelay_configure_trigger(fdelay_device_t *dev, int enable, int termination);
-   int fdelay_configure_output(fdelay_device_t *dev, int channel, int enable,
-       int64_t delay_ps, int64_t width_ps, int64_t delta_ps, int rep_count);
-
-   int fdelay_configure_sync(fdelay_device_t *dev, int mode);
-   int fdelay_update_sync_status(fdelay_device_t *dev);
-   int fdelay_set_time(fdelay_device_t *dev, const fdelay_time_t t);
-   int fdelay_configure_pulse_gen(fdelay_device_t *dev, int channel, int enable,
-       fdelay_time_t t_start, int64_t width_ps, int64_t delta_ps, int rep_count);
-   int fdelay_channel_triggered(fdelay_device_t *dev, int channel);
-   int fdelay_get_time(fdelay_device_t *dev, fdelay_time_t *t);
-@end smallexample
-
-This API doesn't support multiple boards but is still a useful reference
-for the feature-set we need.  The next sections describe the new library,
-that is part of this package and relies on the kernel driver.
 
 @c ==========================================================================
 @node Initialization and Cleanup
@@ -1090,8 +1062,9 @@ The sample program @i{fdelay-list} lists the boards currently on the system,
 using @i{fdelay_init}:
 
 @smallexample
-   spusa# ./fdelay-list
-     dev_id 0200, /dev/zio/zio-fd-0200, /sys/bus/zio/devices/zio-fd-0200
+   spusa# ./lib/fdelay-list
+   ./lib/fdelay-list: found 1 boards
+     dev_id 0200, /dev/fd-0200, /sys/bus/zio/devices/fd-0200
 @end smallexample
 
 @c ==========================================================================
@@ -1130,12 +1103,12 @@ The program @i{fdelay-board-time} is a command-line front-end to the library,
 to validate the library works as expected:
 
 @smallexample
-   spusa# ./fdelay-board-time  25.5; ./fdelay-board-time get
+   spusa# ./lib/fdelay-board-time  25.5; ./lib/fdelay-board-time get
    25.500661824
-   spusa# ./fdelay-board-time  get
+   spusa# ./lib/fdelay-board-time  get
    34.111048968
-   spusa# ./fdelay-board-time  host
-   spusa# ./fdelay-board-time  get
+   spusa# ./lib/fdelay-board-time  host
+   spusa# ./lib/fdelay-board-time  get
    1335974946.493415600
 @end smallexample
 
@@ -1214,25 +1187,24 @@ problem with our use of ZIO. Here below there were three stamps enqueued,
 1ms spaced in time:
 
 @smallexample
-   spusa# ./fdelay-read 10
-   ./fdelay-read: reading 10 pulses in blocking mode... got 1 of them
+   spusa# ./lib/fdelay-read 10
+   ./lib/fdelay-read: reading 10 pulses in blocking mode... got 1 of them
    seq   179: time 1447.218417376 + 0ebf
-   ./fdelay-read: reading 10 pulses in non-blocking mode... got 1 of them
+   ./lib/fdelay-read: reading 10 pulses in non-blocking mode... got 1 of them
    seq   180: time 1447.219415872 + 07b5
 
-   spusa# ./fdelay-read 10
-   ./fdelay-read: reading 10 pulses in blocking mode... got 1 of them
+   spusa# ./lib/fdelay-read 10
+   ./lib/fdelay-read: reading 10 pulses in blocking mode... got 1 of them
    seq   181: time 1447.220418000 + 0187
-   ./fdelay-read: reading 10 pulses in non-blocking mode... got -1 of them
+   ./lib/fdelay-read: reading 10 pulses in non-blocking mode... got -1 of them
 @end smallexample
 
 This is an example with @i{fread}, where it received two bursts of 5 pulses:
 the function didn't return before getting all 10 of them:
 
 @smallexample
-   spusa# ./fdelay-fread 10
-   /fdelay-fread 10
-   ./fdelay-fread: reading 10 pulses using fread... got 10 of them
+   spusa# ./lib/fdelay-fread 10
+   ./lib/fdelay-fread: reading 10 pulses using fread... got 10 of them
    seq   182: time 1587.441758984 + 0a4f
    seq   183: time 1587.442757840 + 03b1
    seq   184: time 1587.443757712 + 08f3
@@ -1327,7 +1299,7 @@ The meaning of the arguments is as follows:
 
 @item <ch>
 
-	The channel number: 0 though 3.
+	The channel number: 0 through 3.
 
 @item <rep>
 
@@ -1356,15 +1328,26 @@ and a 1MHz square wave on channel 1, assuming board time is already
 synchronized with host time:
 
 @smallexample
-   spusa# fdelay-pulse  pulse 0 -1  +2.0  0.001    1.0        ;  \
-          fdelay-pulse  pulse 1 -1  +2.0  0.0+500  0.000001
+   spusa# ./lib/fdelay-pulse  pulse 0 -1  +2.0  0.001    1.0        ;  \
+          ./lib/fdelay-pulse  pulse 1 -1  +2.0  0.0+500  0.000001
 @end smallexample
 
 This example outputs a train of pulses, 100us long
 every 1ms - 10ps:
 
 @smallexample
-   fdelay-pulse  pulse 0 -1  +2.0  0.0001 0.000999+999990
+  ./lib/fdelay-pulse  pulse 0 -1  +2.0  0.0001 0.000999+999990
+@end smallexample 
+
+This final example uses delay functionality, requesting 5 pulses on
+channel 0, 10ms long with a delay of 100ms from the input pulses
+and 100ms period. At the same time channel 1 outputs 6 pulses,
+10ms long with a delay of 150ms; period is again 100ms (it's something
+pretty clear to looks at on the scope).
+
+@smallexample
+  ./lib/fdelay-pulse delay 0 5   0.10 0.01 0.1; \
+  ./lib/fdelay-pulse delay 1 6   0.15 0.01 0.1; \
 @end smallexample 
 
 
@@ -1610,9 +1593,9 @@ where the spec driver can find it. In my case the file name is
 The @i{fdelay} library may report a version mismatch like this:
 
 @example
-   spusa# ./fdelay-board-time  get
+   spusa# ./lib/fdelay-board-time  get
    fdelay_init: version mismatch, lib(1) != drv(2)
-   ./fdelay-board-time: fdelay_init(): Input/output error
+   ./lib/fdelay-board-time: fdelay_init(): Input/output error
 @end example
 
 This reports a difference in the way ZIO attributes are laid out, so user
