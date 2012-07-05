@@ -164,6 +164,28 @@ found:
 	return (void *)b;
 }
 
+/* Open one specific device by logical unit number (CERN/CO-like) */
+struct fdelay_board *fdelay_open_by_lun(int lun)
+{
+	ssize_t ret;
+	char dev_id_str[4];
+	char path_pattern[] = "/dev/fine-delay.%d";
+	char path[sizeof(path_pattern) + 1];
+	int dev_id;
+
+	ret = snprintf(path, sizeof(path), path_pattern, lun);
+	if (ret < 0 || ret >= sizeof(path)) {
+		errno = EINVAL;
+		return NULL;
+	}
+	ret = readlink(path, dev_id_str, sizeof(dev_id_str));
+	if (sscanf(dev_id_str, "%4x", &dev_id) != 1) {
+		errno = ENODEV;
+		return NULL;
+	}
+	return fdelay_open(-1, dev_id);
+}
+
 int fdelay_close(struct fdelay_board *userb)
 {
 	__define_board(b, userb);

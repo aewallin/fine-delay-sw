@@ -54,6 +54,7 @@ extern int fdelay_init(void);
 extern void fdelay_exit(void);
 
 extern struct fdelay_board *fdelay_open(int offset, int dev_id);
+extern struct fdelay_board *fdelay_open_by_lun(int lun);
 extern int fdelay_close(struct fdelay_board *);
 
 extern int fdelay_set_time(struct fdelay_board *b, struct fdelay_time *t);
