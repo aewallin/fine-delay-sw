@@ -64,6 +64,7 @@ static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 	int i;
 	uint64_t *results;
 	uint64_t res, acc = 0;
+	int rem;
 
 	results = kmalloc(n * sizeof(*results), GFP_KERNEL);
 	if (!results)
@@ -119,7 +120,7 @@ static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
 	fd_ch_writel(fd, ch, 0, FD_REG_DCR);
 
 	/* Calculate avg, min max */
-	acc = (acc + n / 2) / n;
+	acc = div_u64_rem((acc + n / 2), n, &rem);
 	if (stats) {
 		stats->avg = acc;
 		stats->min = ~0LL;
