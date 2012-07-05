@@ -36,14 +36,18 @@
 @setchapternewpage off
 
 @set update-month July 2012
+@set release 1.1
+@set tagname fine-delay-sw-v1.1
+@c WARNING: in @example I Can't use @value{tagname}, so please look for this
+@c string when updating the document.
 
 @finalout
 
 @titlepage
 @title fine-delay
-@subtitle @value{update-month}
+@subtitle @value{update-month} -- Release @value{release}
 @subtitle A sub-driver for ``fmc-delay-1ns-4cha'' based on SPEC driver
-@author Alessandro Rubini for CERN
+@author Alessandro Rubini for CERN, with help from BE-CO-HT staff.
 @end titlepage
 @headings single
 
@@ -63,6 +67,7 @@ thus the web references include this wrong naming and it's not a typo
 in the documentation.
 
 @menu
+* Repositories and Releases::   
 * Driver Features::             
 * Installation::                
 * Source Code Conventions::     
@@ -72,6 +77,53 @@ in the documentation.
 * Known Bugs and Missing Features::  
 * Troubleshooting::             
 @end menu
+
+@c ##########################################################################
+@node Repositories and Releases
+@chapter Repositories and Releases
+
+This version of the software package is release @value{release}.
+The code and documentation is distributed in the following places:
+
+@table @code
+
+@item http://www.ohwr.org/projects/fine-delay-sw/documents
+
+	This place hosts the pdf documentation for every official
+        release
+
+@item http://www.ohwr.org/projects/fine-delay-sw/files
+
+	Here we place the @i{.tar.gz} file for every release,
+        including the @i{git} tree and compiled documentation (for
+        those who lack TeX).
+
+@item git://ohwr.org/fmc-projects/fmc-delay-1ns-8cha/fine-delay-sw.git
+@itemx git://gitorious.org/fine-delay/fine-delay.git
+
+	Read-only repositories for the software and documentation.
+        The former is authoritative, the latter is a backup.
+
+@item git@@ohwr.org:fmc-projects/fmc-delay-1ns-8cha/fine-delay-sw.git
+@itemx git@@gitorious.org:fine-delay/fine-delay.git
+
+	Read-write repositories, for thos authorized. Again, OHWR is
+        the authoritative place, but we tend to push to gitorious as
+        well.
+
+@end table
+
+The repository has a tag called called
+@code{@value{tagname}}. The same tag is used in related
+repositories (zio and spec-sw).  Any official hot fixes for this
+release will live in the branch called
+@code{@value{tagname}-fixes}, in all three repositories.
+
+@b{Note:} If you got this from the repository (as opposed to a named
+@i{tar.gz} or @i{pdf} file) you might be looking at a later commit
+than the tagged release: it is a fact of life that developers forget
+to re-read and fix documentation while updating the code. In that case,
+plase run ``@code{git describe HEAD}'' to ensure where you are.
 
 @c ##########################################################################
 @node Driver Features
@@ -215,8 +267,9 @@ them are assumed to be already set when running the commands shown.
 
 @end table
 
-To install ZIO you should download it and install the branch called
-``for-linux-2.6.24'' (which also works for 2.6.32).
+To install ZIO you should download it and install the tag or branch called
+@value{tagname}, which has been backported to work on Linux-2.6.24 and
+Linux-2.6.21.
 
 The commands here are reported without prompt for easy cut-and-paste.
 
@@ -224,20 +277,20 @@ The commands here are reported without prompt for easy cut-and-paste.
    test -d zio/.git || git clone git://ohwr.org/misc/zio.git
    cd zio
    export ZIO=$(/bin/pwd)
-   git checkout origin/for-linux-2.6.24
+   git checkout -b fine-delay fine-delay-sw-v1.1
    make
    sudo make modules_install
 @end example
 
 The procedure for @i{spec-sw} is similar, and again the branch
-is called ``for-linux-2.6.24'':
+is called ``@value{tagname}'':
 
 @example
    test -d spec-sw/.git || \
        git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
    cd spec-sw
    export SPEC_SW=$(/bin/pwd)
-   git checkout origin/for-linux-2.6.24
+   git checkout -b fine-delay fine-delay-sw-v1.1
    cd kernel
    make
    sudo make modules_install
