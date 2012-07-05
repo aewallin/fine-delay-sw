@@ -1056,6 +1056,14 @@ The library offers the following structures and functions:
         is found, the function return NULL with @code{EINVAL}; if either index or
         @code{dev_id} are not found, the function returns NULL with @code{ENODEV}.
 
+@item struct fdelay_board *fdelay_open_by_lun(int lun);
+
+	The function opens a pointer to a board, similarly to @i{fdelay_open},
+        but it uses the Logical Unit Number as argument instead. The LUN
+        is used internally be CERN libraries, and the function is needed
+        for compatibility with the installed tool-set.  The function uses
+        a symbolic link in @i{dev}, created by the local installation procedure.
+
 @end table
 
 The sample program @i{fdelay-list} lists the boards currently on the system,
