@@ -219,7 +219,7 @@ static void fd_i2c_load_calib(struct spec_fd *fd,
 {
 	const struct firmware *fw;
 	struct pci_dev *pdev = fd->spec->pdev;
-	char *newname, *fwname;
+	char *fwname, *newname = NULL;
 	int err;
 
 	/* the calibration_load string is known to be valid */
@@ -233,7 +233,7 @@ static void fd_i2c_load_calib(struct spec_fd *fd,
 		newname = kasprintf(GFP_KERNEL, "%s-%02x%02x\n",
 				    calibration_load,
 				    pdev->bus->number, pdev->devfn);
-		err = request_firmware(&fw, calibration_load, &pdev->dev);
+		err = request_firmware(&fw, newname, &pdev->dev);
 		if (err < 0) {
 			dev_warn(&pdev->dev, "can't load \"%s\"\n",
 				    newname);
@@ -256,7 +256,6 @@ static void fd_i2c_load_calib(struct spec_fd *fd,
 	kfree(newname);
 	return;
 }
-
 
 
 int fd_i2c_init(struct spec_fd *fd)
