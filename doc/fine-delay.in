@@ -60,7 +60,7 @@
 @node Top
 @top Introduction
 
-This is the user manual for the device driver developed for the
+This is the user manual for the
 ``fmc-delay-1ns-4cha'' board developed on @code{ohwr.org}.  Please
 note that the ohwr project is misnamed as @code{fmc-delay-1ns-8cha};
 thus the web references include this wrong naming and it's not a typo
@@ -90,7 +90,7 @@ The code and documentation is distributed in the following places:
 @item http://www.ohwr.org/projects/fine-delay-sw/documents
 
 	This place hosts the pdf documentation for every official
-        release
+        release.
 
 @item http://www.ohwr.org/projects/fine-delay-sw/files
 
@@ -107,7 +107,7 @@ The code and documentation is distributed in the following places:
 @item git@@ohwr.org:fmc-projects/fmc-delay-1ns-8cha/fine-delay-sw.git
 @itemx git@@gitorious.org:fine-delay/fine-delay.git
 
-	Read-write repositories, for thos authorized. Again, OHWR is
+	Read-write repositories, for those authorized. Again, OHWR is
         the authoritative place, but we tend to push to gitorious as
         well.
 
@@ -115,12 +115,13 @@ The code and documentation is distributed in the following places:
 
 The repository has a tag called called
 @code{@value{tagname}}. The same tag is used in related
-repositories (zio and spec-sw).  Any official hot fixes for this
+repositories (@i{zio}, @i{spec-sw} and the hardware repository).
+Any official hot fixes, if any,  for this
 release will live in the branch called
-@code{@value{tagname}-fixes}, in all three repositories.
+@code{@value{tagname}-fixes}, in each repository.
 
 @b{Note:} If you got this from the repository (as opposed to a named
-@i{tar.gz} or @i{pdf} file) you might be looking at a later commit
+@i{tar.gz} or @i{pdf} file) it may happen that you are looking at a later commit
 than the tagged release: it is a fact of life that developers forget
 to re-read and fix documentation while updating the code. In that case,
 plase run ``@code{git describe HEAD}'' to ensure where you are.
