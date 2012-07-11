@@ -380,7 +380,7 @@ and this package will use it.
 To install the FPGA image in the target system, please follow the
 instruction in the documentation of @i{spec-sw}.  To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
-@i{/lib/firmware}.
+@i{/lib/firmware/fmc}.
 
 If you have several @i{fine-delay} cards in the same host, you can
 install several copies of the binary, renamed to match the bus and
@@ -391,7 +391,7 @@ something else than the @i{fine-delay} module).
 If you use the White-Rabbit version of the firmware, you also need
 the @code{wrc.bin} file, renamed as @i{spec-sw} looks for it.
 In my system, where the @i{fine-delay} card is at bus 2 slot 0, I use
-the following two files in @i{/lib/firmware}:
+the following two files in @i{/lib/firmware/fmc}:
 
 @smallexample
    -rw------- 1 root   root    58628 May  4 21:15 spec-B0002-cpu.bin
@@ -402,9 +402,9 @@ Also, please note that you must pass the parameter @code{lm32=0xc0000}
 to the @i{spec.ko} module, because the default address (0x80000) is not
 appropriate to the gateware of this device.
 
-@b{Note:} in local CERN installations, the pathnames for the firmware
-loaded in @i{spec-sw} have been changed to load from
-@code{/lib/firmware/fmc/} instead of @code{/lib/firmware}.
+@b{Note:} if you are running a slightly earlier version of
+@i{spec-sw}, the files for the firmware loaded in @i{spec-sw}
+live in @code{/lib/firmware} instead of @code{/lib/firmware/fmc/}.
 
 @c ==========================================================================
 @node Software Dependencies
