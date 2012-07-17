@@ -44,6 +44,7 @@ static struct zio_attribute fd_zattr_dev[] = {
 	ZATTR_EXT_REG("utc-l", _RW_,		FD_ATTR_DEV_UTC_L, 0),
 	ZATTR_EXT_REG("coarse", _RW_,		FD_ATTR_DEV_COARSE, 0),
 	ZATTR_EXT_REG("command", S_IWUGO,	FD_ATTR_DEV_COMMAND, 0),
+	ZATTR_EXT_REG("temperature", _RW_,	FD_ATTR_DEV_TEMP, 0),
 };
 
 /* Extended attributes for the TDC (== input) cset */
@@ -191,13 +192,20 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 	if (__fd_get_type(dev) == FD_TYPE_OUTPUT)
 		return fd_zio_info_output(dev, zattr, usr_val);
 
+        /* reading temperature */
+        zdev = to_zio_dev(dev);
+        attr = zdev->zattr_set.ext_zattr;
+        fd = zdev->private_data;
+
+        if (zattr->priv.addr == FD_ATTR_DEV_TEMP) {
+                attr[FD_ATTR_DEV_TEMP].value = fd_read_temp(fd, 0);
+                return 0;
+        }
+
 	/* following is whole-dev */
 	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
 		return 0;
 	/* reading utc-h calls an atomic get-time */
-	zdev = to_zio_dev(dev);
-	attr = zdev->zattr_set.ext_zattr;
-	fd = zdev->private_data;
 	fd_time_get(fd, &t, NULL);
 	attr[FD_ATTR_DEV_UTC_H].value = t.utc >> 32;
 	attr[FD_ATTR_DEV_UTC_L].value = t.utc & 0xffffffff;

@@ -660,10 +660,10 @@ directory is @i{/sys/bus/zio/devices/fd-0200}:
 
 @smallexample
    spusa# ls -Ff /sys/bus/zio/devices/fd-0200/
-   ./      enable           utc-l       power/     fd-ch2/
-   ../     resolution-bits  coarse      driver     fd-ch3/
-   uevent  version          command     fd-input/  fd-ch4/
-   name    utc-h            subsystem   fd-ch1/
+   ./      enable           utc-l        subsystem  fd-ch1/
+   ../     resolution-bits  coarse       power/     fd-ch2/
+   uevent  version          command      driver     fd-ch3/
+   name    utc-h            temperature  fd-input/  fd-ch4/
 @end smallexample
 
 @c ==========================================================================
@@ -671,7 +671,8 @@ directory is @i{/sys/bus/zio/devices/fd-0200}:
 @section Device Attributes
 
 Device-wide attributes are the three time tags (@i{utc-h}, @i{utc-l},
-@i{coarse}), a read-only @i{version} and a write-only @i{command}.
+@i{coarse}), a read-only @i{version}, a read-only @i{temperature} 
+and a write-only @i{command}.
 To read device time you
 should read @i{utc-h} first.  Reading @u{utc-h} will atomically read
 all values from the card and store them in the software driver: when
@@ -696,6 +697,16 @@ last: writing @i{utc-h} atomically programs the hardware:
    0
    10003
 @end smallexample
+
+The temperature value is scaled by four bits, so you need divide it by
+16 to obtain the value in degrees. In this example:
+
+@smallexample
+   spusa# cat temperature
+   1129
+@end smallexample
+
+Temperature is 70.5625 degrees.
 
 If you write 0 to @i{command}, board time will be
 synchronized to the current Linux clock within one microsecond
