@@ -109,6 +109,7 @@ extern int fdelay_config_pulse(struct fdelay_board *userb,
 
 	write(fdc, &ctrl, sizeof(ctrl));
 	write(fdd, "1234", 4); /* we need to write data to push it out */
+	usleep(500000);
 	return 0;
 }
 
