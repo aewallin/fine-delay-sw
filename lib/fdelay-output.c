@@ -112,6 +112,26 @@ extern int fdelay_config_pulse(struct fdelay_board *userb,
 	return 0;
 }
 
+static void fdelay_add_ps(struct fdelay_time *p, uint64_t ps)
+{
+	uint32_t coarse, frac;
+
+	/* FIXME: this silently fails with ps > 10^12 = 1s */
+	coarse = ps / 8000;
+	frac = ((ps % 8000) << 12) / 8000;
+
+	p->frac += frac;
+	if (p->frac >= 4096) {
+		p->frac -= 4096;
+		coarse++;
+	}
+	p->coarse += coarse;
+	if (p->coarse > 125*1000*1000) {
+		p->coarse -= 125*1000*1000;
+		p->utc++;
+	}
+}
+
 /* The "pulse_ps" function relies on the previous one */
 int fdelay_config_pulse_ps(struct fdelay_board *userb,
 			   int channel, struct fdelay_pulse_ps *ps)
@@ -122,7 +142,7 @@ int fdelay_config_pulse_ps(struct fdelay_board *userb,
 	p.rep = ps->rep;
 	p.start = ps->start;
 	p.end = ps->start;
-	// fdelay_add_ps(&p.end, ps->length);
+	fdelay_add_ps(&p.end, ps->length);
 	fdelay_pico_to_time(&ps->period, &p.loop);
 	return fdelay_config_pulse(userb, channel, &p);
 }
