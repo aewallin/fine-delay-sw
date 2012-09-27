@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month July 2012
+@set update-month September 2012
 @set release 1.1
 @set tagname fine-delay-sw-v1.1
 @c WARNING: in @example I Can't use @value{tagname}, so please look for this
@@ -45,7 +45,7 @@
 
 @titlepage
 @title Fine Delay User's Manual
-@subtitle @value{update-month} -- Release @value{release}
+@subtitle @value{update-month}
 @subtitle FMC Delay 1ns-4cha hardware and software manual
 @author CERN BE-CO-HT / Tomasz Wlostowski, Alessandro Rubini
 @end titlepage
@@ -118,14 +118,14 @@ The repository has a tag called called
 @code{@value{tagname}}. The same tag is used in related
 repositories (@i{zio}, @i{spec-sw} and the hardware repository).
 Any official hot fixes, if any,  for this
-release will live in the branch called
+release live in the branch called
 @code{@value{tagname}-fixes}, in each repository.
 
 @b{Note:} If you got this from the repository (as opposed to a named
 @i{tar.gz} or @i{pdf} file) it may happen that you are looking at a later commit
 than the tagged release: it is a fact of life that developers forget
 to re-read and fix documentation while updating the code. In that case,
-plase run ``@code{git describe HEAD}'' to ensure where you are.
+please run ``@code{git describe HEAD}'' to ensure where you are.
 
 @c ##########################################################################
 @node Hardware Description
@@ -232,7 +232,7 @@ does not interfere with the operation of the channels being time tagged.
 @noindent @b{Power supply:}
 @itemize
 @item Used power supplies: P12V0, P3V3, P3V3_AUX, VADJ (voltage monitor only).
-@item Typical current comsumption: 200 mA (P12V0) + 1.5 A (P3V3).
+@item Typical current consumption: 200 mA (P12V0) + 1.5 A (P3V3).
 @item Power dissipation: 7 W. Forced cooling is required.
 @end itemize
 
@@ -247,7 +247,7 @@ does not interfere with the operation of the channels being time tagged.
 
 @noindent @b{Time base:}
 @itemize @bullet
-@item Onboard oscillator accuracy: +/- 2.5 ppm (i.e. max. 2.5 ns error for a delay of 1 ms).
+@item On-board oscillator accuracy: +/- 2.5 ppm (i.e. max. 2.5 ns error for a delay of 1 ms).
 @item When using White Rabbit as the timing reference: depending on the characteristics of the grandmaster clock and the carrier used. On SPEC v 4.0 FMC carrier, the accuracy is better than 1 ns.
 @end itemize
 
@@ -445,7 +445,7 @@ them are assumed to be already set when running the commands shown.
 @end table
 
 To install ZIO you should download it and install the tag or branch called
-@value{tagname}, which has been backported to work on Linux-2.6.24 and
+@value{tagname}, which has been back-ported to work on Linux-2.6.24 and
 Linux-2.6.21.
 
 The commands here are reported without prompt for easy cut-and-paste.
@@ -542,7 +542,7 @@ The following parameters are used:
 
 @item calib_s=
 
-	The period, in seconds, of temperature measurement to recalibrate
+	The period, in seconds, of temperature measurement to re-calibrate
         the output delays. Defaults to 30. If set to zero, the timer is
         not activated.
 
@@ -1126,7 +1126,7 @@ The driver defines the following attributes:
 
 To disable the output, you must assign 0 to the mode attribute and
 other attributes are ignored.  To configure pulse or delay, all
-attributes must be set to valied values.
+attributes must be set to valid values.
 
 @b{Note:} writing the output configuration (mode, rep, start, end,
 delta) to @i{sysfs} is not working with this version of ZIO. And I've
@@ -1363,7 +1363,7 @@ following function and macros:
 @itemx int fdelay_get_config_tdc(struct fdelay_board *b);
 
 	The function configures a few options in the input channel.
-	The @i{flags} argument is a bitmask of the following three
+	The @i{flags} argument is a bit-mask of the following three
         values (note that 0 is the default at initialization time).
         The function returns -1 with @code{EINVAL} if the @i{flags}
         argument includes undefined bits.
@@ -1469,7 +1469,7 @@ The library offers the following functions for output configuration:
 @itemx int fdelay_config_pulse_ps(board, channel, pulse_ps_cfg);
 
 	The two functions configure the channel (numbered 0..3)
-        for pulse of delay mode. The former function receives
+        for pulse or delay mode. The former function receives
         @code{struct fdelay_pulse} (with split utc/coarse/frac times)
         while the latter receives @code{struct fdelay_pulse_ps}, with
         picosecond-based time values. The functions return 0 on success, -1
@@ -1477,7 +1477,7 @@ The library offers the following functions for output configuration:
 
 @item int fdelay_has_triggered(struct fdelay_board *b, int channel);
 
-	The funcion returns 1 of the output channel (numbered 0..3) has
+	The function returns 1 of the output channel (numbered 0..3) has
         triggered since the last configuration request, 0 otherwise.
 
 @end table
@@ -1627,7 +1627,7 @@ initialization time, but only uses it if its has is valid. The
 calibration data is in @code{struct fd_calib} and the on-eeprom structure
 is @code{fd_calib_on_eeprom}; both are on show in @file{fine-delay.h}.
 
-If the hash of the data structure found on eeprom is not valid, the
+If the hash of the data structure found on EEPROM is not valid, the
 driver will use the compile-time default values.  You can act on
 this configuration using a number of module parameters; please note
 that changing calibration data is only expected to happen at production
@@ -1718,7 +1718,7 @@ allows:
 a kernel timer.
 
 @item Calibration information in the EEPROM is not fixed for
-endianness, so it only works on hosts of the same endiannes as the
+endianness, so it only works on hosts of the same endianness as the
 one where it has been programmed.
 
 @item We need a module parameter to avoid probing non-fine-delay SPEC
@@ -1848,4 +1848,6 @@ driver and user space from a single release of the source package.
 @c  LocalWords:  gnudd titlepage iftex texinfo CERN documentlanguage settitle
 @c  LocalWords:  documentencoding setfilename afourpaper paragraphindent FPGA
 @c  LocalWords:  setchapternewpage finalout gateware ohwr modprobe insmod cset
-@c  LocalWords:  smallexample ctrl timestamp fdelay struct spusa
+@c  LocalWords:  smallexample ctrl timestamp fdelay struct spusa gitorious http
+@c  LocalWords:  tagname FmcDelay timestamping Timestamps perf picosecond ATTR
+@c  LocalWords:  usec EEPROM sudo
