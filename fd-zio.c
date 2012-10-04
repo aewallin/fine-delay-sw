@@ -108,7 +108,7 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	struct spec_fd *fd;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
 	if (zattr->priv.addr == FD_ATTR_TDC_USER_OFF) {
 		*usr_val = fd->calib.tdc_user_offset;
@@ -135,7 +135,7 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 
 	cset = to_zio_cset(dev);
 	ch = cset->index - 1;
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
 	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
 		*usr_val = fd->calib.zero_offset[ch];
@@ -195,7 +195,7 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
         /* reading temperature */
         zdev = to_zio_dev(dev);
         attr = zdev->zattr_set.ext_zattr;
-        fd = zdev->private_data;
+        fd = zdev->priv_d;
 
         if (zattr->priv.addr == FD_ATTR_DEV_TEMP) {
                 attr[FD_ATTR_DEV_TEMP].value = fd_read_temp(fd, 0);
@@ -223,7 +223,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	int change;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
 
 	switch (zattr->priv.addr) {
@@ -285,7 +285,7 @@ static int fd_zio_conf_output(struct device *dev, struct zio_attribute *zattr,
 	int ch;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 	ch = cset->index - 1;
 
 	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
@@ -316,7 +316,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	/* Remains: wholedev */
 	zdev = to_zio_dev(dev);
 	attr = zdev->zattr_set.ext_zattr;
-	fd = zdev->private_data;
+	fd = zdev->priv_d;
 
 	if (zattr->priv.addr == FD_ATTR_DEV_UTC_H) {
 		/* writing utc-h calls an atomic set-time */
@@ -612,7 +612,7 @@ static int fd_zio_output(struct zio_cset *cset)
 	struct spec_fd *fd;
 	struct zio_control *ctrl;
 
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 	ctrl = zio_get_ctrl(cset->chan->active_block);
 
 	if (fd->verbose > 1) {
@@ -639,7 +639,7 @@ static int fd_zio_output(struct zio_cset *cset)
 static int fd_zio_input(struct zio_cset *cset)
 {
 	struct spec_fd *fd;
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
 	/* Configure the device for input */
 	if (!test_bit(FD_FLAG_DO_INPUT, &fd->flags)) {
@@ -667,7 +667,7 @@ static int fd_zio_probe(struct zio_device *zdev)
 	struct spec_fd *fd;
 
 	/* link the new device from the fd structure */
-	fd = zdev->private_data;
+	fd = zdev->priv_d;
 	fd->zdev = zdev;
 
 	fd->tdc_attrs[FD_CSET_INDEX(FD_ATTR_TDC_OFFSET)] = \
@@ -811,7 +811,7 @@ int fd_zio_init(struct spec_fd *fd)
 
 	/* Mandatory fields */
 	fd->hwzdev->owner = THIS_MODULE;
-	fd->hwzdev->private_data = fd;
+	fd->hwzdev->priv_d = fd;
 
 	/* Our dev_id is bus+devfn */
 	pdev = fd->spec->pdev;
