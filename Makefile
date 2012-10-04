@@ -5,7 +5,8 @@ SPEC_SW ?= $(HOME)/spec-sw
 
 KBUILD_EXTRA_SYMBOLS := $(ZIO)/Module.symvers $(SPEC_SW)/kernel/Module.symvers
 
-ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$M
+ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$(SPEC_SW)/kernel/include \
+	-I$M
 
 #ccflags-y += -DDEBUG
 
