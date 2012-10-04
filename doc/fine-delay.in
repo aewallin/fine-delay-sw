@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month September 2012
+@set update-month October 2012
 @c @set release 1.1
 @set tagname fine-delay-sw-v1.1
 @c WARNING: in @example I Can't use @value{tagname}, so please look for this
@@ -113,13 +113,13 @@ The code and documentation is distributed in the following places:
 
 @end table
 
-The official release of this
-repository has a tag called called
-@code{@value{tagname}}. The same tag is used in related
-repositories (@i{zio}, @i{spec-sw} and the hardware repository).
-Any official hot fixes, if any,  for this
-release live in the branch called
-@code{@value{tagname}-fixes}, in each repository.
+@c The official release of this
+@c repository has a tag called called
+@c @code{@value{tagname}}. The same tag is used in related
+@c repositories (@i{zio}, @i{spec-sw} and the hardware repository).
+@c Any official hot fixes, if any,  for this
+@c release live in the branch called
+@c @code{@value{tagname}-fixes}, in each repository.
 
 @b{Note:} If you got this from the repository (as opposed to a named
 @i{tar.gz} or @i{pdf} file) it may happen that you are looking at a later commit
@@ -164,6 +164,9 @@ In order to operate @i{FmcDelay}, the following hardware/software components are
 @item 50-ohm cables with 1-pin LEMO 00 plugs for connecting the I/O signals,
 @item Any Linux (kernel 2.6 or 3.0+) distribution,
 @end itemize
+
+@b{Note}: currently this is only being developed on Linux-3.4, backports
+will happen later.
 
 @c ==========================================================================
 @node Modes of Operation
@@ -359,8 +362,8 @@ card.
 @section Gateware Dependencies
 
 This driver has been developed from the FPGA binary included in the
-package as @code{binaries/spec_top.bin}, which is White-Rabbit-enabled.
-You should use it with @code{binaries/wrc.bin}.
+package as @code{binaries/fine-delay.bin}, which is White-Rabbit-enabled.
+You should use it with @code{binaries/fine-delay-wrc.bin}.
 
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
@@ -378,45 +381,42 @@ and this package will use it.
 @section Gateware Installation
 
 To install the FPGA image in the target system, please follow the
-instruction in the documentation of @i{spec-sw}.  To summarize, you'll
+instruction in the documentation of @i{spec-sw} (version 2.1 or later).
+To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
-@i{/lib/firmware/fmc}.
+@i{/lib/firmware/fmc}. The default name used by this driver is
+@file{fine_delay.bin}.
 
-If you have several @i{fine-delay} cards in the same host, you can
-install several copies of the binary, renamed to match the bus and
-slot number of the various SPEC cards, or you can use the default
-filename if there are no other SPEC cards (i.e. no cards hosting
-something else than the @i{fine-delay} module).
+If you have several @i{fine-delay} cards in the same host, all of
+them will load the same binary file.
 
-If you use the White-Rabbit version of the firmware, you also need
-the @code{wrc.bin} file, renamed as @i{spec-sw} looks for it.
-In my system, where the @i{fine-delay} card is at bus 2 slot 0, I use
-the following two files in @i{/lib/firmware/fmc}:
+If you use @i{White Rabbit}, you also need
+the program for the @i{white rabbit core}: @code{fine_delay-wrc.bin} (until
+we switch to a gateware that already includes the LM32 program
+inside.  Please note that you'll need to pass the parameter
+@code{wrc=1} to force loading the LM32 program (the package is designed
+for the final ``perfect'' gateware, which won't need an external WRC
+binary to be loaded.
 
-@smallexample
-   -rw------- 1 root   root    58628 May  4 21:15 spec-B0002-cpu.bin
-   -rw------- 1 root   root  1485788 May  4 21:14 spec-B0002.bin
-@end smallexample
+FIXME: wrc loading is not there.
 
-Also, please note that you must pass the parameter @code{lm32=0xc0000}
-to the @i{spec.ko} module, because the default address (0x80000) is not
-appropriate to the gateware of this device.
-
-@b{Note:} if you are running a slightly earlier version of
-@i{spec-sw}, the files for the firmware loaded in @i{spec-sw}
-live in @code{/lib/firmware} instead of @code{/lib/firmware/fmc/}.
+@b{Note:} if you were used to version 1.1 or earlier of this package,
+the rules about naming were different: we rearranged @i{spec-sw}
+in the meanwhile to be a more flexible framework for a wide range
+of mezzanines.
 
 @c ==========================================================================
 @node Software Dependencies
 @section Software Dependencies
 
-The kernel versions I used during development are 2.6.32 and 2.6.24 (in
-its @i{preempt-rt} incantation), because these are the ones
-where installed boards have been running.
+The kernel versions I used during development is 3.4.  I'll port
+to 2.6.32 and 2.6.24 (in its @i{preempt-rt} incantation), at a later
+time (these are the ones where installed boards have been running).
 
-The driver, then is based on the ZIO framework, available from
-@code{ohwr.org}. The version being used during development is a development
-version, back-ported to Linux-2.6.32 and 2.6.24.
+The driver, then, is based on the ZIO framework, available from
+@code{ohwr.org}.  I'm developing with the current @i{master}
+branch of ZIO, until I'll attack backporting as needed.
+
 Similarly, this is a sub-module for the SPEC board, and thus relies
 on code from the @i{spec-sw} package, again from @code{ohwr.org}.
 
@@ -444,9 +444,8 @@ them are assumed to be already set when running the commands shown.
 
 @end table
 
-To install ZIO you should download it and install the tag or branch called
-@value{tagname}, which has been back-ported to work on Linux-2.6.24 and
-Linux-2.6.21.
+To install ZIO you should download it and install it. For this
+development I'm using commit 8d3d8d9.
 
 The commands here are reported without prompt for easy cut-and-paste.
 
@@ -454,57 +453,54 @@ The commands here are reported without prompt for easy cut-and-paste.
    test -d zio/.git || git clone git://ohwr.org/misc/zio.git
    cd zio
    export ZIO=$(/bin/pwd)
-   git checkout -b fine-delay fine-delay-sw-v1.1
+   git checkout -b fine-delay-2 8d3d8d9
    make
    sudo make modules_install
 @end example
 
-The procedure for @i{spec-sw} is similar, and again the branch
-is called ``@value{tagname}'':
+The procedure for @i{spec-sw} is similar. Here we are working with
+the official version 2.1.
 
 @example
    test -d spec-sw/.git || \
        git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
    cd spec-sw
    export SPEC_SW=$(/bin/pwd)
-   git checkout -b fine-delay fine-delay-sw-v1.1
+   git checkout -b fine-delay-2 spec-sw-v2.1
    cd kernel
    make
    sudo make modules_install
 @end example
 
 At this point all the software modules are ready to be loaded.
-Actually, the right set will be auto-loaded when you @i{modprobe} for
-@code{spec-fine-delay} if you installed everything.
+Unlikely what happened with previous versions of this package,
+if you @i{modprobe} for @code{spec-fine-delay} you won't have
+all module loaded: you also need the @i{spec.ko} module, which
+id not a direct dependency of @i{spec-fine-delay} (but likely
+you'll have it auto-loaded by the PCI subsystem.
 
-@b{Note:} When loading @code{spec.ko}
-you @b{must} pass the argument @code{lm32=0xc000}.
-The script used by Tomasz is available as
-@code{tools/load.sh} for your reference.
+@c FIXME @b{Note:} When loading @code{spec-fine-delay.ko}
+@c you @b{must} pass the argument @code{wrc=1}.
+@c A sample script is available as
+@c @code{tools/load.sh} for your reference.
 
-This is an example of the kernel messages you'll get back over
-a few seconds (initializing the fine-delay card above, takes almost
-4 seconds, including the calibration.
+This is an example of the kernel messages you'll get back when loading
+the module. They take a few seconds overall (as shown by the
+timestamps), because the initializing the fine-delay card requires
+some times because it includes a calibration step.
 
 @smallexample
-   spec_probe (device 0002:0000)
-   spec_probe: current 2893 (modprobe)
-   spec 0000:02:00.0: PCI INT A -> GSI 18 (level, low) -> IRQ 18
-   spec_load_files
-   spec 0000:02:00.0: firmware: requesting spec-B0002.bin
-   spec_load_fpga: got binary file "spec-B0002.bin", 1485788 (0x16abdc) bytes
-   spec 0000:02:00.0: firmware: requesting spec-B0002-cpu.bin
-   spec_load_lm32: got program file "spec-B0002-cpu.bin", 59568 (0xe8b0) bytes
-   LM32 has been restarted
-   spec_load_submodule: load "spec-B0002": 256
-   fd_onewire_init: Found DS18xx sensor: 28:85:8c:61:03:00:00:0e
-   fd_read_temp: Scratchpad: 12:05:4b:46:7f:ff:0e:10:42
-   fd_read_temp: Temperature 0x512 (12 bits: 81.125)
-   fd_calibrate_outputs: ch1: 8ns @@846 (f 811, off 35, t 81.12)
-   fd_calibrate_outputs: ch2: 8ns @@854 (f 811, off 43, t 81.12)
-   fd_calibrate_outputs: ch3: 8ns @@842 (f 811, off 31, t 81.12)
-   fd_calibrate_outputs: ch4: 8ns @@846 (f 811, off 35, t 81.12)
-   spec_fine_delay: Found i2c device at 0x50
+[ 7388.014673] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
+[ 7388.216315] spec 0000:02:00.0: FPGA programming successful
+[ 7388.221895] spec 0000:02:00.0: spec_fine_delay: initializing
+[ 7389.683470] fd_read_temp: Scratchpad: bf:04:4b:46:7f:ff:01:10:21
+[ 7389.689673] fd_read_temp: Temperature 0x4bf (12 bits: 75.937)
+[ 7390.638102] fd_calibrate_outputs: ch1: 8ns @@851 (f 819, off 32, t 76.06)
+[ 7390.824421] fd_calibrate_outputs: ch2: 8ns @@860 (f 819, off 41, t 76.06)
+[ 7391.010773] fd_calibrate_outputs: ch3: 8ns @@846 (f 819, off 27, t 76.06)
+[ 7391.197261] fd_calibrate_outputs: ch4: 8ns @@852 (f 819, off 33, t 76.06)
+[ 7391.266086] spec_fine_delay: Found i2c device at 0x50
+[es 7391.293696] fd_i2c_init: calibration on eeprom is invalid
 @end smallexample
 
 @c ==========================================================================
@@ -519,17 +515,21 @@ The following parameters are used:
 
 @table @code
 
-@item regs=
+@item wrc=
 
-	The @i{regs} parameter defaults to 0x80000 and is the offset of
-        fine-delay registers within the PCI memory area.  You shouldn't
-        use it unless you are Tomasz Wlostowski or you otherwise
-	changed the FPGA design
+	Load the LM32 @i{White Rabbit Core} program. Here you can
+        pass a file-name different from the default
+        (@code{fine_delay-wrc.bin}). If you just pass ``@code{1}''
+        as name, the driver will force loading the default name.
+        @b{Note:} this is currently not working.
+@c FIXME
 
 @item verbose=
 
 	The parameter defaults to 0. If set, it enables more diagnostic
-        messages during probe.
+        messages during probe (you may find it is not used, but it is
+        left in to be useful during further development, and avoid
+        compile-time changes like use of @code{DEBUG}).
 
 @item timer_ms=
 
@@ -543,10 +543,59 @@ The following parameters are used:
 @item calib_s=
 
 	The period, in seconds, of temperature measurement to re-calibrate
-        the output delays. Defaults to 30. If set to zero, the timer is
-        not activated.
+        the output delays. Defaults to 30. If set to zero, the
+        re-calibration timer is not activated.
 
 @end table
+
+The module also uses the two parameters provided by the @i{fmc}
+framework:
+
+@table @code
+
+@item busid=
+
+	A list of bus identifiers the driver will accept to driver.
+        Other identifiers will lead to a failure in the @i{probe}
+        function. The meaning of the identifiers is carrier-specific;
+        the SPEC uses the bus number and @i{devfn}, where the latter
+        is most likely zero.
+
+@item gateware=
+
+	A list of gateware file names. The names passed are made to
+        match the @i{busid} parameters, in the same order. This
+        means that you can't make the driver load a different gateware
+        file without passing the respective @i{busid}. Actually, to
+        change the gateware for all boards, you mat just replace
+        the file in @file{/lib/firmware}. (Maybe I'll add an
+        option to change the name at load time for all boards).
+@c FIXME: name for gateware file
+
+@end table
+
+For example, this host has two SPEC cards:
+
+@smallexample
+   spusa.root# lspci | grep CERN
+   02:00.0 Non-VGA unclassified device: CERN/ECP/EDU Device 018d (rev 03)
+   04:00.0 Non-VGA unclassified device: CERN/ECP/EDU Device 018d (rev 03)
+@end smallexample
+
+One of the cards hosts a @i{fine-delay} mezzanine and the other does
+not. FMC identifiers are not programmed to flash, at this point in time:
+
+@smallexample
+   spusa.root# insmod spec-fine-delay.ko busid=0x0200
+   [ 7388.014673] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
+   [ 7388.216315] spec 0000:02:00.0: FPGA programming successful
+   [...]
+   [ 7391.299405] spec 0000:04:00.0: not using "spec_fine_delay" according to modparam
+@end smallexample
+
+The module, then supports some more parameters that are
+calibration-specific. They are described in @ref{Calibration}.
+
 
 @c ##########################################################################
 @node Source Code Conventions
@@ -1731,12 +1780,6 @@ a kernel timer.
 @item Calibration information in the EEPROM is not fixed for
 endianness, so it only works on hosts of the same endianness as the
 one where it has been programmed.
-
-@item We need a module parameter to avoid probing non-fine-delay SPEC
-cards. Reading the magic number from an SPEC that is not programmed
-(or likely that is programmed with a different gateware) may lock up
-the system.  @i{Actually, this is going to be addressed by a new
-approach to loading gateware, set forth in the upcoming spec-sw}.
 
 @end itemize
 
