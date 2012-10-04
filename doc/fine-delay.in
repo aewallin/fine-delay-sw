@@ -36,7 +36,7 @@
 @setchapternewpage off
 
 @set update-month September 2012
-@set release 1.1
+@c @set release 1.1
 @set tagname fine-delay-sw-v1.1
 @c WARNING: in @example I Can't use @value{tagname}, so please look for this
 @c string when updating the document.
@@ -83,7 +83,6 @@ in the documentation.
 @node Repositories and Releases
 @chapter Repositories and Releases
 
-This version of the software package is release @value{release}.
 The code and documentation is distributed in the following places:
 
 @table @code
@@ -114,7 +113,8 @@ The code and documentation is distributed in the following places:
 
 @end table
 
-The repository has a tag called called
+The official release of this
+repository has a tag called called
 @code{@value{tagname}}. The same tag is used in related
 repositories (@i{zio}, @i{spec-sw} and the hardware repository).
 Any official hot fixes, if any,  for this
