@@ -218,39 +218,25 @@ static void fd_i2c_load_calib(struct spec_fd *fd,
 			      struct fd_calib_on_eeprom *cal_ee)
 {
 	const struct firmware *fw;
-	struct pci_dev *pdev = fd->spec->pdev;
 	char *fwname, *newname = NULL;
 	int err;
 
 	/* the calibration_load string is known to be valid */
 
 	fwname = calibration_load;
-	err = request_firmware(&fw, calibration_load, &pdev->dev);
+	err = request_firmware(&fw, calibration_load, fd->fmc->hwdev);
 	if (err < 0) {
-
-		dev_warn(&pdev->dev, "can't load \"%s\"\n",
+		dev_warn(fd->fmc->hwdev, "can't load \"%s\"\n",
 			    calibration_load);
-		newname = kasprintf(GFP_KERNEL, "%s-%02x%02x\n",
-				    calibration_load,
-				    pdev->bus->number, pdev->devfn);
-		err = request_firmware(&fw, newname, &pdev->dev);
-		if (err < 0) {
-			dev_warn(&pdev->dev, "can't load \"%s\"\n",
-				    newname);
-		}
-		fwname = newname;
-	}
-	if (err < 0) {
-		kfree(newname);
 		return;
 	}
 	if (fw->size != sizeof(cal_ee->calib)) {
-		dev_warn(&pdev->dev, "File \"%s\" has wrong size\n",
+		dev_warn(fd->fmc->hwdev, "File \"%s\" has wrong size\n",
 			    fwname);
 	} else {
 		memcpy(&cal_ee->calib, fw->data, fw->size);
-		dev_info(&pdev->dev, "calibration data loaded from \"%s\"\n",
-			 fwname);
+		dev_info(fd->fmc->hwdev,
+			 "calibration data loaded from \"%s\"\n", fwname);
 	}
 	release_firmware(fw);
 	kfree(newname);

@@ -26,11 +26,12 @@
 #include "hw/fd_main_regs.h"
 
 /* Module parameters */
-static int fd_regs_offset = FD_REGS_OFFSET;
-module_param_named(regs, fd_regs_offset, int, 0444);
-
 static int fd_verbose = 0;
 module_param_named(verbose, fd_verbose, int, 0444);
+
+static struct fmc_driver fd_drv; /* forward declaration */
+FMC_PARAM_BUSID(fd_drv);
+FMC_PARAM_GATEWARE(fd_drv);
 
 /* This is pre-set at load time (data by Tomasz) */
 static struct fd_calib fd_default_calib = {
@@ -128,37 +129,66 @@ static struct fd_modlist mods[] = {
 	SUBSYS(zio),
 };
 
-/* probe and remove are called by fd-spec.c */
-int fd_probe(struct spec_dev *dev)
+/* probe and remove are called by the FMC bus core */
+int fd_probe(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
 	struct spec_fd *fd;
-	int i, ret;
+	struct spec_dev *spec;
+	char *fwname;
+	int i, index, ret;
 
 	fd = kzalloc(sizeof(*fd), GFP_KERNEL);
 	if (!fd) {
-		pr_err("%s: can't allocate device\n", __func__);
+		dev_err(fmc->hwdev, "can't allocate device\n");
 		return -ENOMEM;
 	}
+
+	if (strcmp (fmc->carrier_name, "SPEC")) {
+		dev_err(fmc->hwdev, "driver \"%s\" only works on SPEC card\n",
+			KBUILD_MODNAME);
+		dev_err(fmc->hwdev, "support for carrier \"%s\" is missing\n",
+			fmc->carrier_name);
+		return -ENODEV;
+	}
+
+	index = fmc->op->validate(fmc, &fd_drv);
+	if (index < 0) {
+		dev_info(fmc->hwdev, "not using \"%s\" according to "
+			 "modparam\n", KBUILD_MODNAME);
+		return -ENODEV;
+	}
+
+	fwname = FDELAY_GATEWARE_NAME;
+	if (fd_drv.gw_n)
+		fwname = ""; /* ->reprogram will pick from module parameter */
+	ret = fmc->op->reprogram(fmc, &fd_drv, fwname);
+	if (ret < 0) {
+		if (ret == -ESRCH) {
+			dev_info(fmc->hwdev, "%s: no gateware at index %i\n",
+				 KBUILD_MODNAME, index);
+			return -ENODEV;
+		}
+		return ret; /* other error: pass over */
+	}
+
+	spec = fmc->carrier_data;
+
 	spin_lock_init(&fd->lock);
-	dev->sub_priv = fd;
-	fd->spec = dev;
-	fd->base = dev->remap[0];
-	fd->regs = fd->base + fd_regs_offset;
+	fmc->mezzanine_data = fd;
+	fd->fmc = fmc;
+	/* FIXME: don't use base below, but fmc_readl/fmc_writel */
+	fd->regs = fmc->base + 0x80000; /* FIXME: check this 80000 */
 	fd->ow_regs = fd->regs + 0x500;
 	fd->verbose = fd_verbose;
 	fd->calib = fd_default_calib;
 
 	/* Check the binary is there */
 	if (fd_readl(fd, FD_REG_IDR) != FD_MAGIC_FPGA) {
-		pr_err("%s: card at %04x:%04x (regs @ 0x%x): wrong gateware\n",
-		       __func__, dev->pdev->bus->number, dev->pdev->devfn,
-			fd_regs_offset);
+		dev_err(fmc->hwdev, "wrong gateware\n");
 		return -ENODEV;
 	} else {
-		pr_info("%s: card at %04x:%04x (regs @ 0x%x): initializing\n",
-		       __func__, dev->pdev->bus->number, dev->pdev->devfn,
-			fd_regs_offset);
+		dev_info(fmc->hwdev, "%s: initializing\n", KBUILD_MODNAME);
 	}
 
 	/* First, hardware reset */
@@ -202,21 +232,29 @@ err:
 	return ret;
 }
 
-void fd_remove(struct spec_dev *dev)
+int fd_remove(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
-	struct spec_fd *fd = dev->sub_priv;
+	struct spec_fd *fd = fmc->mezzanine_data;
 	int i = ARRAY_SIZE(mods);
 
-	if (!test_bit(FD_FLAG_INITED, &fd->flags))
-		return; /* No init, no exit */
+	if (!test_bit(FD_FLAG_INITED, &fd->flags)) /* FIXME: ditch this */
+		return 0; /* No init, no exit */
 
 	while (--i >= 0) {
 		m = mods + i;
 		if (m->exit)
 			m->exit(fd);
 	}
+	return 0;
 }
+
+static struct fmc_driver fd_drv = {
+	.driver.name = KBUILD_MODNAME,
+	.probe = fd_probe,
+	.remove = fd_remove,
+	/* no table, as the current match just matches everything */
+};
 
 static int fd_init(void)
 {
@@ -225,7 +263,7 @@ static int fd_init(void)
 	ret = fd_zio_register();
 	if (ret < 0)
 		return ret;
-	ret = fd_spec_init();
+	ret = fmc_driver_register(&fd_drv);
 	if (ret < 0) {
 		fd_zio_unregister();
 		return ret;
@@ -235,7 +273,7 @@ static int fd_init(void)
 
 static void fd_exit(void)
 {
-	fd_spec_exit();
+	fmc_driver_unregister(&fd_drv);
 	fd_zio_unregister();
 }
 
