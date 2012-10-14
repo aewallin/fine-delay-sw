@@ -21,6 +21,9 @@
 #include <linux/list.h>
 #include <linux/io.h>
 
+#include <linux/fmc.h>
+#include <linux/fmc-sdb.h>
+
 #include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
@@ -250,6 +253,7 @@ int fd_remove(struct fmc_device *fmc)
 }
 
 static struct fmc_driver fd_drv = {
+	.version = FMC_VERSION,
 	.driver.name = KBUILD_MODNAME,
 	.probe = fd_probe,
 	.remove = fd_remove,

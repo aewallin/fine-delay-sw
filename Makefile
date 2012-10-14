@@ -2,10 +2,19 @@
 LINUX ?= /lib/modules/$(shell uname -r)/build
 ZIO ?= $(HOME)/zio
 SPEC_SW ?= $(HOME)/spec-sw
+FMC_BUS ?= $(HOME)/fmc-bus
 
-KBUILD_EXTRA_SYMBOLS := $(ZIO)/Module.symvers $(SPEC_SW)/kernel/Module.symvers
+KBUILD_EXTRA_SYMBOLS := \
+	$(ZIO)/Module.symvers \
+	$(SPEC_SW)/kernel/Module.symvers \
+	$(FMC_BUS)/kernel/Module.sysmvers
 
-ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$(SPEC_SW)/kernel/include \
+
+ccflags-y = \
+	-I$(ZIO)/include \
+	-I$(SPEC_SW)/kernel \
+	-I$(SPEC_SW)/kernel/include \
+	-I$(FMC_BUS)/kernel/include \
 	-I$M
 
 #ccflags-y += -DDEBUG

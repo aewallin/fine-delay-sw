@@ -420,6 +420,13 @@ branch of ZIO, until I'll attack backporting as needed.
 Similarly, this is a sub-module for the SPEC board, and thus relies
 on code from the @i{spec-sw} package, again from @code{ohwr.org}.
 
+Finally, the driver depends on the @i{fmc-bus} abstraction, which used
+to be part of @i{spec-sw} but it is now a separate @code{ohwr}
+project.
+
+@b{Note}: this setup is temporary, because we are going to use @i{git}
+submodules to simplify the installation for fine-delay users.
+
 @c ==========================================================================
 @node Software Installation
 @section Software Installation
@@ -441,6 +448,10 @@ them are assumed to be already set when running the commands shown.
 @item SPEC_SW
 
 	The top-level directory of the @i{spec-sw} repository checkout.
+
+@item FMC_BUS
+
+	The top level directory of the @i{fmc-bus} repository checkout.
 
 @end table
 
@@ -471,6 +482,9 @@ the official version 2.1.
    make
    sudo make modules_install
 @end example
+
+The procedure for @i{fmc-bus} is the same, using the current
+master branch.
 
 At this point all the software modules are ready to be loaded.
 Unlikely what happened with previous versions of this package,
@@ -567,7 +581,7 @@ framework:
         match the @i{busid} parameters, in the same order. This
         means that you can't make the driver load a different gateware
         file without passing the respective @i{busid}. Actually, to
-        change the gateware for all boards, you mat just replace
+        change the gateware for all boards, you may just replace
         the file in @file{/lib/firmware}. (Maybe I'll add an
         option to change the name at load time for all boards).
 @c FIXME: name for gateware file
