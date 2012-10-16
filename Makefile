@@ -21,11 +21,11 @@ ccflags-y = \
 
 subdirs-ccflags-y = $(ccflags-y)
 
-obj-m := spec-fine-delay.o
+obj-m := fmc-fine-delay.o
 
-spec-fine-delay-objs	=  fd-zio.o fd-core.o
-spec-fine-delay-objs	+= onewire.o spi.o i2c.o gpio.o
-spec-fine-delay-objs	+= acam.o calibrate.o pll.o time.o
+fmc-fine-delay-objs	=  fd-zio.o fd-core.o
+fmc-fine-delay-objs	+= onewire.o spi.o i2c.o gpio.o
+fmc-fine-delay-objs	+= acam.o calibrate.o pll.o time.o
 
 all: modules
 
