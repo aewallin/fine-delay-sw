@@ -1,8 +1,8 @@
 
 LINUX ?= /lib/modules/$(shell uname -r)/build
-ZIO ?= $(HOME)/zio
-SPEC_SW ?= $(HOME)/spec-sw
-FMC_BUS ?= $(HOME)/fmc-bus
+ZIO ?= $(M)/../zio
+SPEC_SW ?= $(M)/../spec-sw
+FMC_BUS ?= $(M)/../fmc-bus
 
 KBUILD_EXTRA_SYMBOLS := \
 	$(ZIO)/Module.symvers \

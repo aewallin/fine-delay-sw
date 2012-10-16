@@ -6,7 +6,7 @@ LOBJ += fdelay-time.o
 LOBJ += fdelay-tdc.o
 LOBJ += fdelay-output.o
 
-CFLAGS = -Wall -ggdb -O2 -I../kernel -I$(ZIO)/include
+CFLAGS = -Wall -ggdb -O2 -I../kernel -I../zio/include
 LDFLAGS = -L. -lfdelay
 
 DEMOSRC := fdelay-list.c
