@@ -36,6 +36,11 @@ static struct fmc_driver fd_drv; /* forward declaration */
 FMC_PARAM_BUSID(fd_drv);
 FMC_PARAM_GATEWARE(fd_drv);
 
+static int fd_show_sdb;
+module_param_named(show_sdb, fd_show_sdb, int, 0444);
+
+/* FIXME: add parameters "file=" and "wrc=" like wr-nic-core does */
+
 /* This is pre-set at load time (data by Tomasz) */
 static struct fd_calib fd_default_calib = {
 	.frr_poly = {
@@ -138,6 +143,7 @@ int fd_probe(struct fmc_device *fmc)
 	struct fd_modlist *m;
 	struct spec_fd *fd;
 	struct spec_dev *spec;
+	struct device *dev = fmc->hwdev;
 	char *fwname;
 	int i, index, ret;
 
@@ -175,13 +181,29 @@ int fd_probe(struct fmc_device *fmc)
 		return ret; /* other error: pass over */
 	}
 
+	/* FIXME: factorize the following stuff */
+	/* Verify that we have SDB at offset 0 */
+	if (fmc_readl(fmc, 0) != 0x5344422d) {
+		dev_err(dev, "Can't find SDB magic\n");
+		ret = -ENODEV;
+		goto out;
+	}
+	dev_info(dev, "Gateware successfully loaded\n");
+
+	if ( (ret = fmc_scan_sdb_tree(fmc, 0)) < 0) {
+		dev_err(dev, "scan fmc failed %i\n", ret);
+		goto out;
+	}
+	if (fd_show_sdb)
+		fmc_show_sdb_tree(fmc);
+
 	spec = fmc->carrier_data;
 
 	spin_lock_init(&fd->lock);
 	fmc->mezzanine_data = fd;
 	fd->fmc = fmc;
 	/* FIXME: don't use base below, but fmc_readl/fmc_writel */
-	fd->regs = fmc->base + 0x80000; /* FIXME: check this 80000 */
+	fd->regs = fmc->base + 0x80000; /* sdb_find_device(cern, f19ede1a) */
 	fd->ow_regs = fd->regs + 0x500;
 	fd->verbose = fd_verbose;
 	fd->calib = fd_default_calib;
@@ -232,6 +254,7 @@ err:
 	while (--m, --i >= 0)
 		if (m->exit)
 			m->exit(fd);
+out:
 	return ret;
 }
 
