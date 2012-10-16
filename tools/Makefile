@@ -19,8 +19,8 @@ all modules: $(hostprogs-y)
 clean:
 	rm -f $(hostprogs-y) *.o *~
 
-# make nothing for module_install, but avoid errors
-module_install:
+# make nothing for modules_install, but avoid errors
+modules_install:
 
 # we need this as we are out of the kernel
 %: %.c

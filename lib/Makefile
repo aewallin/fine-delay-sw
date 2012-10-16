@@ -37,7 +37,7 @@ clean:
 .depend: Makefile $(wildcard *.c *.h ../*.h)
 	$(CC) $(CFLAGS) -M $(LOBJ:.o=.c) -o $@
 
-install module_install:
+install modules_install:
 
 -include .depend
 
