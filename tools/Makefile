@@ -1,5 +1,7 @@
 # user-space tools for spec-fine-delay
 
+M = $(shell /bin/pwd)/../kernel
+
 HOST_EXTRACFLAGS += -I$(M) -I$(ZIO)/include -Wno-trigraphs -Wall -ggdb
 
 HOSTCC ?= gcc
@@ -12,7 +14,7 @@ hostprogs-y += fd-raw-output
 hostprogs-y += fd-raw-perf
 
 # we are not in the kernel, so we need to piggy-back on "make modules"
-modules: $(hostprogs-y)
+all modules: $(hostprogs-y)
 
 clean:
 	rm -f $(hostprogs-y) *.o *~
