@@ -488,12 +488,12 @@ master branch.
 
 At this point all the software modules are ready to be loaded.
 Unlikely what happened with previous versions of this package,
-if you @i{modprobe} for @code{spec-fine-delay} you won't have
+if you @i{modprobe} for @code{fmc-fine-delay} you won't have
 all module loaded: you also need the @i{spec.ko} module, which
-id not a direct dependency of @i{spec-fine-delay} (but likely
+id not a direct dependency of @i{fmc-fine-delay} (but likely
 you'll have it auto-loaded by the PCI subsystem.
 
-@c FIXME @b{Note:} When loading @code{spec-fine-delay.ko}
+@c FIXME @b{Note:} When loading @code{fmc-fine-delay.ko}
 @c you @b{must} pass the argument @code{wrc=1}.
 @c A sample script is available as
 @c @code{tools/load.sh} for your reference.
@@ -600,7 +600,7 @@ One of the cards hosts a @i{fine-delay} mezzanine and the other does
 not. FMC identifiers are not programmed to flash, at this point in time:
 
 @smallexample
-   spusa.root# insmod spec-fine-delay.ko busid=0x0200
+   spusa.root# insmod fmc-fine-delay.ko busid=0x0200
    [ 7388.014673] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
    [ 7388.216315] spec 0000:02:00.0: FPGA programming successful
    [...]
@@ -1767,7 +1767,7 @@ the following known issues exposed by @i{fine-delay}:
 @itemize @bullet
 @item The auto-loading of @i{spec} submodules is not really working:
 the @i{modprobe} command will be stuck sleeping if you try to use it.
-Run `@code{insmod spec-fine-delay}'' (or @i{modprobe}) by hand instead.
+Run `@code{insmod fmc-fine-delay}'' (or @i{modprobe}) by hand instead.
 @i{This will be addressed in an upcoming release of spec-sw}.
 
 @item The @i{user} trigger of ZIO is really user-driven, so the driver
@@ -1872,25 +1872,6 @@ In this case, you should run this command instead
 @smallexample
    sudo make modules_install  LINUX=$LINUX
 @end smallexample
-
-@c ==========================================================================
-@node Wrong FPGA Image
-@section Wrong FPGA Image
-
-
-Thanks to Tomasz, the @i{fine-delay} FPGA binary has a magic number at
-a magic address, so the driver can detect if the @i{spec} includes no
-gateware or a different binary image.
-
-In this case, a message like the following one is reported:
-
-@example
-   fd_probe: card at 0002:0000 has wrong gateware
-@end example
-
-If this happens, please put the binary image in @i{/lib/firmware}
-where the spec driver can find it. In my case the file name is
-@code{spec-B0002.bin} (refer to @i{spec-sw} documentation for details.
 
 @c ==========================================================================
 @node Version Mismatch
