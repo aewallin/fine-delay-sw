@@ -1,0 +1,9 @@
+[submodule "spec-sw"]
+	path = spec-sw
+	url = git://ohwr.org/fmc-projects/spec/spec-sw.git
+[submodule "zio"]
+	path = zio
+	url = git://ohwr.org/misc/zio.git
+[submodule "fmc-bus"]
+	path = fmc-bus
+	url = git://ohwr.org/fmc-projects/fmc-bus.git
