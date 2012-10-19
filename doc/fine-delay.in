@@ -62,22 +62,9 @@
 
 This is the user manual for the
 ``fmc-delay-1ns-4cha'' board developed on @code{ohwr.org}.  Please
-note that the ohwr project is misnamed as @code{fmc-delay-1ns-8cha};
-thus the web references include this wrong naming and it's not a typo
-in the documentation.
-
-@menu
-* Repositories and Releases::   
-* Hardware Description::        
-* Driver Features::             
-* Installation::                
-* Source Code Conventions::     
-* Using the Driver Directly::   
-* Using the Provided API::      
-* Calibration::                 
-* Known Bugs and Missing Features::  
-* Troubleshooting::             
-@end menu
+note that the ohwr hardware project is misnamed as @code{fmc-delay-1ns-8cha};
+even if the board has 4 channels; the references to @code{8ch} below are thus
+correct, even if the may seem wrong.
 
 @c ##########################################################################
 @node Repositories and Releases
@@ -89,14 +76,14 @@ The code and documentation is distributed in the following places:
 
 @item http://www.ohwr.org/projects/fine-delay-sw/documents
 
-	This place hosts the pdf documentation for every official
-        release.
+	This place hosts the pdf documentation for some official
+        release, but we prefer to use the @i{files} tab, below.
 
 @item http://www.ohwr.org/projects/fine-delay-sw/files
 
 	Here we place the @i{.tar.gz} file for every release,
         including the @i{git} tree and compiled documentation (for
-        those who lack TeX).
+        those who lack TeX), as well as manuals.
 
 @item git://ohwr.org/fmc-projects/fmc-delay-1ns-8cha/fine-delay-sw.git
 @itemx git://gitorious.org/fine-delay/fine-delay.git
@@ -123,7 +110,8 @@ The code and documentation is distributed in the following places:
 
 @b{Note:} If you got this from the repository (as opposed to a named
 @i{tar.gz} or @i{pdf} file) it may happen that you are looking at a later commit
-than the tagged release: it is a fact of life that developers forget
+than the release this manual claims to document.
+It is a fact of life that developers forget
 to re-read and fix documentation while updating the code. In that case,
 please run ``@code{git describe HEAD}'' to ensure where you are.
 
@@ -138,15 +126,6 @@ or as a programmable pulse generator triggering at a given TAI time.
 
  For the sake of clarity of this document, the card's 
 name will be further abbreviated as @i{FmcDelay}.
-
-@menu
-* Requirements and Supported Platforms::  
-* Modes of Operation::          
-* Mechanical/Environmental::    
-* Electrical::                  
-* Timing::                      
-* Principles of Operation::     
-@end menu
 
 @c ==========================================================================
 @node Requirements and Supported Platforms
@@ -316,9 +295,10 @@ supports user-defined offsets, so our users can tell the driver
 about channel-specific delays (for example, to account for wiring) and
 ignore the issue in application code.
 
-For each feature offered the driver (and documentation) tries to offer
+For each feature offered the driver (and documentation) the driver
+tries to offer
 the following items; sometimes however one of them is missing for a specific
-driver functionality, if considered unneeded.
+driver functionality, if we don't consider it important enough.
 
 @itemize @bullet
 @item A description of how the features works at low level;
@@ -334,36 +314,28 @@ Additionally, the @code{NewLogger} directory includes the
 (uncommented, undocumented) program that has been used (at least for a
 while) in the Gran Sasso labs to log neutrino catches.
 
-This package is currently available from
-@code{git://gnudd.com/fine-delay.git}, as well as
-@code{git://gitorious.org/fine-delay/fine-delay.git}.
-Snapshots are released on the ``Files''
-and ``Documents'' tabs of the @code{ohwr} project for the related
-hardware and gateware.
-
 @c ##########################################################################
 @node Installation
 @chapter Installation
 
-This driver depends on two other drivers, as well as the Linux kernel.
-Also, it must talk to a specific FPGA binary file running in the carrier
-card.
-
-@menu
-* Gateware Dependencies::       
-* Gateware Installation::       
-* Software Dependencies::       
-* Software Installation::       
-* Module Parameters::           
-@end menu
+This driver depends on three other modules (three @code{ohwr.org}
+packages), as well as the Linux kernel.  Also, it
+must talk to a specific FPGA binary file running in the device.
 
 @c ==========================================================================
 @node Gateware Dependencies
 @section Gateware Dependencies
 
-This driver has been developed from the FPGA binary included in the
+This version of the driver has been developed to run with
+the FPGA binary included in the
 package as @code{binaries/fine-delay.bin}, which is White-Rabbit-enabled.
-You should use it with @code{binaries/fine-delay-wrc.bin}.
+
+Earlier versions required to load a @i{wrc} (White Rabbit Core) program
+that runs in the internal LM32 soft core, but with this version this
+step is not required (the program is already part of the FPGA binary).
+However, if you want to replace it, the default name to use
+is @code{fine-delay-wrc.bin}. @b{Note}: this specific version of
+the driver does not support loading the LM32 program separately.
 
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
@@ -373,8 +345,10 @@ You should use it with @code{binaries/fine-delay-wrc.bin}.
 
 If the gateware is updated, I'll take care to always include in this
 package the exact binary the software is developed and verified
-against, until the @i{spec-sw} package will offer a hash-based approach
-and this package will use it.
+against.
+
+At this point in time, the only supported carrier board is the SPEC,
+but we are working to make this driver portable to other carriers.
 
 @c ==========================================================================
 @node Gateware Installation
@@ -384,21 +358,19 @@ To install the FPGA image in the target system, please follow the
 instruction in the documentation of @i{spec-sw} (version 2.1 or later).
 To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
-@i{/lib/firmware/fmc}. The default name used by this driver is
-@file{fine_delay.bin}.
+@i{/lib/firmware} or a subdirectory thereof.
+The default name used by this driver is
+@file{fmc/fine_delay.bin}.
 
-If you have several @i{fine-delay} cards in the same host, all of
-them will load the same binary file.
+If you have several @i{fine-delay} cards in the same host, you can
+load different binaries in different cards, using appropriate
+module parameters.
 
-If you use @i{White Rabbit}, you also need
-the program for the @i{white rabbit core}: @code{fine_delay-wrc.bin} (until
-we switch to a gateware that already includes the LM32 program
-inside.  Please note that you'll need to pass the parameter
-@code{wrc=1} to force loading the LM32 program (the package is designed
-for the final ``perfect'' gateware, which won't need an external WRC
-binary to be loaded.
+@c @code{wrc=1} to force loading the LM32 program (the package is designed
+@c for the final ``perfect'' gateware, which won't need an external WRC
+@c binary to be loaded.
 
-FIXME: wrc loading is not there.
+@c FIXME: wrc loading is not there.
 
 @b{Note:} if you were used to version 1.1 or earlier of this package,
 the rules about naming were different: we rearranged @i{spec-sw}
@@ -409,133 +381,145 @@ of mezzanines.
 @node Software Dependencies
 @section Software Dependencies
 
-The kernel versions I used during development is 3.4.  I'll port
-to 2.6.32 and 2.6.24 (in its @i{preempt-rt} incantation), at a later
-time (these are the ones where installed boards have been running).
+The kernel versions I am using during development is 3.4.  Everything
+used here is known to at least compile with version 2.6.32, and I'll
+port to version 2.6.24 (in its @i{preempt-rt} incantation) if needed.
+Other versions are currently not used in production, but I foresee
+no special problems in the whole range 2.6.32 to 3.4.
 
 The driver, then, is based on the ZIO framework, available from
-@code{ohwr.org}.  I'm developing with the current @i{master}
-branch of ZIO, until I'll attack backporting as needed.
+@code{ohwr.org}.  I'm developing with the @code{for-2.6.32} branch of
+the framework, as more recent feature break compatibility with older
+kernels.
 
-Similarly, this is a sub-module for the SPEC board, and thus relies
-on code from the @i{spec-sw} package, again from @code{ohwr.org}.
+The FMC mezzanine is supported by means of the @i{fmc-bus}
+software project. Such support used to be part of the @i{spec-sw}
+package, but is not a project of its own.  This @i{fine-delay}
+kernel module registers as a @i{driver} for the FMC bus abstraction.
 
-Finally, the driver depends on the @i{fmc-bus} abstraction, which used
-to be part of @i{spec-sw} but it is now a separate @code{ohwr}
-project.
+Until it is made completely portable across carriers, this driver
+relies on the SPEC carrier software. For this reason it uses
+the @i{spec-sw} package, again from @code{ohwr.org}.
 
-@b{Note}: this setup is temporary, because we are going to use @i{git}
-submodules to simplify the installation for fine-delay users.
+All three packages are currently checked out as @i{git submodules}
+of this package, and each of them is retrieved at the right version
+to be compatible with this driver.  This means you may just
+ignore software dependencies and everything should work.
+
+Unfortunately, as I develop this (October 2012), all involved packages
+are moving fast: I try to keep everything consistent in @i{fine-delay}
+and its submodules, but I may fail sometimes. If in doubt please
+ask.
+
+@c FIXME: clarify software dependencies as we stabilize.
 
 @c ==========================================================================
 @node Software Installation
 @section Software Installation
 
-First of all, please note that you need to define the following
-environment variables to be able to compile this driver. All of
-them are assumed to be already set when running the commands shown.
+To install this software package, you need to tell it where your
+kernel sources live, so the package can pick the right header files.
+You need to set only one environment variable:
 
 @table @code
 @item LINUX
 
 	The top-level directory of the Linux kernel you are compiling
-        against. This document assumes it is already set.
-
-@item ZIO
-
-	The top-level directory of the ZIO repository checkout.
-
-@item SPEC_SW
-
-	The top-level directory of the @i{spec-sw} repository checkout.
-
-@item FMC_BUS
-
-	The top level directory of the @i{fmc-bus} repository checkout.
+        against. If not set, the default may work if you compile in the same
+        host where you expect to run the driver.
 
 @end table
 
-To install ZIO you should download it and install it. For this
-development I'm using commit 8d3d8d9.
-
-The commands here are reported without prompt for easy cut-and-paste.
+Most likely, this is all you need to set. After this, you can
+run:
 
 @example
-   test -d zio/.git || git clone git://ohwr.org/misc/zio.git
-   cd zio
-   export ZIO=$(/bin/pwd)
-   git checkout -b fine-delay-2 8d3d8d9
-   make
-   sudo make modules_install
+    make
+    sudo make install LINUX=$LINUX
 @end example
 
-The procedure for @i{spec-sw} is similar. Here we are working with
-the official version 2.1.
+In addition to the normal installation procedure for
+@code{fmc-fine-delay.ko} you'll see the following message:
 
 @example
-   test -d spec-sw/.git || \
-       git clone git://ohwr.org/fmc-projects/spec/spec-sw.git
-   cd spec-sw
-   export SPEC_SW=$(/bin/pwd)
-   git checkout -b fine-delay-2 spec-sw-v2.1
-   cd kernel
-   make
-   sudo make modules_install
+    WARNING: Consider "make prereq_install"
 @end example
 
-The procedure for @i{fmc-bus} is the same, using the current
-master branch.
+The @i{prerequisite} packages are @i{zio}, @i{fmc-bus} and @i{spec-sw};
+unless you already installed your own preferred version, you are
+expected to install the version this packages suggests. This step
+can be performed by:
 
-At this point all the software modules are ready to be loaded.
-Unlikely what happened with previous versions of this package,
-if you @i{modprobe} for @code{fmc-fine-delay} you won't have
-all module loaded: you also need the @i{spec.ko} module, which
-id not a direct dependency of @i{fmc-fine-delay} (but likely
-you'll have it auto-loaded by the PCI subsystem.
+@example
+    make
+    sudo make prereq_install LINUX=$LINUX
+@end example
 
-@c FIXME @b{Note:} When loading @code{fmc-fine-delay.ko}
-@c you @b{must} pass the argument @code{wrc=1}.
-@c A sample script is available as
-@c @code{tools/load.sh} for your reference.
+The step is not performed by default to avoid overwriting some
+other versions of the drivers. After @code{make prereq_install},
+the warning message won't be repeated any more if you change this
+driver and @code{make install} again.
 
-This is an example of the kernel messages you'll get back when loading
-the module. They take a few seconds overall (as shown by the
-timestamps), because the initializing the fine-delay card requires
-some times because it includes a calibration step.
+After installation, your carrier driver should be loaded automatically
+(for example, the PCI bus will load @code{spec.ko}), but @code{
+fine-delay.ko} must be loaded manually, because support for
+automatic loading is not yet in place. The suggested command is
+one of the following:
 
 @smallexample
-[ 7388.014673] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
-[ 7388.216315] spec 0000:02:00.0: FPGA programming successful
-[ 7388.221895] spec 0000:02:00.0: spec_fine_delay: initializing
-[ 7389.683470] fd_read_temp: Scratchpad: bf:04:4b:46:7f:ff:01:10:21
-[ 7389.689673] fd_read_temp: Temperature 0x4bf (12 bits: 75.937)
-[ 7390.638102] fd_calibrate_outputs: ch1: 8ns @@851 (f 819, off 32, t 76.06)
-[ 7390.824421] fd_calibrate_outputs: ch2: 8ns @@860 (f 819, off 41, t 76.06)
-[ 7391.010773] fd_calibrate_outputs: ch3: 8ns @@846 (f 819, off 27, t 76.06)
-[ 7391.197261] fd_calibrate_outputs: ch4: 8ns @@852 (f 819, off 33, t 76.06)
-[ 7391.266086] spec_fine_delay: Found i2c device at 0x50
-[es 7391.293696] fd_i2c_init: calibration on eeprom is invalid
+   modeprobe fmc-fine-delay [<parameter> ...]         # after make install
+   insmod kernel/fmc-fine-delay.ko [<parameter> ...]  # if not installed
 @end smallexample
+
+Available module parameters are describibed in @ref{Module Parameters}.
+Unless you customized or want to costumize one of the three
+related packages, you can skip the rest of this section.
+
+
+@sp 1
+
+In order to compile @i{fine-delay} against a specific version of one
+of the related packages, you can one or more of the following
+environment variables:
+
+@table @code
+
+@item ZIO
+@itemx SPEC_SW
+@itemx FMC_BUS
+
+	The top-level directory of the repository checkout of each
+        package. Most users won't need to set them, as the Makefiles
+        point them to the proper place by default.
+
+@end table
+
+If any of the above is set, headers and dependencies for the
+respective package are taken from the chosen directory. If you follow
+this customization path, you should not @code{make prereq_install}
+(which doesn't obey the tree variables).
+@c FIXME: make ``prereq_install'' obey the custom variables.
+
 
 @c ==========================================================================
 @node Module Parameters
 @section Module Parameters
 
 The driver accepts a few load-time parameters for configuration. You
-can pass them to @i{insmod} directly, or write them in
-@code{/etc/modules.conf} or the proper file in @code{/etc/modutils/} .
+can pass them to @i{insmod} amd @i{modprobe} directly, or write them
+in @code{/etc/modules.conf} or the proper file in @code{/etc/modutils/}.
 
 The following parameters are used:
 
 @table @code
 
-@item wrc=
-
-	Load the LM32 @i{White Rabbit Core} program. Here you can
-        pass a file-name different from the default
-        (@code{fine_delay-wrc.bin}). If you just pass ``@code{1}''
-        as name, the driver will force loading the default name.
-        @b{Note:} this is currently not working.
+@c @item wrc=
+@c 
+@c         Load the LM32 @i{White Rabbit Core} program. Here you can
+@c         pass a file-name different from the default
+@c         (@code{fine_delay-wrc.bin}). If you just pass ``@code{1}''
+@c         as name, the driver will force loading the default name.
+@c         @b{Note:} this is currently not working.
 @c FIXME
 
 @item verbose=
@@ -597,19 +581,54 @@ For example, this host has two SPEC cards:
 @end smallexample
 
 One of the cards hosts a @i{fine-delay} mezzanine and the other does
-not. FMC identifiers are not programmed to flash, at this point in time:
+not. FMC identifiers are not programmed to flash, at this point in time,
+but you can use @code{busid=} to choose which SPEC must use @i{fine-delay},
+leaving the other ones alone:
 
 @smallexample
-   spusa.root# insmod fmc-fine-delay.ko busid=0x0200
-   [ 7388.014673] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
-   [ 7388.216315] spec 0000:02:00.0: FPGA programming successful
-   [...]
-   [ 7391.299405] spec 0000:04:00.0: not using "spec_fine_delay" according to modparam
+spusa.root# insmod fmc-fine-delay.ko busid=0x0200
+[ 1336.532785] fmc_fine_delay: using a timer for input stamps (10 ms)
+[ 1336.539021] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
+[ 1336.771452] spec 0000:02:00.0: FPGA programming successful
+[ 1336.777063] spec 0000:02:00.0: Gateware successfully loaded
+[ 1336.920880] spec 0000:02:00.0: fmc_fine_delay: initializing
+[ 1338.381674] fd_read_temp: Scratchpad: 70:04:4b:46:7f:ff:10:10:28
+[ 1338.387888] fd_read_temp: Temperature 0x470 (12 bits: 71.000)
+[ 1339.335887] fd_calibrate_outputs: ch1: 8ns @@859 (f 827, off 32, t 71.00)
+[ 1339.521890] fd_calibrate_outputs: ch2: 8ns @@867 (f 827, off 40, t 71.00)
+[ 1339.707855] fd_calibrate_outputs: ch3: 8ns @@854 (f 827, off 27, t 71.00)
+[ 1339.893847] fd_calibrate_outputs: ch4: 8ns @@859 (f 827, off 32, t 71.00)
+[ 1339.962600] fmc_fine_delay: Found i2c device at 0x50
+[ 1339.989642] fd_i2c_init: calibration on eeprom is invalid
+[ 1339.995394] spec 0000:04:00.0: not using "fmc_fine_delay" according to modparam
+@end smallexample
+
+If you use @code{show_sdb=1}, you'll get the following dump of the
+internal SDB structure to @i{printk}. The @i{Self Describing Bus} data
+structure is described in the documentation of the
+@i{fpga-config-space} project, under @code{ohwr.org}.
+
+@smallexample
+SDB: 00000651:e6a542c9 WB4-Crossbar-GSI
+SDB: 0000ce42:f19ede1a Fine Delay Core     (00080000-000807ff)
+SDB: 00000651:eef0b198 WB4-Bridge-GSI      (bridge: 000c0000)
+SDB:    00000651:e6a542c9 WB4-Crossbar-GSI
+SDB:    0000ce42:66cfeb52 WB4-BlockRAM        (000c0000-000d5fff)
+SDB:    00000651:eef0b198 WB4-Bridge-GSI      (bridge: 000e0000)
+SDB:       00000651:e6a542c9 WB4-Crossbar-GSI 
+SDB:       0000ce42:ab28633a WR-Mini-NIC         (001a0000-001a00ff)
+SDB:       0000ce42:650c2d4f WR-Endpoint         (001a0100-001a01ff)
+SDB:       0000ce42:65158dc0 WR-Soft-PLL         (001a0200-001a02ff)
+SDB:       0000ce42:de0d8ced WR-PPS-Generator    (001a0300-001a03ff)
+SDB:       0000ce42:ff07fc47 WR-Periph-Syscon    (001a0400-001a04ff)
+SDB:       0000ce42:e2d13d04 WR-Periph-UART      (001a0500-001a05ff)
+SDB:       0000ce42:779c5443 WR-Periph-1Wire     (001a0600-001a06ff)
+SDB:       00000651:cababa56 WB4-Streaming-DMA_0 (001a0700-001a071f)
+SDB: 0000ce42:00000013 WB-VIC-Int.Control  (00090000-000900ff)
 @end smallexample
 
 The module, then supports some more parameters that are
 calibration-specific. They are described in @ref{Calibration}.
-
 
 @c ##########################################################################
 @node Source Code Conventions
@@ -661,13 +680,6 @@ The reader of this chapter is expected to be confident with basic ZIO
 concepts, available in ZIO documentation (ZIO is an @code{ohwr.org}
 project).
 
-@menu
-* The device::                  
-* Device Attributes::           
-* The Input cset::              
-* The Output cset::             
-@end menu
-
 @c ==========================================================================
 @node The device
 @section The device
@@ -687,21 +699,22 @@ The device appears in @i{/dev} as a set of char devices:
 
 @smallexample
    spusa# ls -l /dev/zio/*
-   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/fd-0200-0-0-ctrl
-   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/fd-0200-0-0-data
-   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/fd-0200-1-0-ctrl
-   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/fd-0200-1-0-data
-   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/fd-0200-2-0-ctrl
-   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/fd-0200-2-0-data
-   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/fd-0200-3-0-ctrl
-   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/fd-0200-3-0-data
-   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/fd-0200-4-0-ctrl
-   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/fd-0200-4-0-data
+   crw------- 1 root root 249,   0 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-ctrl
+   crw------- 1 root root 249,   1 Apr 26 00:26 /dev/zio/zio-fd-0200-0-0-data
+   crw------- 1 root root 249,  32 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-ctrl
+   crw------- 1 root root 249,  33 Apr 26 00:26 /dev/zio/zio-fd-0200-1-0-data
+   crw------- 1 root root 249,  64 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-ctrl
+   crw------- 1 root root 249,  65 Apr 26 00:26 /dev/zio/zio-fd-0200-2-0-data
+   crw------- 1 root root 249,  96 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-ctrl
+   crw------- 1 root root 249,  97 Apr 26 00:26 /dev/zio/zio-fd-0200-3-0-data
+   crw------- 1 root root 249, 128 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-ctrl
+   crw------- 1 root root 249, 129 Apr 26 00:26 /dev/zio/zio-fd-0200-4-0-data
 @end smallexample
 
 The actual pathnames depend on the version of @i{udev}, and the support
-library tries both names (the new one shown above, and the older one,
-without a @code{zio} subdirectory).
+library tries the three names that have been used over time
+(the newest name is shown above; the oldest didn't have the two
+@code{zio} ).
 Also, please note that a still-newer version of @i{udev} obeys device
 permissions, so you'll have read-only and write-only device files.
 
@@ -719,10 +732,10 @@ to be solved differently.
 
 Device (and channel) attributes can be accessed in the proper @i{sysfs}
 directory. For a card in slot 0 of bus 2 (like shown above), the
-directory is @i{/sys/bus/zio/devices/fd-0200}:
+directory is @i{/sys/bus/zio/devices/zio-fd-0200}:
 
 @smallexample
-   spusa# ls -Ff /sys/bus/zio/devices/fd-0200/
+   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/
    ./      enable           utc-l        subsystem  fd-ch1/
    ../     resolution-bits  coarse       power/     fd-ch2/
    uevent  version          command      driver     fd-ch3/
@@ -743,7 +756,7 @@ reading @i{utc-l} and @i{coarse} you'll get such cached values.
 
 Example:
 @smallexample
-   spusa# cd /sys/bus/zio/devices/fd-0200/
+   spusa# cd /sys/bus/zio/devices/zio-fd-0200/
    spusa# cat coarse coarse utc-h coarse
    75136756
    75136756
@@ -793,12 +806,6 @@ I chose to offer a @i{command} channel, which is opaque to the user,
 because there are several commands that you may need to send to the
 device, and we need to limit the number of attributes. The command numbers
 are enumerated in @code{fine-delay.h} and described here below.
-
-@menu
-* List of Commands to the Device::  
-* Reading Board Time::          
-* Writing Board Time::          
-@end menu
 
 @c --------------------------------------------------------------------------
 @node List of Commands to the Device
@@ -903,15 +910,6 @@ attributes}, which you can look at using @i{zio-dump} (part of the ZIO
 package) or
 @i{tools/fd-raw-input} which is part of this package.
 
-@menu
-* Input Device Attributes::     
-* Reading with zio-dump::       
-* Reading with fd-raw-input::   
-* Using fd-raw-perf::           
-* Configuring the Input Channel::  
-* Pulsing from the Parallel Port::  
-@end menu
-
 @c --------------------------------------------------------------------------
 @node Input Device Attributes
 @subsection Input Device Attributes
@@ -942,7 +940,7 @@ The attributes are also visible in @i{/sys}, in the directory
 describing the cset:
 
 @smallexample
-   spusa# ls -Ff /sys/bus/zio/devices/fd-0200/fd-input/
+   spusa# ls -Ff /sys/bus/zio/devices/zio-fd-0200/fd-input/
    ./      enable           utc-l   chan         power/
    ../     current_trigger  coarse  flags        trigger/
    uevent  current_buffer   frac    offset       chan0/
@@ -977,7 +975,7 @@ that the programs in @code{tools/} and @code{lib/} in this package are
 in general a better choice to timestamp input pulses.
 
 @smallexample
-   spusa# zio-dump /dev/zio/fd-0200-0-0-*
+   spusa# zio-dump /dev/zio/zio-fd-0200-0-0-*
    Ctrl: version 0.5, trigger user, dev fd, cset 0, chan 0
    Ctrl: seq 1, n 16, size 4, bits 32, flags 01000001 (little-endian)
    Ctrl: stamp 1335737285.312696982 (0)
@@ -1245,10 +1243,6 @@ As of this version, the other attributes are not
 readable nor writable in @i{sysfs} --  they are meant to be used
 in the control block written to @i{/dev}.
 
-@menu
-* Using fd-raw-output::         
-@end menu
-
 @c --------------------------------------------------------------------------
 @node Using fd-raw-output
 @subsection Using fd-raw-output
@@ -1317,15 +1311,6 @@ Only, it needs a copy of @code{fine-delay.h} (which it currently pulls
 from the parent directory) and the ZIO headers, retrieved using the
 @code{ZIO} environment variable).
 
-@menu
-* Initialization and Cleanup::  
-* Time Management::             
-* Input Configuration::         
-* Reading Input Time-stamps::   
-* Output Configuration::        
-* White-Rabbit Configuration::  
-@end menu
-
 @c ==========================================================================
 @node Initialization and Cleanup
 @section Initialization and Cleanup
@@ -1376,7 +1361,7 @@ using @i{fdelay_init}:
 @smallexample
    spusa# ./lib/fdelay-list
    ./lib/fdelay-list: found 1 boards
-     dev_id 0200, /dev/fd-0200, /sys/bus/zio/devices/fd-0200
+     dev_id 0200, /dev/zio/zio-fd-0200, /sys/bus/zio/devices/zio-fd-0200
 @end smallexample
 
 @c ==========================================================================
@@ -1697,7 +1682,7 @@ Future releases of this driver are expected to use SDB for describe
 flash layout, but the offset of 6kB will be retained for compatibility.
 
 The driver automatically loads calibration data from the flash at
-initialization time, but only uses it if its has is valid. The
+initialization time, but only uses it if its hash is valid. The
 calibration data is in @code{struct fd_calib} and the on-eeprom structure
 is @code{fd_calib_on_eeprom}; both are on show in @file{fine-delay.h}.
 
@@ -1749,26 +1734,18 @@ of calibration).
 @chapter Known Bugs and Missing Features
 
 This package is still work in progress, and unfortunately the same
-applies to the packages it depends on -- ZIO and @i{spec-sw}.
-
-@menu
-* Bugs in Related Packages::    
-* Bugs in This Package::        
-* Wish List::                   
-@end menu
+applies to the packages it depends on -- @i{zio}, @i{fmc-bus} and @i{spec-sw}.
 
 @c ==========================================================================
 @node Bugs in Related Packages
 @section Bugs in Related Packages
 
-The current package set (i.e., @i{zio}, @i{spec-sw} and this one) has
+The current package set (i.e., @i{zio}, @i{fmc-bus},
+@i{spec-sw} and this one) has
 the following known issues exposed by @i{fine-delay}:
 
 @itemize @bullet
-@item The auto-loading of @i{spec} submodules is not really working:
-the @i{modprobe} command will be stuck sleeping if you try to use it.
-Run `@code{insmod fmc-fine-delay}'' (or @i{modprobe}) by hand instead.
-@i{This will be addressed in an upcoming release of spec-sw}.
+@item The auto-loading of @i{fmc} modules is not yet working:
 
 @item The @i{user} trigger of ZIO is really user-driven, so the driver
 can't push stuff to the buffer until asked to. Also, a related buglet
@@ -1813,14 +1790,6 @@ slower than it could be.
 
 @item Most example programs only use the ``first'' board in the system.
 
-@item Kernel messages are not very consistent: the code uses both
-@i{dev_info} and plain @i{kern_info}.
-
-@item There is clear inconsistency between the various uses of bus
-and @i{devfn} numbers, in firmware naming and @i{sysfs} naming. The
-inconsistency is mainly between this driver and the SPEC driver, but
-this one is more correct.
-
 @end itemize
 
 
@@ -1830,13 +1799,6 @@ this one is more correct.
 
 This chapters lists a few errors that may happen and how to deal with
 them.
-
-@menu
-* ZIO Doesn't Compile::         
-* make modules_install misbehaves::  
-* Wrong FPGA Image::            
-* Version Mismatch::            
-@end menu
 
 @c ==========================================================================
 @node ZIO Doesn't Compile
