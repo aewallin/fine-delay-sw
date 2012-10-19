@@ -164,6 +164,8 @@ int main(int argc, char **argv)
 		glob("/dev/fd-*-0-0-ctrl", GLOB_DOOFFS, NULL, &glob_buf);
 		glob("/dev/zio/fd-*-0-0-ctrl",
 		     GLOB_DOOFFS | GLOB_APPEND, NULL, &glob_buf);
+		glob("/dev/zio/zio-fd-*-0-0-ctrl",
+		     GLOB_DOOFFS | GLOB_APPEND, NULL, &glob_buf);
 		glob_buf.gl_pathv[0] = argv[0];
 		argv = glob_buf.gl_pathv;
 		argc = glob_buf.gl_pathc + glob_buf.gl_offs;
