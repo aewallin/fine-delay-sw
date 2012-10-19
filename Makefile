@@ -1,25 +1,29 @@
 
-LINUX ?= /lib/modules/$(shell uname -r)/build
-ZIO ?= $(HOME)/zio
-SPEC_SW ?= $(HOME)/spec-sw
+.PHONY: all clean modules install modules_install
+.PHONY: gitmodules prereq prereq_install_warn prereq_install_warn
 
-KBUILD_EXTRA_SYMBOLS := $(ZIO)/Module.symvers $(SPEC_SW)/kernel/Module.symvers
+DIRS = kernel tools lib
 
-ccflags-y = -I$(ZIO)/include -I$(SPEC_SW)/kernel -I$M
+all clean modules install modules_install: gitmodules
+	for d in $(DIRS); do $(MAKE) -C $$d $@ || exit 1; done
+	@if echo $@ | grep -q install; then $(MAKE) prereq_install_warn; fi
 
-#ccflags-y += -DDEBUG
+all modules: prereq
 
-subdirs-ccflags-y = $(ccflags-y)
+# The following targets are used to manage prerequisite repositories
+gitmodules:
+	@test -d fmc-bus/doc || echo "Checking out submodules"
+	@test -d fmc-bus/doc || git submodule init && git submodule update
 
-obj-m := spec-fine-delay.o
+SUBMOD = fmc-bus spec-sw zio
 
-spec-fine-delay-objs	=  fd-zio.o fd-spec.o fd-core.o
-spec-fine-delay-objs	+= onewire.o spi.o i2c.o gpio.o
-spec-fine-delay-objs	+= acam.o calibrate.o pll.o time.o
+prereq:
+	for d in $(SUBMOD); do $(MAKE) -C $$d || exit 1; done
 
-all: modules
+prereq_install_warn:
+	@test -f .prereq_installed || \
+		echo -e "\n\n\tWARNING: Consider \"make prereq_install\"\n"
 
-modules_install clean modules:
-	$(MAKE) -C $(LINUX) M=$(shell /bin/pwd) $@
-	$(MAKE) -C tools  M=$(shell /bin/pwd) $@
-	$(MAKE) -C lib $@
+prereq_install:
+	for d in $(SUBMOD); do $(MAKE) -C $$d modules_install || exit 1; done
+	touch .prereq_installed

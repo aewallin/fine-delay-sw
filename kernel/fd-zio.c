@@ -802,6 +802,7 @@ void fd_zio_unregister(void)
 int fd_zio_init(struct spec_fd *fd)
 {
 	int err = 0;
+	struct spec_dev *spec;
 	struct pci_dev *pdev;
 	int dev_id;
 
@@ -814,7 +815,8 @@ int fd_zio_init(struct spec_fd *fd)
 	fd->hwzdev->private_data = fd;
 
 	/* Our dev_id is bus+devfn */
-	pdev = fd->spec->pdev;
+	spec = fd->fmc->carrier_data;
+	pdev = spec->pdev;
 	dev_id = (pdev->bus->number << 8) | pdev->devfn;
 
 	err = zio_register_device(fd->hwzdev, "fd", dev_id);

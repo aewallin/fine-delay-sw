@@ -1,7 +1,9 @@
 #ifndef __FINE_DELAY_H__
 #define __FINE_DELAY_H__
 
-#define FDELAY_VERSION		2
+#define FDELAY_GATEWARE_NAME "fmc/fine-delay.bin"
+
+#define FDELAY_VERSION		2 /* version of the layout of registers */
 /*
  * ZIO concatenates device, cset and channel extended attributes in the 32
  * values that are reported in the control block. So we are limited to
@@ -153,7 +155,7 @@ struct fd_ch {
 struct spec_fd {
 	spinlock_t lock;
 	unsigned long flags;
-	struct spec_dev *spec;
+	struct fmc_device *fmc;
 	struct zio_device *zdev, *hwzdev;
 	struct timer_list fifo_timer;
 	struct timer_list temp_timer;
@@ -284,10 +286,6 @@ static inline void __check_output(int x)
 #define FD_GPIO_OUTPUT_MASK	0x003c		/* Output driver enable */
 #define FD_GPIO_TRIG_INTERNAL	0x0040		/* TDC trig (1=in, 1=fpga) */
 #define FD_GPIO_CAL_DISABLE	0x0080		/* 0 enables calibration */
-
-/* Functions exported by fd-core.c */
-extern int fd_probe(struct spec_dev *dev);
-extern void fd_remove(struct spec_dev *dev);
 
 /* Functions exported by spi.c */
 extern int fd_spi_xfer(struct spec_fd *fd, int ss, int num_bits,

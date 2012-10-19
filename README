@@ -1,5 +1,5 @@
 Please check doc/
 
-There, fine-delay.in is the source file, and you can "make" to get
+In ./doc/, fine-delay.in is the source file, and you can "make" to get
 pdf and other formats provided you have the proper tools installed
 (mainly texinfo and tex).
