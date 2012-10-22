@@ -101,6 +101,7 @@ enum fd_output_mode {
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
 #include <linux/spinlock.h>
 #include <linux/timer.h>
+#include <linux/fmc.h>
 #include <linux/version.h>
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,25)
 #include <linux/math64.h>
@@ -125,6 +126,7 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 #endif
 
 #define FD_REGS_BASE	0x80000 /* sdb_find_device(cern, f19ede1a) */
+#define FD_OWREGS_BASE	(FD_REGS_BASE + 0x500)
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
@@ -221,11 +223,11 @@ static inline void fd_split_pico(uint64_t pico,
 
 static inline uint32_t fd_readl(struct fd_dev *fd, unsigned long reg)
 {
-	return readl(fd->regs + reg);
+	return fmc_readl(fd->fmc, FD_REGS_BASE + reg);
 }
 static inline void fd_writel(struct fd_dev *fd, uint32_t v, unsigned long reg)
 {
-	writel(v, fd->regs + reg);
+	fmc_writel(fd->fmc, v, FD_REGS_BASE + reg);
 }
 
 static inline void __check_chan(int x)
