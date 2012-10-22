@@ -19,7 +19,6 @@
 #include <linux/random.h>
 #include <linux/firmware.h>
 #include <linux/jhash.h>
-#include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 

@@ -17,6 +17,7 @@
 #include <linux/spinlock.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/io.h>
@@ -24,7 +25,6 @@
 #include <linux/fmc.h>
 #include <linux/fmc-sdb.h>
 
-#include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 

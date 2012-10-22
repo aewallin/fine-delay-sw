@@ -23,6 +23,8 @@
 #include <linux/zio-buffer.h>
 #include <linux/zio-trigger.h>
 
+#include <linux/fmc.h>
+
 #include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
@@ -802,7 +804,6 @@ void fd_zio_unregister(void)
 int fd_zio_init(struct fd_dev *fd)
 {
 	int err = 0;
-	struct spec_dev *spec;
 	struct pci_dev *pdev;
 	int dev_id;
 
@@ -814,10 +815,20 @@ int fd_zio_init(struct fd_dev *fd)
 	fd->hwzdev->owner = THIS_MODULE;
 	fd->hwzdev->private_data = fd;
 
-	/* Our dev_id is bus+devfn */
-	spec = fd->fmc->carrier_data;
-	pdev = spec->pdev;
-	dev_id = (pdev->bus->number << 8) | pdev->devfn;
+	if (!strcmp(fd->fmc->carrier_name, "SPEC")) { /* devid <= bus+devfn */
+		struct spec_dev *spec;
+
+		spec = fd->fmc->carrier_data;
+		pdev = spec->pdev;
+		dev_id = (pdev->bus->number << 8) | pdev->devfn;
+	} else {
+		/* Please fill this with other carriers. SVEC? */
+		static int count;
+
+		dev_warn(fd->fmc->hwdev, "Unknown FMC carrier \"%s\":"
+			 " using ID %i\n", fd->fmc->carrier_name, count);
+		dev_id = count++;
+	}
 
 	err = zio_register_device(fd->hwzdev, "fd", dev_id);
 	if (err) {
