@@ -54,7 +54,7 @@ static void dumpstruct(char *name, void *ptr, int size)
 		printk("\n");
 }
 
-static void set_sda(struct spec_fd *fd, int val)
+static void set_sda(struct fd_dev *fd, int val)
 {
 	uint32_t reg;
 
@@ -64,7 +64,7 @@ static void set_sda(struct spec_fd *fd, int val)
 	fd_writel(fd, reg, FD_REG_I2CR);
 }
 
-static void set_scl(struct spec_fd *fd, int val)
+static void set_scl(struct fd_dev *fd, int val)
 {
 	uint32_t reg;
 
@@ -74,25 +74,25 @@ static void set_scl(struct spec_fd *fd, int val)
 	fd_writel(fd, reg, FD_REG_I2CR);
 }
 
-static int get_sda(struct spec_fd *fd)
+static int get_sda(struct fd_dev *fd)
 {
 	return fd_readl(fd, FD_REG_I2CR) & FD_I2CR_SDA_IN ? 1 : 0;
 };
 
-static void mi2c_start(struct spec_fd *fd)
+static void mi2c_start(struct fd_dev *fd)
 {
 	set_sda(fd, 0);
 	set_scl(fd, 0);
 }
 
-static void mi2c_stop(struct spec_fd *fd)
+static void mi2c_stop(struct fd_dev *fd)
 {
 	set_sda(fd, 0);
 	set_scl(fd, 1);
 	set_sda(fd, 1);
 }
 
-int mi2c_put_byte(struct spec_fd *fd, int data)
+int mi2c_put_byte(struct fd_dev *fd, int data)
 {
 	int i;
 	int ack;
@@ -114,7 +114,7 @@ int mi2c_put_byte(struct spec_fd *fd, int data)
 	return ack ? -EIO : 0; /* ack low == success */
 }
 
-int mi2c_get_byte(struct spec_fd *fd, unsigned char *data, int sendack)
+int mi2c_get_byte(struct fd_dev *fd, unsigned char *data, int sendack)
 {
 	int i;
 	int indata = 0;
@@ -139,13 +139,13 @@ int mi2c_get_byte(struct spec_fd *fd, unsigned char *data, int sendack)
 	return 0;
 }
 
-void mi2c_init(struct spec_fd *fd)
+void mi2c_init(struct fd_dev *fd)
 {
 	set_scl(fd, 1);
 	set_sda(fd, 1);
 }
 
-void mi2c_scan(struct spec_fd *fd)
+void mi2c_scan(struct fd_dev *fd)
 {
 	int i;
 	for(i = 0; i < 256; i += 2) {
@@ -158,7 +158,7 @@ void mi2c_scan(struct spec_fd *fd)
 }
 
 /* FIXME: this is very inefficient: read several bytes in a row instead */
-int fd_eeprom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+int fd_eeprom_read(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 		void *buf, size_t size)
 {
 	int i;
@@ -185,7 +185,7 @@ int fd_eeprom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
 	return size;
 }
 
-int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 		 void *buf, size_t size)
 {
 	int i, busy;
@@ -214,7 +214,7 @@ int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
 }
 
 /* The user requested to load the configuration from file */
-static void fd_i2c_load_calib(struct spec_fd *fd,
+static void fd_i2c_load_calib(struct fd_dev *fd,
 			      struct fd_calib_on_eeprom *cal_ee)
 {
 	const struct firmware *fw;
@@ -244,7 +244,7 @@ static void fd_i2c_load_calib(struct spec_fd *fd,
 }
 
 
-int fd_i2c_init(struct spec_fd *fd)
+int fd_i2c_init(struct fd_dev *fd)
 {
 	struct fd_calib_on_eeprom *cal_ee;
 	u32 hash;
@@ -322,7 +322,7 @@ load:
 	return 0;
 }
 
-void fd_i2c_exit(struct spec_fd *fd)
+void fd_i2c_exit(struct fd_dev *fd)
 {
 	/* nothing to do */
 }

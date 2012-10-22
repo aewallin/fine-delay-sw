@@ -22,21 +22,21 @@
 #include "hw/fd_channel_regs.h"
 
 /* TEMP! */
-static void acam_set_bypass(struct spec_fd *fd, int on)
+static void acam_set_bypass(struct fd_dev *fd, int on)
 {
 	/* FIXME: this zeroes all other GCR bits */
 	fd_writel(fd, on ? FD_GCR_BYPASS : 0, FD_REG_GCR);
 }
 
 
-static int acam_test_delay_transfer_function(struct spec_fd *fd)
+static int acam_test_delay_transfer_function(struct fd_dev *fd)
 {
 	/* FIXME */
 	return 0;
 }
 
 /* Evaluates 2nd order polynomial. Coefs have 32 fractional bits. */
-static int fd_eval_polynomial(struct spec_fd *fd)
+static int fd_eval_polynomial(struct fd_dev *fd)
 {
 	int64_t x = fd->temp;
 	int64_t *coef = fd->calib.frr_poly;
@@ -58,7 +58,7 @@ struct delay_stats {
 };
 
 /* Note: channel is the "internal" one: 0..3 */
-static uint64_t output_delay_ps(struct spec_fd *fd, int ch, int fine, int n,
+static uint64_t output_delay_ps(struct fd_dev *fd, int ch, int fine, int n,
 				struct delay_stats *stats)
 {
 	int i;
@@ -145,7 +145,7 @@ static void __pr_fixed(char *head, uint64_t val, char *tail)
 	       ((int)(val & 0xffff) * 1000) >> 16, tail);
 }
 
-static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
+static int fd_find_8ns_tap(struct fd_dev *fd, int ch)
 {
 	int l = 0, mid, r = FD_NUM_TAPS - 1;
 	uint64_t bias, dly;
@@ -177,7 +177,7 @@ static int fd_find_8ns_tap(struct spec_fd *fd, int ch)
 
 }
 
-int fd_calibrate_outputs(struct spec_fd *fd)
+int fd_calibrate_outputs(struct fd_dev *fd)
 {
 	int ret, ch;
 	int measured, fitted, new;
@@ -211,7 +211,7 @@ int fd_calibrate_outputs(struct spec_fd *fd)
 /* Called from a timer any few seconds */
 void fd_update_calibration(unsigned long arg)
 {
-	struct spec_fd *fd = (void *)arg;
+	struct fd_dev *fd = (void *)arg;
 	int ch, fitted, new;
 
 	fd_read_temp(fd, 0 /* not verbose */);

@@ -105,7 +105,7 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 			     uint32_t *usr_val)
 {
 	struct zio_cset *cset;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 
 	cset = to_zio_cset(dev);
 	fd = cset->zdev->private_data;
@@ -130,7 +130,7 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 			     uint32_t *usr_val)
 {
 	struct zio_cset *cset;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	int ch;
 
 	cset = to_zio_cset(dev);
@@ -154,7 +154,7 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 	return 0;
 }
 
-static int fd_wr_mode(struct spec_fd *fd, int on)
+static int fd_wr_mode(struct fd_dev *fd, int on)
 {
 	if (on) {
 		fd_writel(fd, FD_TCR_WR_ENABLE, FD_REG_TCR);
@@ -166,7 +166,7 @@ static int fd_wr_mode(struct spec_fd *fd, int on)
 	return 0;
 }
 
-static int fd_wr_query(struct spec_fd *fd)
+static int fd_wr_query(struct fd_dev *fd)
 {
 	int ena = test_bit(FD_FLAG_WR_MODE, &fd->flags);
 
@@ -184,7 +184,7 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 {
 	struct fd_time t;
 	struct zio_device *zdev;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	struct zio_attribute *attr;
 
 	if (__fd_get_type(dev) == FD_TYPE_INPUT)
@@ -218,7 +218,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 			    uint32_t  usr_val)
 {
 	struct zio_cset *cset;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	uint32_t reg;
 	int change;
 
@@ -281,7 +281,7 @@ static int fd_zio_conf_output(struct device *dev, struct zio_attribute *zattr,
 			      uint32_t  usr_val)
 {
 	struct zio_cset *cset;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	int ch;
 
 	cset = to_zio_cset(dev);
@@ -305,7 +305,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 {
 	struct fd_time t;
 	struct zio_device *zdev;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	struct zio_attribute *attr;
 
 	if (__fd_get_type(dev) == FD_TYPE_INPUT)
@@ -435,7 +435,7 @@ static inline void __fd_apply_offset(uint32_t *a, int32_t off_pico)
 	}
 }
 
-static int fd_read_fifo(struct spec_fd *fd, struct zio_channel *chan)
+static int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
 	uint32_t *v, reg;
@@ -504,7 +504,7 @@ static int fd_timer_period_jiffies; /* converted from ms at init time */
 
 static void fd_timer_fn(unsigned long arg)
 {
-	struct spec_fd *fd = (void *)arg;
+	struct fd_dev *fd = (void *)arg;
 	struct zio_channel *chan = NULL;
 	struct zio_device *zdev = fd->zdev;
 	int i;
@@ -539,7 +539,7 @@ out:
 }
 
 /* Internal output engine */
-static void __fd_zio_output(struct spec_fd *fd, int index1_4, uint32_t *attrs)
+static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 {
 	int ch = index1_4 - 1;
 	int mode = attrs[FD_ATTR_OUT_MODE];
@@ -609,7 +609,7 @@ static void __fd_zio_output(struct spec_fd *fd, int index1_4, uint32_t *attrs)
 static int fd_zio_output(struct zio_cset *cset)
 {
 	int i;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	struct zio_control *ctrl;
 
 	fd = cset->zdev->private_data;
@@ -638,7 +638,7 @@ static int fd_zio_output(struct zio_cset *cset)
  */
 static int fd_zio_input(struct zio_cset *cset)
 {
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	fd = cset->zdev->private_data;
 
 	/* Configure the device for input */
@@ -664,7 +664,7 @@ static int fd_zio_input(struct zio_cset *cset)
  */
 static int fd_zio_probe(struct zio_device *zdev)
 {
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 
 	/* link the new device from the fd structure */
 	fd = zdev->private_data;
@@ -799,7 +799,7 @@ void fd_zio_unregister(void)
 }
 
 /* Init and exit are called for each FD card we have */
-int fd_zio_init(struct spec_fd *fd)
+int fd_zio_init(struct fd_dev *fd)
 {
 	int err = 0;
 	struct spec_dev *spec;
@@ -831,7 +831,7 @@ int fd_zio_init(struct spec_fd *fd)
 	return 0;
 }
 
-void fd_zio_exit(struct spec_fd *fd)
+void fd_zio_exit(struct fd_dev *fd)
 {
 	del_timer_sync(&fd->fifo_timer);
 	zio_unregister_device(fd->hwzdev);

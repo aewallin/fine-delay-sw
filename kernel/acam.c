@@ -83,7 +83,7 @@ static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 	return (bin + 1) / 3; /* We are in I-Mode, R-Mode bin is 1/3 if this */
 }
 
-static void acam_set_address(struct spec_fd *fd, int addr)
+static void acam_set_address(struct fd_dev *fd, int addr)
 {
 	if (addr == fd->acam_addr)
 		return;
@@ -96,33 +96,33 @@ static void acam_set_address(struct spec_fd *fd, int addr)
 }
 
 /* Warning: acam_readl and acam_writel only work if GCR.BYPASS is set */
-uint32_t acam_readl(struct spec_fd *fd, int reg)
+uint32_t acam_readl(struct fd_dev *fd, int reg)
 {
 	acam_set_address(fd, reg);
 	fd_writel(fd, FD_TDCSR_READ, FD_REG_TDCSR);
 	return fd_readl(fd, FD_REG_TDR) & ACAM_MASK;
 }
 
-void acam_writel(struct spec_fd *fd, int val, int reg)
+void acam_writel(struct fd_dev *fd, int val, int reg)
 {
 	acam_set_address(fd, reg);
 	fd_writel(fd, val, FD_REG_TDR);
 	fd_writel(fd, FD_TDCSR_WRITE, FD_REG_TDCSR);
 }
 
-static void acam_set_bypass(struct spec_fd *fd, int on)
+static void acam_set_bypass(struct fd_dev *fd, int on)
 {
 	/* FIXME: this zeroes all other GCR bits */
 	fd_writel(fd, on ? FD_GCR_BYPASS : 0, FD_REG_GCR);
 }
 
-static inline int acam_is_pll_locked(struct spec_fd *fd)
+static inline int acam_is_pll_locked(struct fd_dev *fd)
 {
 	return !(acam_readl(fd, 12) &AR12_NotLocked);
 }
 
 /* Two test functions to verify the bus is working -- Tom */
-static int acam_test_addr_bit(struct spec_fd *fd, int base, int bit,
+static int acam_test_addr_bit(struct fd_dev *fd, int base, int bit,
 			       int data)
 {
 	int addr1 = base;
@@ -156,7 +156,7 @@ out:
 	return -EIO;
 }
 
-static int acam_test_bus(struct spec_fd *fd)
+static int acam_test_bus(struct fd_dev *fd)
 {
 	int err = 0, i, v;
 
@@ -248,7 +248,7 @@ static struct acam_mode_setup fd_acam_table[] = {
 };
 
 /* To configure the thing, follow the table, but treat 5 and 7 as special */
-static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
+static int __acam_config(struct fd_dev *fd, struct acam_mode_setup *s)
 {
 	int i, hsdiv, refdiv, reg7val;
 	struct acam_init_data *p;
@@ -289,7 +289,7 @@ static int __acam_config(struct spec_fd *fd, struct acam_mode_setup *s)
 	return 0;
 }
 
-int fd_acam_config(struct spec_fd *fd, enum fd_acam_modes mode)
+int fd_acam_config(struct fd_dev *fd, enum fd_acam_modes mode)
 {
 	struct acam_mode_setup *s;
 	int i;
@@ -301,7 +301,7 @@ int fd_acam_config(struct spec_fd *fd, enum fd_acam_modes mode)
 	return -EINVAL;
 }
 
-int fd_acam_init(struct spec_fd *fd)
+int fd_acam_init(struct fd_dev *fd)
 {
 	int ret;
 	fd->acam_addr = -1; /* First time must be activated */
@@ -343,7 +343,7 @@ int fd_acam_init(struct spec_fd *fd)
 	return 0;
 }
 
-void fd_acam_exit(struct spec_fd *fd)
+void fd_acam_exit(struct fd_dev *fd)
 {
 	del_timer_sync(&fd->temp_timer);
 }

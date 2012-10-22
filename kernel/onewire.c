@@ -54,17 +54,17 @@
 
 #define FD_OW_PORT 0 /* what is this slow? */
 
-static void ow_writel(struct spec_fd *fd, uint32_t val, unsigned long reg)
+static void ow_writel(struct fd_dev *fd, uint32_t val, unsigned long reg)
 {
 	writel(val, fd->ow_regs + reg);
 }
 
-static uint32_t ow_readl(struct spec_fd *fd, unsigned long reg)
+static uint32_t ow_readl(struct fd_dev *fd, unsigned long reg)
 {
 	return readl(fd->ow_regs + reg);
 }
 
-static int ow_reset(struct spec_fd *fd, int port)
+static int ow_reset(struct fd_dev *fd, int port)
 {
 	uint32_t reg, data;
 
@@ -77,7 +77,7 @@ static int ow_reset(struct spec_fd *fd, int port)
 	return ~reg & CSR_DAT_MSK;
 }
 
-static int slot(struct spec_fd *fd, int port, int bit)
+static int slot(struct fd_dev *fd, int port, int bit)
 {
 	uint32_t reg, data;
 
@@ -90,17 +90,17 @@ static int slot(struct spec_fd *fd, int port, int bit)
 	return reg & CSR_DAT_MSK;
 }
 
-static int read_bit(struct spec_fd *fd, int port)
+static int read_bit(struct fd_dev *fd, int port)
 {
 	return slot(fd, port, 0x1);
 }
 
-static int write_bit(struct spec_fd *fd, int port, int bit)
+static int write_bit(struct fd_dev *fd, int port, int bit)
 {
 	return slot(fd, port, bit);
 }
 
-static int ow_read_byte(struct spec_fd *fd, int port)
+static int ow_read_byte(struct fd_dev *fd, int port)
 {
 	int byte = 0, i;
 
@@ -109,7 +109,7 @@ static int ow_read_byte(struct spec_fd *fd, int port)
 	return byte;
 }
 
-static int ow_write_byte(struct spec_fd *fd, int port, int byte)
+static int ow_write_byte(struct fd_dev *fd, int port, int byte)
 {
 	int data = 0;
 	int i;
@@ -121,7 +121,7 @@ static int ow_write_byte(struct spec_fd *fd, int port, int byte)
 	return 0; /* success */
 }
 
-static int ow_write_block(struct spec_fd *fd, int port, uint8_t *block, int len)
+static int ow_write_block(struct fd_dev *fd, int port, uint8_t *block, int len)
 {
 	int i;
 
@@ -130,7 +130,7 @@ static int ow_write_block(struct spec_fd *fd, int port, uint8_t *block, int len)
 	return 0;
 }
 
-static int ow_read_block(struct spec_fd *fd, int port, uint8_t *block, int len)
+static int ow_read_block(struct fd_dev *fd, int port, uint8_t *block, int len)
 {
 	int i;
 	for(i = 0; i < len; i++)
@@ -138,7 +138,7 @@ static int ow_read_block(struct spec_fd *fd, int port, uint8_t *block, int len)
 	return 0;
 }
 
-static int ds18x_read_serial(struct spec_fd *fd)
+static int ds18x_read_serial(struct fd_dev *fd)
 {
 	if(!ow_reset(fd, 0)) {
 		pr_err("%s: Failure in resetting one-wire channel\n",
@@ -150,7 +150,7 @@ static int ds18x_read_serial(struct spec_fd *fd)
 	return ow_read_block(fd, FD_OW_PORT, fd->ds18_id, 8);
 }
 
-static int ds18x_access(struct spec_fd *fd)
+static int ds18x_access(struct fd_dev *fd)
 {
 	if(!ow_reset(fd, 0))
 		goto out;
@@ -169,7 +169,7 @@ out:
 	return -EIO;
 }
 
-static void __temp_command_and_next_t(struct spec_fd *fd, int cfg_reg)
+static void __temp_command_and_next_t(struct fd_dev *fd, int cfg_reg)
 {
 	int ms;
 
@@ -180,7 +180,7 @@ static void __temp_command_and_next_t(struct spec_fd *fd, int cfg_reg)
 	fd->next_t = jiffies + msecs_to_jiffies(ms);
 }
 
-int fd_read_temp(struct spec_fd *fd, int verbose)
+int fd_read_temp(struct fd_dev *fd, int verbose)
 {
 	int i, temp;
 	unsigned long j;
@@ -222,7 +222,7 @@ int fd_read_temp(struct spec_fd *fd, int verbose)
 	return temp;
 }
 
-int fd_onewire_init(struct spec_fd *fd)
+int fd_onewire_init(struct fd_dev *fd)
 {
 	int i;
 
@@ -244,7 +244,7 @@ int fd_onewire_init(struct spec_fd *fd)
 	return 0;
 }
 
-void fd_onewire_exit(struct spec_fd *fd)
+void fd_onewire_exit(struct fd_dev *fd)
 {
 	/* Nothing to do */
 }

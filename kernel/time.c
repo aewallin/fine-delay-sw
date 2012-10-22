@@ -18,7 +18,7 @@
 #include "hw/fd_main_regs.h"
 
 /* If fd_time is not null, use it. if ts is not null, use it, else current */
-int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
+int fd_time_set(struct fd_dev *fd, struct fd_time *t, struct timespec *ts)
 {
 	uint32_t tcr, gcr;
 	unsigned long flags;
@@ -52,7 +52,7 @@ int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 }
 
 /* If fd_time is not null, use it. Otherwise use ts */
-int fd_time_get(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
+int fd_time_get(struct fd_dev *fd, struct fd_time *t, struct timespec *ts)
 {
 	uint32_t tcr, h, l, c;
 	unsigned long flags;
@@ -76,7 +76,7 @@ int fd_time_get(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 	return 0;
 }
 
-int fd_time_init(struct spec_fd *fd)
+int fd_time_init(struct fd_dev *fd)
 {
 	struct timespec ts = {0,0};
 
@@ -84,7 +84,7 @@ int fd_time_init(struct spec_fd *fd)
 	return fd_time_set(fd, NULL, &ts);
 }
 
-void fd_time_exit(struct spec_fd *fd)
+void fd_time_exit(struct fd_dev *fd)
 {
 	/* nothing to do */
 }

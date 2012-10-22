@@ -16,18 +16,18 @@
 
 #define SPI_RETRIES 100
 
-static int gpio_writel(struct spec_fd *fd, int val, int reg)
+static int gpio_writel(struct fd_dev *fd, int val, int reg)
 {
 	int rval = fd_spi_xfer(fd, FD_CS_GPIO, 24,
 			   0x4e0000 | (reg << 8) | val, NULL);
 
 	fd_spi_xfer(fd, FD_CS_NONE, 24,
 			  0, NULL);
-	
+
 	return rval;
 }
 
-static int gpio_readl(struct spec_fd *fd, int reg)
+static int gpio_readl(struct fd_dev *fd, int reg)
 {
 	uint32_t ret;
 	int err;
@@ -43,7 +43,7 @@ static int gpio_readl(struct spec_fd *fd, int reg)
 	return ret & 0xff;
 }
 
-static int gpio_writel_with_retry(struct spec_fd *fd, int val, int reg)
+static int gpio_writel_with_retry(struct fd_dev *fd, int val, int reg)
 {
 	int retries = SPI_RETRIES, rv;
 	while(retries--)
@@ -61,7 +61,7 @@ static int gpio_writel_with_retry(struct spec_fd *fd, int val, int reg)
 	return -EIO;
 }
 
-void fd_gpio_dir(struct spec_fd *fd, int mask, int dir)
+void fd_gpio_dir(struct fd_dev *fd, int mask, int dir)
 {
 	fd->mcp_iodir &= ~mask;
 	if (dir == FD_GPIO_IN)
@@ -71,7 +71,7 @@ void fd_gpio_dir(struct spec_fd *fd, int mask, int dir)
 	gpio_writel_with_retry(fd, (fd->mcp_iodir >> 8), FD_MCP_IODIR+1);
 }
 
-void fd_gpio_val(struct spec_fd *fd, int mask, int values)
+void fd_gpio_val(struct fd_dev *fd, int mask, int values)
 {
 
 	fd->mcp_olat &= ~mask;
@@ -81,7 +81,7 @@ void fd_gpio_val(struct spec_fd *fd, int mask, int values)
 	gpio_writel_with_retry(fd, (fd->mcp_olat >> 8), FD_MCP_OLAT+1);
 }
 
-void fd_gpio_set_clr(struct spec_fd *fd, int mask, int set)
+void fd_gpio_set_clr(struct fd_dev *fd, int mask, int set)
 {
 	if (set)
 		fd_gpio_val(fd, mask, mask);
@@ -89,7 +89,7 @@ void fd_gpio_set_clr(struct spec_fd *fd, int mask, int set)
 		fd_gpio_val(fd, mask, 0);
 }
 
-int fd_gpio_init(struct spec_fd *fd)
+int fd_gpio_init(struct fd_dev *fd)
 {
 	int i, val;
 
@@ -120,12 +120,12 @@ out:
 	return -EIO;
 }
 
-void fd_gpio_exit(struct spec_fd *fd)
+void fd_gpio_exit(struct fd_dev *fd)
 {
 	/* nothing to do */
 }
 
-int fd_dump_mcp(struct spec_fd *fd)
+int fd_dump_mcp(struct fd_dev *fd)
 {
 	printk(KERN_DEBUG "MCP23S17 register dump\n");
 	printk(KERN_DEBUG "IOCON: 0x%02x\n", gpio_readl(fd, FD_MCP_IOCON));

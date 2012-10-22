@@ -58,7 +58,7 @@ static struct fd_calib fd_default_calib = {
 };
 
 /* The reset function (by Tomasz) */
-static void fd_do_reset(struct spec_fd *fd, int hw_reset)
+static void fd_do_reset(struct fd_dev *fd, int hw_reset)
 {
 	if (hw_reset) {
 		fd_writel(fd, FD_RSTR_LOCK_W(0xdead) | FD_RSTR_RST_CORE_MASK,
@@ -80,7 +80,7 @@ static void fd_do_reset(struct spec_fd *fd, int hw_reset)
 }
 
 /* Some init procedures to be intermixed with subsystems */
-int fd_gpio_defaults(struct spec_fd *fd)
+int fd_gpio_defaults(struct fd_dev *fd)
 {
 	fd_gpio_dir(fd, FD_GPIO_TRIG_INTERNAL, FD_GPIO_OUT);
 	fd_gpio_set(fd, FD_GPIO_TRIG_INTERNAL);
@@ -93,7 +93,7 @@ int fd_gpio_defaults(struct spec_fd *fd)
 	return 0;
 }
 
-int fd_reset_again(struct spec_fd *fd)
+int fd_reset_again(struct fd_dev *fd)
 {
 	unsigned long j;
 
@@ -118,8 +118,8 @@ int fd_reset_again(struct spec_fd *fd)
 /* This structure lists the various subsystems */
 struct fd_modlist {
 	char *name;
-	int (*init)(struct spec_fd *);
-	void (*exit)(struct spec_fd *);
+	int (*init)(struct fd_dev *);
+	void (*exit)(struct fd_dev *);
 };
 
 
@@ -141,7 +141,7 @@ static struct fd_modlist mods[] = {
 int fd_probe(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
-	struct spec_fd *fd;
+	struct fd_dev *fd;
 	struct spec_dev *spec;
 	struct device *dev = fmc->hwdev;
 	char *fwname;
@@ -261,7 +261,7 @@ out:
 int fd_remove(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
-	struct spec_fd *fd = fmc->mezzanine_data;
+	struct fd_dev *fd = fmc->mezzanine_data;
 	int i = ARRAY_SIZE(mods);
 
 	if (!test_bit(FD_FLAG_INITED, &fd->flags)) /* FIXME: ditch this */

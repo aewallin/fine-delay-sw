@@ -18,12 +18,12 @@
 #include "fine-delay.h"
 #include "hw/pll_config.h" /* the table to be written */
 
-static int pll_writel(struct spec_fd *fd, int val, int reg)
+static int pll_writel(struct fd_dev *fd, int val, int reg)
 {
 	return fd_spi_xfer(fd, FD_CS_PLL, 24, (reg << 8) | val, NULL);
 }
 
-static int pll_readl(struct spec_fd *fd, int reg)
+static int pll_readl(struct fd_dev *fd, int reg)
 {
 	uint32_t ret;
 	int err;
@@ -34,7 +34,7 @@ static int pll_readl(struct spec_fd *fd, int reg)
 	return ret & 0xff;
 }
 
-int fd_pll_init(struct spec_fd *fd)
+int fd_pll_init(struct fd_dev *fd)
 {
 	int i;
 	unsigned long j;
@@ -99,7 +99,7 @@ out:
 	return -EIO;
 }
 
-void fd_pll_exit(struct spec_fd *fd)
+void fd_pll_exit(struct fd_dev *fd)
 {
 	/* nothing to do */
 }

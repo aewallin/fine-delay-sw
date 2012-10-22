@@ -17,7 +17,7 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
-int fd_spi_xfer(struct spec_fd *fd, int ss, int num_bits,
+int fd_spi_xfer(struct fd_dev *fd, int ss, int num_bits,
 		uint32_t in, uint32_t *out)
 {
 	uint32_t scr = 0, r;
@@ -44,13 +44,13 @@ int fd_spi_xfer(struct spec_fd *fd, int ss, int num_bits,
 }
 
 
-int fd_spi_init(struct spec_fd *fd)
+int fd_spi_init(struct fd_dev *fd)
 {
 	/* nothing to do */
 	return 0;
 }
 
-void fd_spi_exit(struct spec_fd *fd)
+void fd_spi_exit(struct fd_dev *fd)
 {
 	/* nothing to do */
 }

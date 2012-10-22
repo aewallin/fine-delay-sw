@@ -163,7 +163,7 @@ struct fd_ch {
 };
 
 /* This is the device we use all around */
-struct spec_fd {
+struct fd_dev {
 	spinlock_t lock;
 	unsigned long flags;
 	struct fmc_device *fmc;
@@ -217,11 +217,11 @@ static inline void fd_split_pico(uint64_t pico,
 	*frac = (*frac << 12) / 8000;
 }
 
-static inline uint32_t fd_readl(struct spec_fd *fd, unsigned long reg)
+static inline uint32_t fd_readl(struct fd_dev *fd, unsigned long reg)
 {
 	return readl(fd->regs + reg);
 }
-static inline void fd_writel(struct spec_fd *fd, uint32_t v, unsigned long reg)
+static inline void fd_writel(struct fd_dev *fd, uint32_t v, unsigned long reg)
 {
 	writel(v, fd->regs + reg);
 }
@@ -232,14 +232,14 @@ static inline void __check_chan(int x)
 }
 
 
-static inline uint32_t fd_ch_readl(struct spec_fd *fd, int ch,
+static inline uint32_t fd_ch_readl(struct fd_dev *fd, int ch,
 				   unsigned long reg)
 {
 	__check_chan(ch);
 	return fd_readl(fd, 0x100 + ch * 0x100 + reg);
 }
 
-static inline void fd_ch_writel(struct spec_fd *fd, int ch,
+static inline void fd_ch_writel(struct fd_dev *fd, int ch,
 				uint32_t v, unsigned long reg)
 {
 	__check_chan(ch);
@@ -299,66 +299,66 @@ static inline void __check_output(int x)
 #define FD_GPIO_CAL_DISABLE	0x0080		/* 0 enables calibration */
 
 /* Functions exported by spi.c */
-extern int fd_spi_xfer(struct spec_fd *fd, int ss, int num_bits,
+extern int fd_spi_xfer(struct fd_dev *fd, int ss, int num_bits,
 		       uint32_t in, uint32_t *out);
-extern int fd_spi_init(struct spec_fd *fd);
-extern void fd_spi_exit(struct spec_fd *fd);
+extern int fd_spi_init(struct fd_dev *fd);
+extern void fd_spi_exit(struct fd_dev *fd);
 
 /* Functions exported by pll.c */
-extern int fd_pll_init(struct spec_fd *fd);
-extern void fd_pll_exit(struct spec_fd *fd);
+extern int fd_pll_init(struct fd_dev *fd);
+extern void fd_pll_exit(struct fd_dev *fd);
 
 /* Functions exported by onewire.c */
-extern int fd_onewire_init(struct spec_fd *fd);
-extern void fd_onewire_exit(struct spec_fd *fd);
-extern int fd_read_temp(struct spec_fd *fd, int verbose);
+extern int fd_onewire_init(struct fd_dev *fd);
+extern void fd_onewire_exit(struct fd_dev *fd);
+extern int fd_read_temp(struct fd_dev *fd, int verbose);
 
 /* Functions exported by acam.c */
-extern int fd_acam_init(struct spec_fd *fd);
-extern void fd_acam_exit(struct spec_fd *fd);
-extern uint32_t acam_readl(struct spec_fd *fd, int reg);
-extern void acam_writel(struct spec_fd *fd, int val, int reg);
+extern int fd_acam_init(struct fd_dev *fd);
+extern void fd_acam_exit(struct fd_dev *fd);
+extern uint32_t acam_readl(struct fd_dev *fd, int reg);
+extern void acam_writel(struct fd_dev *fd, int val, int reg);
 
 /* Functions exported by calibrate.c, called within acam.c */
-extern int fd_calibrate_outputs(struct spec_fd *fd);
+extern int fd_calibrate_outputs(struct fd_dev *fd);
 extern void fd_update_calibration(unsigned long arg);
 extern int fd_calib_period_s;
 
 
 /* Functions exported by gpio.c */
-extern int fd_gpio_init(struct spec_fd *fd);
-extern void fd_gpio_exit(struct spec_fd *fd);
-extern void fd_gpio_dir(struct spec_fd *fd, int pin, int dir);
-extern void fd_gpio_val(struct spec_fd *fd, int pin, int val);
-extern void fd_gpio_set_clr(struct spec_fd *fd, int pin, int set);
-extern int fd_dump_mcp(struct spec_fd *fd);
+extern int fd_gpio_init(struct fd_dev *fd);
+extern void fd_gpio_exit(struct fd_dev *fd);
+extern void fd_gpio_dir(struct fd_dev *fd, int pin, int dir);
+extern void fd_gpio_val(struct fd_dev *fd, int pin, int val);
+extern void fd_gpio_set_clr(struct fd_dev *fd, int pin, int set);
+extern int fd_dump_mcp(struct fd_dev *fd);
 #define fd_gpio_set(fd, pin) fd_gpio_set_clr((fd), (pin), 1)
 #define fd_gpio_clr(fd, pin) fd_gpio_set_clr((fd), (pin), 0)
 
 /* Functions exported by time.c */
-extern int fd_time_init(struct spec_fd *fd);
-extern void fd_time_exit(struct spec_fd *fd);
-extern int fd_time_set(struct spec_fd *fd, struct fd_time *t,
+extern int fd_time_init(struct fd_dev *fd);
+extern void fd_time_exit(struct fd_dev *fd);
+extern int fd_time_set(struct fd_dev *fd, struct fd_time *t,
 		       struct timespec *ts);
-extern int fd_time_get(struct spec_fd *fd, struct fd_time *t,
+extern int fd_time_get(struct fd_dev *fd, struct fd_time *t,
 		       struct timespec *ts);
 
 /* Functions exported by fd-zio.c */
 extern int fd_zio_register(void);
 extern void fd_zio_unregister(void);
-extern int fd_zio_init(struct spec_fd *fd);
-extern void fd_zio_exit(struct spec_fd *fd);
+extern int fd_zio_init(struct fd_dev *fd);
+extern void fd_zio_exit(struct fd_dev *fd);
 
 /* Functions exported by fd-spec.c */
 extern int fd_spec_init(void);
 extern void fd_spec_exit(void);
 
 /* Functions exported by i2c.c */
-extern int fd_i2c_init(struct spec_fd *fd);
-extern void fd_i2c_exit(struct spec_fd *fd);
-extern int fd_eerom_read(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+extern int fd_i2c_init(struct fd_dev *fd);
+extern void fd_i2c_exit(struct fd_dev *fd);
+extern int fd_eerom_read(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			 void *buf, size_t size);
-extern int fd_eeprom_write(struct spec_fd *fd, int i2c_addr, uint32_t offset,
+extern int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			void *buf, size_t size);
 
 
