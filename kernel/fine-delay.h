@@ -176,9 +176,6 @@ struct fd_dev {
 	struct timer_list temp_timer;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
-	unsigned char __iomem *base;	/* regs files are byte-oriented */
-	unsigned char __iomem *regs;
-	unsigned char __iomem *ow_regs;
 	uint32_t bin;
 	int acam_addr;			/* cache of currently active addr */
 	uint8_t ds18_id[8];
