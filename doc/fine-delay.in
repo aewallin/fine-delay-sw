@@ -495,11 +495,9 @@ environment variables:
 @end table
 
 If any of the above is set, headers and dependencies for the
-respective package are taken from the chosen directory. If you follow
-this customization path, you should not @code{make prereq_install}
-(which doesn't obey the tree variables).
-@c FIXME: make ``prereq_install'' obey the custom variables.
-
+respective package are taken from the chosen directory. If you
+@code{make prereq_install} with any of these variables set, they'll 
+be used to know where to install from.
 
 @c ==========================================================================
 @node Module Parameters
@@ -568,7 +566,7 @@ framework:
         change the gateware for all boards, you may just replace
         the file in @file{/lib/firmware}. (Maybe I'll add an
         option to change the name at load time for all boards).
-@c FIXME: name for gateware file
+@c FIXME: name for gateware file (the global one)
 
 @end table
 

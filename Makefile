@@ -10,12 +10,16 @@ all clean modules install modules_install: gitmodules
 
 all modules: prereq
 
-# The following targets are used to manage prerequisite repositories
+#### The following targets are used to manage prerequisite repositories
 gitmodules:
 	@test -d fmc-bus/doc || echo "Checking out submodules"
 	@test -d fmc-bus/doc || git submodule init && git submodule update
 
-SUBMOD = fmc-bus spec-sw zio
+# The user can override, using evn variables, all these three:
+FMC_BUS ?= fmc-bus
+SPEC_SW ?= spec-sw
+ZIO ?= zio
+SUBMOD = $(FMC_BUS) $(SPEC_SW) $(ZIO)
 
 prereq:
 	for d in $(SUBMOD); do $(MAKE) -C $$d || exit 1; done
