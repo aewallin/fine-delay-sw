@@ -38,10 +38,7 @@ int fd_time_set(struct spec_fd *fd, struct fd_time *t, struct timespec *ts)
 			ts = &localts;
 			getnstimeofday(ts);
 		}
-		if (BITS_PER_LONG > 32)
-			fd_writel(fd, ts->tv_sec >> 32, FD_REG_TM_SECH);
-		else
-			fd_writel(fd, 0, FD_REG_TM_SECH);
+		fd_writel(fd, GET_HI32(ts->tv_sec), FD_REG_TM_SECH);
 		fd_writel(fd, (int32_t)ts->tv_sec, FD_REG_TM_SECL);
 		fd_writel(fd, ts->tv_nsec >> 3, FD_REG_TM_CYCLES);
 	}
