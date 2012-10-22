@@ -203,7 +203,7 @@ int fd_probe(struct fmc_device *fmc)
 	fmc->mezzanine_data = fd;
 	fd->fmc = fmc;
 	/* FIXME: don't use base below, but fmc_readl/fmc_writel */
-	fd->regs = fmc->base + 0x80000; /* sdb_find_device(cern, f19ede1a) */
+	fd->regs = fmc->base + FD_REGS_BASE; /* FIXME: remove this completely */
 	fd->ow_regs = fd->regs + 0x500;
 	fd->verbose = fd_verbose;
 	fd->calib = fd_default_calib;

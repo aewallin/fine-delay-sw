@@ -124,6 +124,8 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 #  endif
 #endif
 
+#define FD_REGS_BASE	0x80000 /* sdb_find_device(cern, f19ede1a) */
+
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
 	uint32_t magic;			/* magic ID: 0xf19ede1a */
