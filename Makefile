@@ -1,6 +1,6 @@
 
 .PHONY: all clean modules install modules_install
-.PHONY: gitmodules prereq prereq_install_warn prereq_install_warn
+.PHONY: gitmodules prereq prereq_install prereq_install_warn
 
 DIRS = kernel tools lib
 
@@ -13,9 +13,9 @@ all modules: prereq
 #### The following targets are used to manage prerequisite repositories
 gitmodules:
 	@test -d fmc-bus/doc || echo "Checking out submodules"
-	@test -d fmc-bus/doc || git submodule init && git submodule update
+	@test -d fmc-bus/doc || git submodule update --init
 
-# The user can override, using evn variables, all these three:
+# The user can override, using environment variables, all these three:
 FMC_BUS ?= fmc-bus
 SPEC_SW ?= spec-sw
 ZIO ?= zio

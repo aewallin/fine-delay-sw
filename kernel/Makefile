@@ -7,7 +7,7 @@ FMC_BUS ?= $(M)/../fmc-bus
 KBUILD_EXTRA_SYMBOLS := \
 	$(ZIO)/Module.symvers \
 	$(SPEC_SW)/kernel/Module.symvers \
-	$(FMC_BUS)/kernel/Module.sysmvers
+	$(FMC_BUS)/kernel/Module.symvers
 
 
 ccflags-y = \
