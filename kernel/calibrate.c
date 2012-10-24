@@ -21,10 +21,9 @@
 #include "hw/acam_gpx.h"
 #include "hw/fd_channel_regs.h"
 
-/* TEMP! */
+/* This is the same as in ./acam.c: use only at init time */
 static void acam_set_bypass(struct fd_dev *fd, int on)
 {
-	/* FIXME: this zeroes all other GCR bits */
 	fd_writel(fd, on ? FD_GCR_BYPASS : 0, FD_REG_GCR);
 }
 

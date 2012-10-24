@@ -158,6 +158,9 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 
 static int fd_wr_mode(struct fd_dev *fd, int on)
 {
+	unsigned long flags;
+
+	spin_lock_irqsave(&fd->lock, flags);
 	if (on) {
 		fd_writel(fd, FD_TCR_WR_ENABLE, FD_REG_TCR);
 		set_bit(FD_FLAG_WR_MODE, &fd->flags);
@@ -165,6 +168,7 @@ static int fd_wr_mode(struct fd_dev *fd, int on)
 		fd_writel(fd, 0, FD_REG_TCR);
 		clear_bit(FD_FLAG_WR_MODE, &fd->flags);
 	}
+	spin_unlock_irqrestore(&fd->lock, flags);
 	return 0;
 }
 
@@ -448,7 +452,7 @@ static int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	if (!chan->active_block)
 		return -EAGAIN;
 
-	/* Advance to the next fifo entry */
+	/* Fecth the fifo entry to registers, so we can read them */
 	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
 
 	/* First, read input data into a local struct to fix the offset */

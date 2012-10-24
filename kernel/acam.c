@@ -112,7 +112,7 @@ void acam_writel(struct fd_dev *fd, int val, int reg)
 
 static void acam_set_bypass(struct fd_dev *fd, int on)
 {
-	/* FIXME: this zeroes all other GCR bits */
+	/* warning: this clears the "input enable" bit: call at init only */
 	fd_writel(fd, on ? FD_GCR_BYPASS : 0, FD_REG_GCR);
 }
 
