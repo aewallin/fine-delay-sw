@@ -608,7 +608,7 @@ structure is described in the documentation of the
 
 @smallexample
 SDB: 00000651:e6a542c9 WB4-Crossbar-GSI
-SDB: 0000ce42:f19ede1a Fine Delay Core     (00080000-000807ff)
+SDB: 0000ce42:f19ede1a Fine-Delay-Core     (00080000-000807ff)
 SDB: 00000651:eef0b198 WB4-Bridge-GSI      (bridge: 000c0000)
 SDB:    00000651:e6a542c9 WB4-Crossbar-GSI
 SDB:    0000ce42:66cfeb52 WB4-BlockRAM        (000c0000-000d5fff)
