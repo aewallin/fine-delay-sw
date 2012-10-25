@@ -158,12 +158,28 @@ struct fd_calib_on_eeprom {
 
 #define FD_NUM_TAPS	1024	/* This is an hardware feature of SY89295U */
 #define FD_CAL_STEPS	1024	/* This is a parameter: must be power of 2 */
+#define FD_SW_FIFO_LEN	1024	/* Again, aa parameter: must be a power of 2 */
 
 struct fd_ch {
 	/* Offset between FRR measured at known T at startup and poly-fitted */
 	uint32_t frr_offset;
 	/* Fine range register for each ch, current value (after T comp.) */
 	uint32_t frr_cur;
+};
+
+/* Internal time: the first three fields should be converted to zio time */
+struct fd_time {
+	uint64_t utc;
+	uint32_t coarse;
+	uint32_t frac;
+	uint32_t channel;
+	uint32_t seq_id;
+};
+
+/* The software fifo is a circular buffer */
+struct fd_sw_fifo {
+	unsigned long head, tail;
+	struct fd_time *t;
 };
 
 /* This is the device we use all around */
@@ -184,6 +200,7 @@ struct fd_dev {
 	int verbose;
 	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
 	uint16_t mcp_iodir, mcp_olat;
+	struct fd_sw_fifo sw_fifo;
 };
 
 /* We act on flags using atomic ops, so flag is the number, not the mask */
@@ -197,15 +214,6 @@ enum fd_flags {
 	_FD_FLAG_DO_OUTPUT3,
 	_FD_FLAG_DO_OUTPUT4,
 	FD_FLAG_WR_MODE,
-};
-
-/* Internal time: the first three fields should be converted to zio time */
-struct fd_time {
-	uint64_t utc;
-	uint32_t coarse;
-	uint32_t frac;
-	uint32_t channel;
-	uint32_t seq_id;
 };
 
 /* Split a pico value into coarse and frac */

@@ -25,10 +25,12 @@
 
 #include <linux/fmc.h>
 
-#include "spec.h"
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 #include "hw/fd_channel_regs.h"
+
+static int fd_sw_fifo_len = FD_SW_FIFO_LEN;
+module_param_named(fifo_len, fd_sw_fifo_len, int, 0444);
 
 /* Subtract an offset (used for the input timestamp) */
 static void fd_ts_sub(struct fd_time *t, uint64_t pico)
@@ -169,6 +171,18 @@ int fd_irq_init(struct fd_dev *fd)
 		return -EINVAL;
 	}
 
+	/* Also, check that the sw fifo size is a power of two */
+	if (fd_sw_fifo_len & (fd_sw_fifo_len - 1)) {
+		pr_err("%s: fifo len must be a power of 2 (not %d = 0x%x)\n",
+		       KBUILD_MODNAME, fd_sw_fifo_len, fd_sw_fifo_len);
+		return -EINVAL;
+	}
+
+	fd->sw_fifo.t = kmalloc(fd_sw_fifo_len * sizeof(*fd->sw_fifo.t),
+				GFP_KERNEL);
+	if (!fd->sw_fifo.t)
+		return -ENOMEM;
+
 	setup_timer(&fd->fifo_timer, fd_timer_fn, (unsigned long)fd);
 	if (fd_timer_period_ms)
 		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
@@ -180,4 +194,5 @@ int fd_irq_init(struct fd_dev *fd)
 void fd_irq_exit(struct fd_dev *fd)
 {
 	del_timer_sync(&fd->fifo_timer);
+	kfree(fd->sw_fifo.t);
 }
