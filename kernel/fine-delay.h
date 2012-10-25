@@ -324,7 +324,6 @@ extern int fd_calibrate_outputs(struct fd_dev *fd);
 extern void fd_update_calibration(unsigned long arg);
 extern int fd_calib_period_s;
 
-
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct fd_dev *fd);
 extern void fd_gpio_exit(struct fd_dev *fd);
@@ -348,6 +347,13 @@ extern int fd_zio_register(void);
 extern void fd_zio_unregister(void);
 extern int fd_zio_init(struct fd_dev *fd);
 extern void fd_zio_exit(struct fd_dev *fd);
+extern void fd_apply_offset(uint32_t *a, int32_t off_pico);
+
+/* Functions exported by fd-irq.c */
+struct zio_channel;
+extern int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan);
+extern int fd_irq_init(struct fd_dev *fd);
+extern void fd_irq_exit(struct fd_dev *fd);
 
 /* Functions exported by fd-spec.c */
 extern int fd_spec_init(void);
@@ -360,8 +366,6 @@ extern int fd_eerom_read(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			 void *buf, size_t size);
 extern int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			void *buf, size_t size);
-
-
 
 #endif /* __KERNEL__ */
 #endif /* __FINE_DELAY_H__ */

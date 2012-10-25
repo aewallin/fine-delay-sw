@@ -228,8 +228,10 @@ int fd_probe(struct fmc_device *fmc)
 		}
 	}
 
-	/* Finally, enable the input */
-	fd_writel(fd, FD_GCR_INPUT_EN, FD_REG_GCR);
+	/* Finally, enable the input emgine */
+	ret = fd_irq_init(fd);
+	if (ret < 0)
+		goto err;
 
 	if (0) {
 		struct timespec ts1, ts2, ts3;
@@ -264,6 +266,7 @@ int fd_remove(struct fmc_device *fmc)
 	if (!test_bit(FD_FLAG_INITED, &fd->flags)) /* FIXME: ditch this */
 		return 0; /* No init, no exit */
 
+	fd_irq_exit(fd);
 	while (--i >= 0) {
 		m = mods + i;
 		if (m->exit)
