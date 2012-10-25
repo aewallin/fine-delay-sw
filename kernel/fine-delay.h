@@ -359,7 +359,7 @@ extern void fd_apply_offset(uint32_t *a, int32_t off_pico);
 
 /* Functions exported by fd-irq.c */
 struct zio_channel;
-extern int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan);
+extern int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan);
 extern int fd_irq_init(struct fd_dev *fd);
 extern void fd_irq_exit(struct fd_dev *fd);
 

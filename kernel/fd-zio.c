@@ -531,7 +531,7 @@ static int fd_zio_input(struct zio_cset *cset)
 		set_bit(FD_FLAG_DO_INPUT, &fd->flags);
 	}
 	/* Ready for input. If there's already something, return it now */
-	if (fd_read_fifo(fd, cset->chan) == 0) {
+	if (fd_read_sw_fifo(fd, cset->chan) == 0) {
 		return 0; /* don't call data_done, let the caller do it */
 	}
 	/* Mark the active block is valid, and return EAGAIN */

@@ -17,6 +17,7 @@
 #include <linux/timer.h>
 #include <linux/jiffies.h>
 #include <linux/bitops.h>
+#include <linux/spinlock.h>
 #include <linux/io.h>
 
 #include <linux/zio.h>
@@ -53,29 +54,26 @@ static void fd_ts_sub(struct fd_time *t, uint64_t pico)
 	}
 }
 
-int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan)
+/* This is called from outside, too */
+int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
-	uint32_t *v, reg;
+	uint32_t *v;
+	int i;
 	struct fd_time t;
+	unsigned long flags;
 
-	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
-		return -EAGAIN;
 	if (!chan->active_block)
 		return -EAGAIN;
+	if (fd->sw_fifo.tail == fd->sw_fifo.head)
+		return -EAGAIN;
 
-	/* Fecth the fifo entry to registers, so we can read them */
-	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
-
-	/* First, read input data into a local struct to fix the offset */
-	t.utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	t.utc <<= 32;
-	t.utc |= fd_readl(fd, FD_REG_TSBR_SECL);
-	t.coarse = fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
-	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	t.frac = FD_TSBR_FID_FINE_R(reg);
-	t.channel = FD_TSBR_FID_CHANNEL_R(reg);
-	t.seq_id = FD_TSBR_FID_SEQID_R(reg);
+	/* Copy the sample to local storage */
+	spin_lock_irqsave(&fd->lock, flags);
+	i = fd->sw_fifo.tail & (fd_sw_fifo_len - 1);
+	t = fd->sw_fifo.t[i];
+	fd->sw_fifo.tail++;
+	spin_unlock_irqrestore(&fd->lock, flags);
 
 	/* The coarse count may be negative, because of how it works */
 	if (t.coarse & (1<<27)) { // coarse is 28 bits
@@ -111,6 +109,49 @@ int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	return 0;
 }
 
+/* This is local: reads the hw fifo and stores to the sw fifo */
+static int fd_read_hw_fifo(struct fd_dev *fd)
+{
+	uint32_t reg;
+	struct fd_time *t;
+	unsigned long flags;
+	signed long diff;
+
+	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
+		return -EAGAIN;
+
+	t = fd->sw_fifo.t;
+	t += fd->sw_fifo.head & (fd_sw_fifo_len - 1);
+
+	/* Fetch the fifo entry to registers, so we can read them */
+	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
+
+	/* Read input data into the sofware fifo */
+	t->utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
+	t->utc <<= 32;
+	t->utc |= fd_readl(fd, FD_REG_TSBR_SECL);
+	t->coarse = fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
+	reg = fd_readl(fd, FD_REG_TSBR_FID);
+	t->frac = FD_TSBR_FID_FINE_R(reg);
+	t->channel = FD_TSBR_FID_CHANNEL_R(reg);
+	t->seq_id = FD_TSBR_FID_SEQID_R(reg);
+
+	/* Then, increment head and make some checks */
+	spin_lock_irqsave(&fd->lock, flags);
+	diff = fd->sw_fifo.head - fd->sw_fifo.tail;
+	fd->sw_fifo.head++;
+	if (diff >= fd_sw_fifo_len)
+		fd->sw_fifo.tail += fd_sw_fifo_len / 2;
+	spin_unlock_irqrestore(&fd->lock, flags);
+
+	BUG_ON(diff < 0);
+	if (diff >= fd_sw_fifo_len)
+		dev_warn(fd->fmc->hwdev, "Fifo overlow, dropped %i samples\n",
+			 fd_sw_fifo_len / 2);
+
+	return 0;
+}
+
 /*
  * We have a timer, used to poll for input samples, until the interrupt
  * is there. A timer duration of 0 selects the interrupt.
@@ -127,6 +168,10 @@ static void fd_timer_fn(unsigned long arg)
 	struct zio_device *zdev = fd->zdev;
 	int i;
 
+	/* Always read the hardware fifo until empty */
+	while (!fd_read_hw_fifo(fd))
+		;
+
 	if (zdev) {
 		chan = zdev->cset[0].chan;
 	} else {
@@ -134,12 +179,11 @@ static void fd_timer_fn(unsigned long arg)
 		goto out;
 	}
 
-	/* FIXME: manage an array of input samples */
 	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
 		goto out;
 
-	/* there is an active block, try reading fifo */
-	if (fd_read_fifo(fd, chan) == 0) {
+	/* there is an active block, try reading an accumulated sample */
+	if (fd_read_sw_fifo(fd, chan) == 0) {
 		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
 		chan->cset->trig->t_op->data_done(chan->cset);
 	}
