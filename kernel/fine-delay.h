@@ -127,6 +127,7 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 
 #define FD_REGS_BASE	0x80000 /* sdb_find_device(cern, f19ede1a) */
 #define FD_OWREGS_BASE	(FD_REGS_BASE + 0x500)
+#define FD_VIC_BASE	0x90000 /* sdb_find_device(cern, 00000013) */
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
@@ -190,6 +191,7 @@ struct fd_dev {
 	struct zio_device *zdev, *hwzdev;
 	struct timer_list fifo_timer;
 	struct timer_list temp_timer;
+	struct tasklet_struct tlet;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
 	uint32_t bin;

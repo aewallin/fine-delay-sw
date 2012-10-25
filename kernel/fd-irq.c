@@ -17,6 +17,7 @@
 #include <linux/timer.h>
 #include <linux/jiffies.h>
 #include <linux/bitops.h>
+#include <linux/gpio.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 
@@ -29,6 +30,7 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 #include "hw/fd_channel_regs.h"
+#include "hw/vic_regs.h"
 
 static int fd_sw_fifo_len = FD_SW_FIFO_LEN;
 module_param_named(fifo_len, fd_sw_fifo_len, int, 0444);
@@ -156,16 +158,18 @@ static int fd_read_hw_fifo(struct fd_dev *fd)
  * We have a timer, used to poll for input samples, until the interrupt
  * is there. A timer duration of 0 selects the interrupt.
  */
-static int fd_timer_period_ms = 10;
+static int fd_timer_period_ms = 0;
 module_param_named(timer_ms, fd_timer_period_ms, int, 0444);
 
 static int fd_timer_period_jiffies; /* converted from ms at init time */
 
-static void fd_timer_fn(unsigned long arg)
+/* This acts as either a timer or an interrupt tasklet */
+static void fd_tlet(unsigned long arg)
 {
 	struct fd_dev *fd = (void *)arg;
 	struct zio_channel *chan = NULL;
 	struct zio_device *zdev = fd->zdev;
+	struct fmc_device *fmc = fd->fmc;
 	int i;
 
 	/* Always read the hardware fifo until empty */
@@ -179,6 +183,7 @@ static void fd_timer_fn(unsigned long arg)
 		goto out;
 	}
 
+	/* FIXME: race condition */
 	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
 		goto out;
 
@@ -197,25 +202,67 @@ out:
 			pr_debug("called data_done\n");
 		}
 
-	mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
+	if (fd_timer_period_ms)
+		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
+	else {
+		/* ack at this point, but may be redundant */
+		fmc->op->irq_ack(fmc);
+		fmc_writel(fmc, 0, FD_VIC_BASE + VIC_REG_EOIR);
+	}
 }
+
+irqreturn_t fd_irq_handler(int irq, void *dev_id)
+{
+	struct fmc_device *fmc = dev_id;
+	struct fd_dev *fd = fmc->mezzanine_data;
+
+	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
+		goto out_unexpected; /* bah! */
+
+	/*
+	 * We must empty the fifo in hardware, and ack at this point.
+	 * I used to disable_irq() and empty the fifo in the tasklet,
+	 * but it doesn't work because the hw request is still pending
+	 */
+	while (!fd_read_hw_fifo(fd))
+		;
+	tasklet_schedule(&fd->tlet);
+
+out_unexpected:
+	/*
+	 * This may be an unexpected interrupt (it may not even be
+	 * use, but still on the SPEC we must ack, or the system locks
+	 * up, entering the interrupt again and again
+	 */
+	fmc->op->irq_ack(fmc);
+	fmc_writel(fmc, 0, FD_VIC_BASE + VIC_REG_EOIR);
+	return IRQ_HANDLED;
+}
+
+/* Unfortunately, on the spec this is GPIO9, i.e. IRQ(1) */
+static struct fmc_gpio fd_gpio_on[] = {
+	{
+		.gpio = FMC_GPIO_IRQ(1),
+		.mode = GPIOF_DIR_IN,
+		.irqmode = IRQF_TRIGGER_RISING,
+	}
+};
+
+static struct fmc_gpio fd_gpio_off[] = {
+	{
+		.gpio = FMC_GPIO_IRQ(1),
+		.mode = GPIOF_DIR_IN,
+		.irqmode = 0,
+	}
+};
 
 
 int fd_irq_init(struct fd_dev *fd)
 {
+	struct fmc_device *fmc = fd->fmc;
+	uint32_t vic_ctl;
 
-	/* This is not per-device, but it works anyways */
-	fd_timer_period_jiffies = msecs_to_jiffies(fd_timer_period_ms);
-	if (fd_timer_period_ms) {
-		pr_info("%s: using a timer for input stamps (%i ms)\n",
-			KBUILD_MODNAME, fd_timer_period_ms);
-	} else {
-		pr_info("%s: NOT using interrupt (not implemented)\n",
-			KBUILD_MODNAME);
-		return -EINVAL;
-	}
-
-	/* Also, check that the sw fifo size is a power of two */
+	/* Check that the sw fifo size is a power of two */
 	if (fd_sw_fifo_len & (fd_sw_fifo_len - 1)) {
 		pr_err("%s: fifo len must be a power of 2 (not %d = 0x%x)\n",
 		       KBUILD_MODNAME, fd_sw_fifo_len, fd_sw_fifo_len);
@@ -227,16 +274,55 @@ int fd_irq_init(struct fd_dev *fd)
 	if (!fd->sw_fifo.t)
 		return -ENOMEM;
 
-	setup_timer(&fd->fifo_timer, fd_timer_fn, (unsigned long)fd);
-	if (fd_timer_period_ms)
-		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
+	fd_timer_period_jiffies = msecs_to_jiffies(fd_timer_period_ms);
+	/*
+	 * According to the period, this can work with a timer (old way)
+	 * or a custom tasklet (newer). Init both anyways, no harm is done.
+	 */
+	setup_timer(&fd->fifo_timer, fd_tlet, (unsigned long)fd);
+	tasklet_init(&fd->tlet, fd_tlet, (unsigned long)fd);
 
+	if (fd_timer_period_ms) {
+		dev_info(fd->fmc->hwdev,"Using a timer for input (%i ms)\n",
+			 jiffies_to_msecs(fd_timer_period_jiffies));
+		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
+	} else {
+		dev_info(fd->fmc->hwdev, "Using interrupts for input\n");
+		fmc->op->irq_request(fmc, fd_irq_handler, "fine-delay",
+				     IRQF_SHARED);
+
+		/* Then, configure hardware: fd, then vic, finally carrier */
+
+		fd_writel(fd, FD_EIC_IER_TS_BUF_NOTEMPTY, FD_REG_EIC_IER);
+
+		/* 4us edge emulation timer (counts in 16ns steps) */
+		vic_ctl = VIC_CTL_EMU_EDGE | VIC_CTL_EMU_LEN_W(4000 / 16);
+		fmc_writel(fmc, vic_ctl | VIC_CTL_ENABLE | VIC_CTL_POL,
+			   FD_VIC_BASE + VIC_REG_CTL);
+		fmc_writel(fmc, 1, FD_VIC_BASE + VIC_REG_IER);
+
+		fmc->op->gpio_config(fmc, fd_gpio_on, ARRAY_SIZE(fd_gpio_on));
+	}
+
+	/* let it run... */
 	fd_writel(fd, FD_GCR_INPUT_EN, FD_REG_GCR);
+
 	return 0;
 }
 
 void fd_irq_exit(struct fd_dev *fd)
 {
-	del_timer_sync(&fd->fifo_timer);
+	struct fmc_device *fmc = fd->fmc;
+
+	if (fd_timer_period_ms) {
+		del_timer_sync(&fd->fifo_timer);
+	} else {
+		/* disable interrupts: first carrier, than vic, then fd */
+		fmc->op->gpio_config(fmc, fd_gpio_off, ARRAY_SIZE(fd_gpio_off));
+		fmc_writel(fmc, 1, FD_VIC_BASE + VIC_REG_IDR);
+		fd_writel(fd, ~0, FD_REG_EIC_IDR);
+		fmc_writel(fmc, VIC_CTL_POL, FD_VIC_BASE + VIC_REG_CTL);
+		fmc->op->irq_free(fmc);
+	}
 	kfree(fd->sw_fifo.t);
 }
