@@ -127,6 +127,7 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 
 #define FD_REGS_BASE	0x80000 /* sdb_find_device(cern, f19ede1a) */
 #define FD_OWREGS_BASE	(FD_REGS_BASE + 0x500)
+#define FD_VIC_BASE	0x90000 /* sdb_find_device(cern, 00000013) */
 
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
@@ -158,12 +159,28 @@ struct fd_calib_on_eeprom {
 
 #define FD_NUM_TAPS	1024	/* This is an hardware feature of SY89295U */
 #define FD_CAL_STEPS	1024	/* This is a parameter: must be power of 2 */
+#define FD_SW_FIFO_LEN	1024	/* Again, aa parameter: must be a power of 2 */
 
 struct fd_ch {
 	/* Offset between FRR measured at known T at startup and poly-fitted */
 	uint32_t frr_offset;
 	/* Fine range register for each ch, current value (after T comp.) */
 	uint32_t frr_cur;
+};
+
+/* Internal time: the first three fields should be converted to zio time */
+struct fd_time {
+	uint64_t utc;
+	uint32_t coarse;
+	uint32_t frac;
+	uint32_t channel;
+	uint32_t seq_id;
+};
+
+/* The software fifo is a circular buffer */
+struct fd_sw_fifo {
+	unsigned long head, tail;
+	struct fd_time *t;
 };
 
 /* This is the device we use all around */
@@ -174,6 +191,7 @@ struct fd_dev {
 	struct zio_device *zdev, *hwzdev;
 	struct timer_list fifo_timer;
 	struct timer_list temp_timer;
+	struct tasklet_struct tlet;
 	struct fd_calib calib;
 	struct fd_ch ch[FD_CH_NUMBER];
 	uint32_t bin;
@@ -184,6 +202,7 @@ struct fd_dev {
 	int verbose;
 	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
 	uint16_t mcp_iodir, mcp_olat;
+	struct fd_sw_fifo sw_fifo;
 };
 
 /* We act on flags using atomic ops, so flag is the number, not the mask */
@@ -197,15 +216,6 @@ enum fd_flags {
 	_FD_FLAG_DO_OUTPUT3,
 	_FD_FLAG_DO_OUTPUT4,
 	FD_FLAG_WR_MODE,
-};
-
-/* Internal time: the first three fields should be converted to zio time */
-struct fd_time {
-	uint64_t utc;
-	uint32_t coarse;
-	uint32_t frac;
-	uint32_t channel;
-	uint32_t seq_id;
 };
 
 /* Split a pico value into coarse and frac */
@@ -324,7 +334,6 @@ extern int fd_calibrate_outputs(struct fd_dev *fd);
 extern void fd_update_calibration(unsigned long arg);
 extern int fd_calib_period_s;
 
-
 /* Functions exported by gpio.c */
 extern int fd_gpio_init(struct fd_dev *fd);
 extern void fd_gpio_exit(struct fd_dev *fd);
@@ -348,6 +357,13 @@ extern int fd_zio_register(void);
 extern void fd_zio_unregister(void);
 extern int fd_zio_init(struct fd_dev *fd);
 extern void fd_zio_exit(struct fd_dev *fd);
+extern void fd_apply_offset(uint32_t *a, int32_t off_pico);
+
+/* Functions exported by fd-irq.c */
+struct zio_channel;
+extern int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan);
+extern int fd_irq_init(struct fd_dev *fd);
+extern void fd_irq_exit(struct fd_dev *fd);
 
 /* Functions exported by fd-spec.c */
 extern int fd_spec_init(void);
@@ -360,8 +376,6 @@ extern int fd_eerom_read(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			 void *buf, size_t size);
 extern int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			void *buf, size_t size);
-
-
 
 #endif /* __KERNEL__ */
 #endif /* __FINE_DELAY_H__ */

@@ -359,29 +359,8 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 }
 
 /*
- * We are over with attributes, now there's real I/O
+ * We are over with attributes, now there's real I/O (part is in fd-irq.c)
  */
-
-/* Subtract an offset (used for the input timestamp) */
-static void fd_ts_sub(struct fd_time *t, uint64_t pico)
-{
-	uint32_t coarse, frac;
-
-	/* FIXME: we really need to pre-convert pico to internal repres. */
-	fd_split_pico(pico, &coarse, &frac);
-	if (t->frac >= frac) {
-		t->frac -= frac;
-	} else {
-		t->frac = 4096 + t->frac - frac;
-		coarse++;
-	}
-	if (t->coarse >= coarse) {
-		t->coarse -= coarse;
-	} else {
-		t->coarse = 125*1000*1000 + t->coarse - coarse;
-		t->utc--;
-	}
-}
 
 /* We need to change the time in attribute tuples, so here it is */
 enum attrs {__UTC_H, __UTC_L, __COARSE, __FRAC}; /* the order of our attrs */
@@ -431,7 +410,7 @@ static void fd_attr_add(uint32_t *a, uint32_t pico)
 	}
 }
 
-static inline void __fd_apply_offset(uint32_t *a, int32_t off_pico)
+void fd_apply_offset(uint32_t *a, int32_t off_pico)
 {
 	if (off_pico) {
 		if (off_pico > 0)
@@ -439,109 +418,6 @@ static inline void __fd_apply_offset(uint32_t *a, int32_t off_pico)
 		else
 			fd_attr_sub(a, -off_pico);
 	}
-}
-
-static int fd_read_fifo(struct fd_dev *fd, struct zio_channel *chan)
-{
-	struct zio_control *ctrl;
-	uint32_t *v, reg;
-	struct fd_time t;
-
-	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
-		return -EAGAIN;
-	if (!chan->active_block)
-		return -EAGAIN;
-
-	/* Fecth the fifo entry to registers, so we can read them */
-	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
-
-	/* First, read input data into a local struct to fix the offset */
-	t.utc = fd_readl(fd, FD_REG_TSBR_SECH) & 0xff;
-	t.utc <<= 32;
-	t.utc |= fd_readl(fd, FD_REG_TSBR_SECL);
-	t.coarse = fd_readl(fd, FD_REG_TSBR_CYCLES) & 0xfffffff;
-	reg = fd_readl(fd, FD_REG_TSBR_FID);
-	t.frac = FD_TSBR_FID_FINE_R(reg);
-	t.channel = FD_TSBR_FID_CHANNEL_R(reg);
-	t.seq_id = FD_TSBR_FID_SEQID_R(reg);
-
-	/* The coarse count may be negative, because of how it works */
-	if (t.coarse & (1<<27)) { // coarse is 28 bits
-		/* we may get 0xfff.ffef..0xffff.ffff -- 125M == 0x773.5940 */
-		t.coarse += 125000000;
-		t.coarse &= 0xfffffff;
-		t.utc--;
-	} else if(t.coarse > 125000000) {
-		t.coarse -= 125000000;
-		t.utc++;
-	}
-
-	fd_ts_sub(&t, fd->calib.tdc_zero_offset);
-
-	/* The input data is written to attribute values in the active block. */
-	ctrl = zio_get_ctrl(chan->active_block);
-	v = ctrl->attr_channel.ext_val;
-	v[FD_ATTR_TDC_UTC_H]	= t.utc >> 32;
-	v[FD_ATTR_TDC_UTC_L]	= t.utc;
-	v[FD_ATTR_TDC_COARSE]	= t.coarse;
-	v[FD_ATTR_TDC_FRAC]	= t.frac;
-	v[FD_ATTR_TDC_SEQ]	= t.seq_id;
-	v[FD_ATTR_TDC_CHAN]	= t.channel;
-	v[FD_ATTR_TDC_FLAGS]	= fd->calib.tdc_flags;
-	v[FD_ATTR_TDC_OFFSET]	= fd->calib.tdc_zero_offset;
-	v[FD_ATTR_TDC_USER_OFF]	= fd->calib.tdc_user_offset;
-
-	__fd_apply_offset(v + FD_ATTR_TDC_UTC_H, fd->calib.tdc_user_offset);
-
-	/* We also need a copy within the device, so sysfs can read it */
-	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));
-
-	return 0;
-}
-
-/*
- * We have a timer, used to poll for input samples, until the interrupt
- * is there. A timer duration of 0 selects the interrupt.
- */
-static int fd_timer_period_ms = 10;
-module_param_named(timer_ms, fd_timer_period_ms, int, 0444);
-
-static int fd_timer_period_jiffies; /* converted from ms at init time */
-
-static void fd_timer_fn(unsigned long arg)
-{
-	struct fd_dev *fd = (void *)arg;
-	struct zio_channel *chan = NULL;
-	struct zio_device *zdev = fd->zdev;
-	int i;
-
-	if (zdev) {
-		chan = zdev->cset[0].chan;
-	} else {
-		/* nobody read the device so far: we lack the information */
-		goto out;
-	}
-
-	/* FIXME: manage an array of input samples */
-	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
-		goto out;
-
-	/* there is an active block, try reading fifo */
-	if (fd_read_fifo(fd, chan) == 0) {
-		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
-		chan->cset->trig->t_op->data_done(chan->cset);
-	}
-
-out:
-	/* Check all output channels with a pending block (FIXME: bad) */
-	for (i = 1; i < 5; i++)
-		if (test_and_clear_bit(FD_FLAG_DO_OUTPUT + i, &fd->flags)) {
-			struct zio_cset *cset = fd->zdev->cset + i;
-			cset->ti->t_op->data_done(cset);
-			pr_debug("called data_done\n");
-		}
-
-	mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 }
 
 /* Internal output engine */
@@ -562,7 +438,7 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 			    fd->calib.zero_offset[ch]);
 	}
 
-	__fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
+	fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
 			  fd->calib.ch_user_offset[ch]);
 
 	fd_ch_writel(fd, ch, fd->ch[ch].frr_cur,  FD_REG_FRR);
@@ -655,7 +531,7 @@ static int fd_zio_input(struct zio_cset *cset)
 		set_bit(FD_FLAG_DO_INPUT, &fd->flags);
 	}
 	/* Ready for input. If there's already something, return it now */
-	if (fd_read_fifo(fd, cset->chan) == 0) {
+	if (fd_read_sw_fifo(fd, cset->chan) == 0) {
 		return 0; /* don't call data_done, let the caller do it */
 	}
 	/* Mark the active block is valid, and return EAGAIN */
@@ -785,16 +661,6 @@ int fd_zio_register(void)
 	if (err)
 		return err;
 
-	fd_timer_period_jiffies = msecs_to_jiffies(fd_timer_period_ms);
-	if (fd_timer_period_ms) {
-		pr_info("%s: using a timer for input stamps (%i ms)\n",
-			KBUILD_MODNAME, fd_timer_period_ms);
-	} else {
-		pr_info("%s: NOT using interrupt (not implemented)\n",
-			KBUILD_MODNAME);
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
@@ -840,15 +706,11 @@ int fd_zio_init(struct fd_dev *fd)
 		return err;
 	}
 
-	setup_timer(&fd->fifo_timer, fd_timer_fn, (unsigned long)fd);
-	if (fd_timer_period_ms)
-		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 	return 0;
 }
 
 void fd_zio_exit(struct fd_dev *fd)
 {
-	del_timer_sync(&fd->fifo_timer);
 	zio_unregister_device(fd->hwzdev);
 	zio_free_device(fd->hwzdev);
 }
