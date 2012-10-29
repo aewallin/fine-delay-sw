@@ -60,6 +60,7 @@ static void fd_ts_sub(struct fd_time *t, uint64_t pico)
 int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
+	struct zio_ti *ti = chan->cset->ti;
 	uint32_t *v;
 	int i;
 	struct fd_time t;
@@ -89,6 +90,11 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	}
 
 	fd_ts_sub(&t, fd->calib.tdc_zero_offset);
+
+	/* Write the timestamp in the trigger, it will reach the control */
+	ti->tstamp.tv_sec = t.utc;
+	ti->tstamp.tv_nsec = t.coarse * 8;
+	ti->tstamp_extra = t.frac;
 
 	/* The input data is written to attribute values in the active block. */
 	ctrl = zio_get_ctrl(chan->active_block);
