@@ -14,6 +14,7 @@ all modules: prereq
 gitmodules:
 	@test -d fmc-bus/doc || echo "Checking out submodules"
 	@test -d fmc-bus/doc || git submodule update --init
+	@git submodule update
 
 # The user can override, using environment variables, all these three:
 FMC_BUS ?= fmc-bus
