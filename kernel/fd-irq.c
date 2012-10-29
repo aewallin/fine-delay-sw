@@ -170,7 +170,6 @@ static void fd_tlet(unsigned long arg)
 	struct zio_channel *chan = NULL;
 	struct zio_device *zdev = fd->zdev;
 	struct fmc_device *fmc = fd->fmc;
-	int i;
 
 	/* Always read the hardware fifo until empty */
 	while (!fd_read_hw_fifo(fd))
@@ -194,14 +193,6 @@ static void fd_tlet(unsigned long arg)
 	}
 
 out:
-	/* Check all output channels with a pending block (FIXME: bad) */
-	for (i = 1; i < 5; i++)
-		if (test_and_clear_bit(FD_FLAG_DO_OUTPUT + i, &fd->flags)) {
-			struct zio_cset *cset = fd->zdev->cset + i;
-			cset->ti->t_op->data_done(cset);
-			pr_debug("called data_done\n");
-		}
-
 	if (fd_timer_period_ms)
 		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 	else {

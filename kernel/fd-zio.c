@@ -505,12 +505,7 @@ static int fd_zio_output(struct zio_cset *cset)
 			       i == FD_ATTR_OUT__LAST -1 ? '\n' : ' ');
 	}
 	__fd_zio_output(fd, cset->index, ctrl->attr_channel.ext_val);
-	/*
-	 * There's a buglet in this version of zio: we can't
-	 * just return 0 to say "done". We need to do it later.
-	 */
-	set_bit(FD_FLAG_DO_OUTPUT + cset->index, &fd->flags);
-	return -EAGAIN;
+	return 0; /* already done */
 }
 
 /*
