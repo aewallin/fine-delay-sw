@@ -184,7 +184,8 @@ int fd_probe(struct fmc_device *fmc)
 	/* FIXME: factorize the following stuff */
 	/* Verify that we have SDB at offset 0 */
 	if (fmc_readl(fmc, 0) != 0x5344422d) {
-		dev_err(dev, "Can't find SDB magic\n");
+		dev_err(dev, "Can't find SDB magic (got 0x%x)\n",
+			fmc_readl(fmc, 0));
 		ret = -ENODEV;
 		goto out;
 	}
