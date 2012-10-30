@@ -288,8 +288,15 @@ int fd_irq_init(struct fd_dev *fd)
 		fmc->op->irq_request(fmc, fd_irq_handler, "fine-delay",
 				     IRQF_SHARED);
 
-		/* Then, configure hardware: fd, then vic, finally carrier */
+		/*
+		 * Then, configure the hardware: first fine delay,
+		 * then vic, and finally the carrier
+		 */
 
+		/* current VHDL has a buglet: timeout is 8ns, not 1ms each */
+		fd_writel(fd, FD_TSBIR_TIMEOUT_W(10) /* should be ms */
+			  | FD_TSBIR_THRESHOLD_W(15), /* samples */
+			  FD_REG_TSBIR);
 		fd_writel(fd, FD_EIC_IER_TS_BUF_NOTEMPTY, FD_REG_EIC_IER);
 
 		/* 4us edge emulation timer (counts in 16ns steps) */
