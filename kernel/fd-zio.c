@@ -498,8 +498,7 @@ static int fd_zio_output(struct zio_cset *cset)
 	ctrl = zio_get_ctrl(cset->chan->active_block);
 
 	if (fd->verbose > 1) {
-		for (i = 0; i < 4; i++)
-			pr_info("%s: attrs: ", __func__);
+		pr_info("%s: attrs for cset %i: ", __func__, cset->index);
 		for (i = FD_ATTR_DEV__LAST; i < FD_ATTR_OUT__LAST; i++)
 			printk("%08x%c", ctrl->attr_channel.ext_val[i],
 			       i == FD_ATTR_OUT__LAST -1 ? '\n' : ' ');
