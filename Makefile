@@ -10,6 +10,10 @@ all clean modules install modules_install: gitmodules
 
 all modules: prereq
 
+# a hack, to prevent compiling wr-nic.ko, which won't work on older kernels
+CONFIG_WR_NIC=n
+export CONFIG_WR_NIC
+
 #### The following targets are used to manage prerequisite repositories
 gitmodules:
 	@test -d fmc-bus/doc || echo "Checking out submodules"
