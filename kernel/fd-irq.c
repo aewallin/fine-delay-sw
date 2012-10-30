@@ -96,8 +96,13 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	ti->tstamp.tv_nsec = t.coarse * 8;
 	ti->tstamp_extra = t.frac;
 
+	/*
+	 * This is different than it was. We used to fill the active block,
+	 * but now zio copies chan->current_ctrl at a later time, so we
+	 * must fill _those_ attributes instead
+	 */
 	/* The input data is written to attribute values in the active block. */
-	ctrl = zio_get_ctrl(chan->active_block);
+	ctrl = chan->current_ctrl;
 	v = ctrl->attr_channel.ext_val;
 	v[FD_ATTR_TDC_UTC_H]	= t.utc >> 32;
 	v[FD_ATTR_TDC_UTC_L]	= t.utc;
