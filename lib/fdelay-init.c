@@ -43,6 +43,7 @@ int fdelay_init(void)
 	/* Look for boards in /dev: old and new pathnames: only one matches */
 	glob("/dev/fd-*-0-0-ctrl", 0, NULL, &glob_dev);
 	glob("/dev/zio/fd-*-0-0-ctrl", GLOB_APPEND, NULL, &glob_dev);
+	glob("/dev/zio-fd-*-0-0-ctrl", GLOB_APPEND, NULL, &glob_dev);
 	glob("/dev/zio/zio-fd-*-0-0-ctrl", GLOB_APPEND, NULL, &glob_dev);
 
 	/* And look in /sys as well */
