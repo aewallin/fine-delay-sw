@@ -148,21 +148,21 @@ int fd_probe(struct fmc_device *fmc)
 
 	fd = kzalloc(sizeof(*fd), GFP_KERNEL);
 	if (!fd) {
-		dev_err(fmc->hwdev, "can't allocate device\n");
+		dev_err(dev, "can't allocate device\n");
 		return -ENOMEM;
 	}
 
 	if (strcmp (fmc->carrier_name, "SPEC")) {
-		dev_err(fmc->hwdev, "driver \"%s\" only works on SPEC card\n",
+		dev_err(dev, "driver \"%s\" only works on SPEC card\n",
 			KBUILD_MODNAME);
-		dev_err(fmc->hwdev, "support for carrier \"%s\" is missing\n",
+		dev_err(dev, "support for carrier \"%s\" is missing\n",
 			fmc->carrier_name);
 		return -ENODEV;
 	}
 
 	index = fmc->op->validate(fmc, &fd_drv);
 	if (index < 0) {
-		dev_info(fmc->hwdev, "not using \"%s\" according to "
+		dev_info(dev, "not using \"%s\" according to "
 			 "modparam\n", KBUILD_MODNAME);
 		return -ENODEV;
 	}
@@ -173,7 +173,7 @@ int fd_probe(struct fmc_device *fmc)
 	ret = fmc->op->reprogram(fmc, &fd_drv, fwname);
 	if (ret < 0) {
 		if (ret == -ESRCH) {
-			dev_info(fmc->hwdev, "%s: no gateware at index %i\n",
+			dev_info(dev, "%s: no gateware at index %i\n",
 				 KBUILD_MODNAME, index);
 			return -ENODEV;
 		}
@@ -205,10 +205,10 @@ int fd_probe(struct fmc_device *fmc)
 
 	/* Check the binary is there */
 	if (fd_readl(fd, FD_REG_IDR) != FD_MAGIC_FPGA) {
-		dev_err(fmc->hwdev, "wrong gateware\n");
+		dev_err(dev, "wrong gateware\n");
 		return -ENODEV;
 	} else {
-		dev_info(fmc->hwdev, "%s: initializing\n", KBUILD_MODNAME);
+		dev_info(dev, "%s: initializing\n", KBUILD_MODNAME);
 	}
 
 	/* First, hardware reset */
