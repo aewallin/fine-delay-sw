@@ -142,7 +142,6 @@ int fd_probe(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
 	struct fd_dev *fd;
-	struct spec_dev *spec;
 	struct device *dev = fmc->hwdev;
 	char *fwname;
 	int i, index, ret;
@@ -197,8 +196,6 @@ int fd_probe(struct fmc_device *fmc)
 	}
 	if (fd_show_sdb)
 		fmc_show_sdb_tree(fmc);
-
-	spec = fmc->carrier_data;
 
 	spin_lock_init(&fd->lock);
 	fmc->mezzanine_data = fd;
