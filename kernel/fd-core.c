@@ -152,15 +152,6 @@ int fd_probe(struct fmc_device *fmc)
 		return -ENOMEM;
 	}
 
-	if (strcmp(fmc->carrier_name, "SPEC") &&
-	    strcmp(fmc->carrier_name, "SVEC") ) {
-		dev_err(dev, "driver \"%s\" only works on "
-			"SPEC/SVEC cards\n", KBUILD_MODNAME);
-		dev_err(dev, "support for carrier \"%s\" is missing\n",
-			fmc->carrier_name);
-		return -ENODEV;
-	}
-
 	index = fmc->op->validate(fmc, &fd_drv);
 	if (index < 0) {
 		dev_info(dev, "not using \"%s\" according to "
@@ -181,25 +172,22 @@ int fd_probe(struct fmc_device *fmc)
 		return ret; /* other error: pass over */
 	}
 
-	if (!strcmp(fmc->carrier_name, "SPEC")) {
-		/* This is spec-specific by now. FIXME: factorize sdb */
-
-		/* Verify that we have SDB at offset 0 */
-		if (fmc_readl(fmc, 0) != 0x5344422d) {
-			dev_err(dev, "Can't find SDB magic (got 0x%x)\n",
-				fmc_readl(fmc, 0));
-			ret = -ENODEV;
-			goto out;
-		}
-		dev_info(dev, "Gateware successfully loaded\n");
-
-		if ( (ret = fmc_scan_sdb_tree(fmc, 0)) < 0) {
-			dev_err(dev, "scan fmc failed %i\n", ret);
-			goto out;
-		}
-		if (fd_show_sdb)
-			fmc_show_sdb_tree(fmc);
+	/* All our FPGA images are expected to have SDB at offset 0 */
+	if (fmc_readl(fmc, 0) != 0x5344422d) {
+		dev_err(dev, "Can't find SDB magic (got 0x%x)\n",
+			fmc_readl(fmc, 0));
+		ret = -ENODEV;
+		goto out;
 	}
+	dev_info(dev, "Gateware successfully loaded\n");
+
+	if ( (ret = fmc_scan_sdb_tree(fmc, 0)) < 0) {
+		dev_err(dev, "scan fmc failed %i\n", ret);
+		goto out;
+	}
+	if (fd_show_sdb)
+		fmc_show_sdb_tree(fmc);
+
 	spin_lock_init(&fd->lock);
 	fmc->mezzanine_data = fd;
 	fd->fmc = fmc;
