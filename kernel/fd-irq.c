@@ -209,7 +209,7 @@ out:
 	else {
 		/* ack at this point, but may be redundant */
 		fmc->op->irq_ack(fmc);
-		fmc_writel(fmc, 0, FD_VIC_BASE + VIC_REG_EOIR);
+		fmc_writel(fmc, 0, fd->fd_vic_base + VIC_REG_EOIR);
 	}
 }
 
@@ -237,7 +237,7 @@ out_unexpected:
 	 * up, entering the interrupt again and again
 	 */
 	fmc->op->irq_ack(fmc);
-	fmc_writel(fmc, 0, FD_VIC_BASE + VIC_REG_EOIR);
+	fmc_writel(fmc, 0, fd->fd_vic_base + VIC_REG_EOIR);
 	return IRQ_HANDLED;
 }
 
@@ -307,8 +307,8 @@ int fd_irq_init(struct fd_dev *fd)
 		/* 4us edge emulation timer (counts in 16ns steps) */
 		vic_ctl = VIC_CTL_EMU_EDGE | VIC_CTL_EMU_LEN_W(4000 / 16);
 		fmc_writel(fmc, vic_ctl | VIC_CTL_ENABLE | VIC_CTL_POL,
-			   FD_VIC_BASE + VIC_REG_CTL);
-		fmc_writel(fmc, 1, FD_VIC_BASE + VIC_REG_IER);
+			   fd->fd_vic_base + VIC_REG_CTL);
+		fmc_writel(fmc, 1, fd->fd_vic_base + VIC_REG_IER);
 
 		fmc->op->gpio_config(fmc, fd_gpio_on, ARRAY_SIZE(fd_gpio_on));
 	}
@@ -328,9 +328,9 @@ void fd_irq_exit(struct fd_dev *fd)
 	} else {
 		/* disable interrupts: first carrier, than vic, then fd */
 		fmc->op->gpio_config(fmc, fd_gpio_off, ARRAY_SIZE(fd_gpio_off));
-		fmc_writel(fmc, 1, FD_VIC_BASE + VIC_REG_IDR);
+		fmc_writel(fmc, 1, fd->fd_vic_base + VIC_REG_IDR);
 		fd_writel(fd, ~0, FD_REG_EIC_IDR);
-		fmc_writel(fmc, VIC_CTL_POL, FD_VIC_BASE + VIC_REG_CTL);
+		fmc_writel(fmc, VIC_CTL_POL, fd->fd_vic_base + VIC_REG_CTL);
 		fmc->op->irq_free(fmc);
 	}
 	kfree(fd->sw_fifo.t);

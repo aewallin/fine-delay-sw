@@ -22,8 +22,7 @@
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
 
-/* The eeprom is at address 0x50, and the structure lives at 6kB */
-#define I2C_ADDR 0x50
+/* The eeprom is geographically addressed, and the structure lives at 6kB */
 #define I2C_OFFSET (6*1024)
 
 /* At factory config time, it's possible to load a file and/or write eeprom */
@@ -256,7 +255,7 @@ int fd_i2c_init(struct fd_dev *fd)
 		u8 buf[8];
 		int i;
 
-		fd_eeprom_read(fd, I2C_ADDR, I2C_OFFSET, buf, 8);
+		fd_eeprom_read(fd, fd->fmc->eeprom_addr, I2C_OFFSET, buf, 8);
 		printk("read: ");
 		for (i = 0; i < 8; i++)
 			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
@@ -265,14 +264,15 @@ int fd_i2c_init(struct fd_dev *fd)
 		printk("write: ");
 		for (i = 0; i < 8; i++)
 			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
-		fd_eeprom_write(fd, I2C_ADDR, I2C_OFFSET, buf, 8);
+		fd_eeprom_write(fd, fd->fmc->eeprom_addr, I2C_OFFSET, buf, 8);
 	}
 
 	/* Retrieve and validate the calibration */
 	cal_ee = kzalloc(sizeof(*cal_ee), GFP_KERNEL);
 	if (!cal_ee)
 		return -ENOMEM;
-	i = fd_eeprom_read(fd, I2C_ADDR, I2C_OFFSET, cal_ee, sizeof(*cal_ee));
+	i = fd_eeprom_read(fd, fd->fmc->eeprom_addr, I2C_OFFSET,
+			   cal_ee, sizeof(*cal_ee));
 	if (i != sizeof(*cal_ee)) {
 		pr_err("%s: cannot read_eeprom\n", __func__);
 		goto load;
@@ -305,8 +305,8 @@ load:
 	cal_ee->version = 1;
 
 	if (calibration_save) {
-		i = fd_eeprom_write(fd, I2C_ADDR, I2C_OFFSET, cal_ee,
-				    sizeof(*cal_ee));
+		i = fd_eeprom_write(fd, fd->fmc->eeprom_addr, I2C_OFFSET,
+				    cal_ee, sizeof(*cal_ee));
 		if (i != sizeof(*cal_ee)) {
 			pr_err("%s: error in writing calibration to eeprom\n",
 			       __func__);

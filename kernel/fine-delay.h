@@ -125,10 +125,6 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 #  endif
 #endif
 
-#define FD_REGS_BASE	0x80000 /* sdb_find_device(cern, f19ede1a) */
-#define FD_OWREGS_BASE	(FD_REGS_BASE + 0x500)
-#define FD_VIC_BASE	0x90000 /* sdb_find_device(cern, 00000013) */
-
 struct fd_calib {
 	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
 	uint32_t magic;			/* magic ID: 0xf19ede1a */
@@ -187,6 +183,9 @@ struct fd_sw_fifo {
 struct fd_dev {
 	spinlock_t lock;
 	unsigned long flags;
+	int fd_regs_base;		/* sdb_find_device(cern, f19ede1a) */
+	int fd_owregs_base;		/* regs_base + 0x500 */
+	int fd_vic_base;		/* sdb_find_device(cern, 00000013) */
 	struct fmc_device *fmc;
 	struct zio_device *zdev, *hwzdev;
 	struct timer_list fifo_timer;
@@ -225,11 +224,11 @@ static inline void fd_split_pico(uint64_t pico,
 
 static inline uint32_t fd_readl(struct fd_dev *fd, unsigned long reg)
 {
-	return fmc_readl(fd->fmc, FD_REGS_BASE + reg);
+	return fmc_readl(fd->fmc, fd->fd_regs_base + reg);
 }
 static inline void fd_writel(struct fd_dev *fd, uint32_t v, unsigned long reg)
 {
-	fmc_writel(fd->fmc, v, FD_REGS_BASE + reg);
+	fmc_writel(fd->fmc, v, fd->fd_regs_base + reg);
 }
 
 static inline void __check_chan(int x)

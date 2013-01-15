@@ -188,6 +188,13 @@ int fd_probe(struct fmc_device *fmc)
 	if (fd_show_sdb)
 		fmc_show_sdb_tree(fmc);
 
+	/* Now use SDB to find the base addresses */
+	fd->fd_regs_base =
+		fmc_find_sdb_device(fmc->sdb, 0xce42, 0xf19ede1a, NULL);
+	fd->fd_vic_base =
+		fmc_find_sdb_device(fmc->sdb, 0xce42, 0x00000013, NULL);
+	fd->fd_owregs_base = fd->fd_regs_base + 0x500;
+
 	spin_lock_init(&fd->lock);
 	fmc->mezzanine_data = fd;
 	fd->fmc = fmc;
