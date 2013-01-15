@@ -288,7 +288,7 @@ a TDC, pulse generator or a pulse delay.
 @node Driver Features
 @chapter Driver Features
 
-This driver is based on ZIO and @i{spec-sw}.  It supports initial
+This driver is based on ZIO and @i{fmc-bus}.  It supports initial
 setup of the board, setting and reading time, run-time continuous
 calibration, input timestamping and output pulse generation.  It
 supports user-defined offsets, so our users can tell the driver
@@ -355,7 +355,8 @@ but we are working to make this driver portable to other carriers.
 @section Gateware Installation
 
 To install the FPGA image in the target system, please follow the
-instruction in the documentation of @i{spec-sw} (version 2.1 or later).
+instruction in the documentation of @i{spec-sw} (version 2.1 or later),
+or the one for your specific FMC carrier.
 To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
 @i{/lib/firmware} or a subdirectory thereof.
@@ -375,7 +376,8 @@ module parameters.
 @b{Note:} if you were used to version 1.1 or earlier of this package,
 the rules about naming were different: we rearranged @i{spec-sw}
 in the meanwhile to be a more flexible framework for a wide range
-of mezzanines.
+of mezzanines, up to removing the dependency of this package
+from @i{spec-sw}.
 
 @c ==========================================================================
 @node Software Dependencies
@@ -397,11 +399,7 @@ software project. Such support used to be part of the @i{spec-sw}
 package, but is not a project of its own.  This @i{fine-delay}
 kernel module registers as a @i{driver} for the FMC bus abstraction.
 
-Until it is made completely portable across carriers, this driver
-relies on the SPEC carrier software. For this reason it uses
-the @i{spec-sw} package, again from @code{ohwr.org}.
-
-All three packages are currently checked out as @i{git submodules}
+Both packages are currently checked out as @i{git submodules}
 of this package, and each of them is retrieved at the right version
 to be compatible with this driver.  This means you may just
 ignore software dependencies and everything should work.
@@ -445,7 +443,7 @@ In addition to the normal installation procedure for
     WARNING: Consider "make prereq_install"
 @end example
 
-The @i{prerequisite} packages are @i{zio}, @i{fmc-bus} and @i{spec-sw};
+The @i{prerequisite} packages are @i{zio} and @i{fmc-bus};
 unless you already installed your own preferred version, you are
 expected to install the version this packages suggests. This step
 can be performed by:
@@ -1731,14 +1729,13 @@ of calibration).
 @chapter Known Bugs and Missing Features
 
 This package is still work in progress, and unfortunately the same
-applies to the packages it depends on -- @i{zio}, @i{fmc-bus} and @i{spec-sw}.
+applies to the packages it depends on -- @i{zio} and @i{fmc-bus}.
 
 @c ==========================================================================
 @node Bugs in Related Packages
 @section Bugs in Related Packages
 
-The current package set (i.e., @i{zio}, @i{fmc-bus},
-@i{spec-sw} and this one) has
+The current package set (i.e., @i{zio}, @i{fmc-bus} and this one) has
 the following known issues exposed by @i{fine-delay}:
 
 @itemize @bullet

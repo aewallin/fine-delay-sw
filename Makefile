@@ -22,7 +22,6 @@ gitmodules:
 
 # The user can override, using environment variables, all these three:
 FMC_BUS ?= fmc-bus
-SPEC_SW ?= spec-sw
 ZIO ?= zio
 SUBMOD = $(FMC_BUS) $(SPEC_SW) $(ZIO)
 
