@@ -191,6 +191,13 @@ int fd_probe(struct fmc_device *fmc)
 	/* Now use SDB to find the base addresses */
 	fd->fd_regs_base =
 		fmc_find_sdb_device(fmc->sdb, 0xce42, 0xf19ede1a, NULL);
+
+	/* ugly hack for svec testing*/
+	if (fmc->slot_id == 1) {
+		fd->fd_regs_base = 0x10000;
+	}
+	dev_info(dev, "fd_regs_base is %x\n", fd->fd_regs_base);
+
 	fd->fd_vic_base =
 		fmc_find_sdb_device(fmc->sdb, 0xce42, 0x00000013, NULL);
 	fd->fd_owregs_base = fd->fd_regs_base + 0x500;
