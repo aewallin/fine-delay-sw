@@ -33,51 +33,51 @@
 
 
 /* The sample size. Mandatory, device-wide */
-DEFINE_ZATTR_STD(ZDEV, fd_zattr_dev_std) = {
-	ZATTR_REG(zdev, ZATTR_NBITS, S_IRUGO, 0, 32), /* 32 bits. Really? */
+ZIO_ATTR_DEFINE_STD(ZIO_DEV, fd_zattr_dev_std) = {
+	ZIO_ATTR(zdev, ZIO_ATTR_NBITS, S_IRUGO, 0, 32), /* 32 bits. Really? */
 };
 
 /* Extended attributes for the device */
 static struct zio_attribute fd_zattr_dev[] = {
-	ZATTR_EXT_REG("version", S_IRUGO,	FD_ATTR_DEV_VERSION,
+	ZIO_ATTR_EXT("version", S_IRUGO,	FD_ATTR_DEV_VERSION,
 		      FDELAY_VERSION),
-	ZATTR_EXT_REG("utc-h", _RW_,		FD_ATTR_DEV_UTC_H, 0),
-	ZATTR_EXT_REG("utc-l", _RW_,		FD_ATTR_DEV_UTC_L, 0),
-	ZATTR_EXT_REG("coarse", _RW_,		FD_ATTR_DEV_COARSE, 0),
-	ZATTR_EXT_REG("command", S_IWUGO,	FD_ATTR_DEV_COMMAND, 0),
-	ZATTR_EXT_REG("temperature", _RW_,	FD_ATTR_DEV_TEMP, 0),
+	ZIO_ATTR_EXT("utc-h", _RW_,		FD_ATTR_DEV_UTC_H, 0),
+	ZIO_ATTR_EXT("utc-l", _RW_,		FD_ATTR_DEV_UTC_L, 0),
+	ZIO_ATTR_EXT("coarse", _RW_,		FD_ATTR_DEV_COARSE, 0),
+	ZIO_ATTR_EXT("command", S_IWUGO,	FD_ATTR_DEV_COMMAND, 0),
+	ZIO_ATTR_EXT("temperature", _RW_,	FD_ATTR_DEV_TEMP, 0),
 };
 
 /* Extended attributes for the TDC (== input) cset */
 static struct zio_attribute fd_zattr_input[] = {
-	ZATTR_EXT_REG("utc-h", S_IRUGO,		FD_ATTR_TDC_UTC_H, 0),
-	ZATTR_EXT_REG("utc-l", S_IRUGO,		FD_ATTR_TDC_UTC_L, 0),
-	ZATTR_EXT_REG("coarse", S_IRUGO,	FD_ATTR_TDC_COARSE, 0),
-	ZATTR_EXT_REG("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
-	ZATTR_EXT_REG("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
-	ZATTR_EXT_REG("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
-	ZATTR_EXT_REG("flags", _RW_,		FD_ATTR_TDC_FLAGS, 0),
-	ZATTR_EXT_REG("offset", _RW_,		FD_ATTR_TDC_OFFSET, 0),
-	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_TDC_USER_OFF, 0),
+	ZIO_ATTR_EXT("utc-h", S_IRUGO,		FD_ATTR_TDC_UTC_H, 0),
+	ZIO_ATTR_EXT("utc-l", S_IRUGO,		FD_ATTR_TDC_UTC_L, 0),
+	ZIO_ATTR_EXT("coarse", S_IRUGO,	FD_ATTR_TDC_COARSE, 0),
+	ZIO_ATTR_EXT("frac", S_IRUGO,		FD_ATTR_TDC_FRAC, 0),
+	ZIO_ATTR_EXT("seq", S_IRUGO,		FD_ATTR_TDC_SEQ, 0),
+	ZIO_ATTR_EXT("chan", S_IRUGO,		FD_ATTR_TDC_CHAN, 0),
+	ZIO_ATTR_EXT("flags", _RW_,		FD_ATTR_TDC_FLAGS, 0),
+	ZIO_ATTR_EXT("offset", _RW_,		FD_ATTR_TDC_OFFSET, 0),
+	ZIO_ATTR_EXT("user-offset", _RW_,	FD_ATTR_TDC_USER_OFF, 0),
 };
 
 /* Extended attributes for the output csets (most not-read-nor-write mode) */
 static struct zio_attribute fd_zattr_output[] = {
-	ZATTR_EXT_REG("mode", S_IRUGO,		FD_ATTR_OUT_MODE, 0),
-	ZATTR_EXT_REG("rep", 0,			FD_ATTR_OUT_REP, 0),
-	ZATTR_EXT_REG("start-h", 0,		FD_ATTR_OUT_START_H, 0),
-	ZATTR_EXT_REG("start-l", 0,		FD_ATTR_OUT_START_L, 0),
-	ZATTR_EXT_REG("start-coarse", 0,	FD_ATTR_OUT_START_COARSE, 0),
-	ZATTR_EXT_REG("start-fine", 0,		FD_ATTR_OUT_START_FINE, 0),
-	ZATTR_EXT_REG("end-h", 0,		FD_ATTR_OUT_END_H, 0),
-	ZATTR_EXT_REG("end-l", 0,		FD_ATTR_OUT_END_L, 0),
-	ZATTR_EXT_REG("end-coarse", 0,		FD_ATTR_OUT_END_COARSE, 0),
-	ZATTR_EXT_REG("end-fine", 0,		FD_ATTR_OUT_END_FINE, 0),
-	ZATTR_EXT_REG("delta-l", 0,		FD_ATTR_OUT_DELTA_L, 0),
-	ZATTR_EXT_REG("delta-coarse", 0,	FD_ATTR_OUT_DELTA_COARSE, 0),
-	ZATTR_EXT_REG("delta-fine", 0,		FD_ATTR_OUT_DELTA_FINE, 0),
-	ZATTR_EXT_REG("delay-offset", _RW_,	FD_ATTR_OUT_DELAY_OFF, 0),
-	ZATTR_EXT_REG("user-offset", _RW_,	FD_ATTR_OUT_USER_OFF, 0),
+	ZIO_ATTR_EXT("mode", S_IRUGO,		FD_ATTR_OUT_MODE, 0),
+	ZIO_ATTR_EXT("rep", 0,			FD_ATTR_OUT_REP, 0),
+	ZIO_ATTR_EXT("start-h", 0,		FD_ATTR_OUT_START_H, 0),
+	ZIO_ATTR_EXT("start-l", 0,		FD_ATTR_OUT_START_L, 0),
+	ZIO_ATTR_EXT("start-coarse", 0,	FD_ATTR_OUT_START_COARSE, 0),
+	ZIO_ATTR_EXT("start-fine", 0,		FD_ATTR_OUT_START_FINE, 0),
+	ZIO_ATTR_EXT("end-h", 0,		FD_ATTR_OUT_END_H, 0),
+	ZIO_ATTR_EXT("end-l", 0,		FD_ATTR_OUT_END_L, 0),
+	ZIO_ATTR_EXT("end-coarse", 0,		FD_ATTR_OUT_END_COARSE, 0),
+	ZIO_ATTR_EXT("end-fine", 0,		FD_ATTR_OUT_END_FINE, 0),
+	ZIO_ATTR_EXT("delta-l", 0,		FD_ATTR_OUT_DELTA_L, 0),
+	ZIO_ATTR_EXT("delta-coarse", 0,	FD_ATTR_OUT_DELTA_COARSE, 0),
+	ZIO_ATTR_EXT("delta-fine", 0,		FD_ATTR_OUT_DELTA_FINE, 0),
+	ZIO_ATTR_EXT("delay-offset", _RW_,	FD_ATTR_OUT_DELAY_OFF, 0),
+	ZIO_ATTR_EXT("user-offset", _RW_,	FD_ATTR_OUT_USER_OFF, 0),
 };
 
 
@@ -93,7 +93,7 @@ static enum fd_devtype __fd_get_type(struct device *dev)
 	struct zio_obj_head *head = to_zio_head(dev);
 	struct zio_cset *cset;
 
-	if (head->zobj_type == ZDEV)
+	if (head->zobj_type == ZIO_DEV)
 		return FD_TYPE_WHOLEDEV;
 	cset = to_zio_cset(dev);
 	if (cset->index == 0)
@@ -109,9 +109,9 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	struct fd_dev *fd;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
-	if (zattr->priv.addr == FD_ATTR_TDC_USER_OFF) {
+	if (zattr->id == FD_ATTR_TDC_USER_OFF) {
 		*usr_val = fd->calib.tdc_user_offset;
 		return 0;
 	}
@@ -121,7 +121,7 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	 * array of integers instead of filling attributes, so here
 	 * pick the values from our array.
 	 */
-	*usr_val = fd->tdc_attrs[FD_CSET_INDEX(zattr->priv.addr)];
+	*usr_val = fd->tdc_attrs[FD_CSET_INDEX(zattr->id)];
 
 	return 0;
 }
@@ -136,18 +136,18 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 
 	cset = to_zio_cset(dev);
 	ch = cset->index - 1;
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
-	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
+	if (zattr->id == FD_ATTR_OUT_DELAY_OFF) {
 		*usr_val = fd->calib.zero_offset[ch];
 		return 0;
 	}
-	if (zattr->priv.addr == FD_ATTR_OUT_USER_OFF) {
+	if (zattr->id == FD_ATTR_OUT_USER_OFF) {
 		*usr_val = fd->calib.ch_user_offset[ch];
 		return 0;
 	}
 	/* Reading the mode tells wether it triggered or not */
-	if (zattr->priv.addr == FD_ATTR_OUT_MODE) {
+	if (zattr->id == FD_ATTR_OUT_MODE) {
 		int t = fd_ch_readl(fd, ch, FD_REG_DCR) & FD_DCR_PG_TRIG;
 		*usr_val = t ? 0x80 : 0; /* low bits will return mode */
 		return 0;
@@ -197,18 +197,18 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 	if (__fd_get_type(dev) == FD_TYPE_OUTPUT)
 		return fd_zio_info_output(dev, zattr, usr_val);
 
-        /* reading temperature */
-        zdev = to_zio_dev(dev);
-        attr = zdev->zattr_set.ext_zattr;
-        fd = zdev->private_data;
+	/* reading temperature */
+	zdev = to_zio_dev(dev);
+	attr = zdev->zattr_set.ext_zattr;
+	fd = zdev->priv_d;
 
-        if (zattr->priv.addr == FD_ATTR_DEV_TEMP) {
-                attr[FD_ATTR_DEV_TEMP].value = fd_read_temp(fd, 0);
-                return 0;
-        }
+	if (zattr->id == FD_ATTR_DEV_TEMP) {
+		attr[FD_ATTR_DEV_TEMP].value = fd_read_temp(fd, 0);
+		return 0;
+	}
 
 	/* following is whole-dev */
-	if (zattr->priv.addr != FD_ATTR_DEV_UTC_H)
+	if (zattr->id != FD_ATTR_DEV_UTC_H)
 		return 0;
 	/* reading utc-h calls an atomic get-time */
 	fd_time_get(fd, &t, NULL);
@@ -228,10 +228,9 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	int change;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
-
-	switch (zattr->priv.addr) {
+	switch (zattr->id) {
 	case FD_ATTR_TDC_OFFSET:
 		fd->calib.tdc_zero_offset = usr_val;
 		goto out;
@@ -290,14 +289,14 @@ static int fd_zio_conf_output(struct device *dev, struct zio_attribute *zattr,
 	int ch;
 
 	cset = to_zio_cset(dev);
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 	ch = cset->index - 1;
 
-	if (zattr->priv.addr == FD_ATTR_OUT_DELAY_OFF) {
+	if (zattr->id == FD_ATTR_OUT_DELAY_OFF) {
 		fd->calib.zero_offset[ch] = usr_val;
 		return 0;
 	}
-	if (zattr->priv.addr == FD_ATTR_OUT_USER_OFF) {
+	if (zattr->id == FD_ATTR_OUT_USER_OFF) {
 		fd->calib.ch_user_offset[ch] = usr_val;
 		return 0;
 	}
@@ -321,9 +320,9 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	/* Remains: wholedev */
 	zdev = to_zio_dev(dev);
 	attr = zdev->zattr_set.ext_zattr;
-	fd = zdev->private_data;
+	fd = zdev->priv_d;
 
-	if (zattr->priv.addr == FD_ATTR_DEV_UTC_H) {
+	if (zattr->id == FD_ATTR_DEV_UTC_H) {
 		/* writing utc-h calls an atomic set-time */
 		t.utc = (uint64_t)attr[FD_ATTR_DEV_UTC_H].value << 32;
 		t.utc |= attr[FD_ATTR_DEV_UTC_L].value;
@@ -333,7 +332,7 @@ static int fd_zio_conf_set(struct device *dev, struct zio_attribute *zattr,
 	}
 
 	/* Not command, nothing to do */
-	if (zattr->priv.addr != FD_ATTR_DEV_COMMAND)
+	if (zattr->id != FD_ATTR_DEV_COMMAND)
 		return 0;
 
 	switch(usr_val) {
@@ -493,7 +492,7 @@ static int fd_zio_output(struct zio_cset *cset)
 	struct fd_dev *fd;
 	struct zio_control *ctrl;
 
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 	ctrl = zio_get_ctrl(cset->chan->active_block);
 
 	if (fd->verbose > 1) {
@@ -514,7 +513,7 @@ static int fd_zio_output(struct zio_cset *cset)
 static int fd_zio_input(struct zio_cset *cset)
 {
 	struct fd_dev *fd;
-	fd = cset->zdev->private_data;
+	fd = cset->zdev->priv_d;
 
 	/* Configure the device for input */
 	if (!test_bit(FD_FLAG_DO_INPUT, &fd->flags)) {
@@ -542,7 +541,7 @@ static int fd_zio_probe(struct zio_device *zdev)
 	struct fd_dev *fd;
 
 	/* link the new device from the fd structure */
-	fd = zdev->private_data;
+	fd = zdev->priv_d;
 	fd->zdev = zdev;
 
 	fd->tdc_attrs[FD_CSET_INDEX(FD_ATTR_TDC_OFFSET)] = \
@@ -561,55 +560,55 @@ static const struct zio_sysfs_operations fd_zio_s_op = {
 /* We have 5 csets, since each output triggers separately */
 static struct zio_cset fd_cset[] = {
 	{
-		SET_OBJECT_NAME("fd-input"),
+		ZIO_SET_OBJ_NAME("fd-input"),
 		.raw_io =	fd_zio_input,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_INPUT | ZCSET_TYPE_TIME,
+		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_input,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_input),
 		},
 	},
 	{
-		SET_OBJECT_NAME("fd-ch1"),
+		ZIO_SET_OBJ_NAME("fd-ch1"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
 		},
 	},
 	{
-		SET_OBJECT_NAME("fd-ch2"),
+		ZIO_SET_OBJ_NAME("fd-ch2"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
 		},
 	},
 	{
-		SET_OBJECT_NAME("fd-ch3"),
+		ZIO_SET_OBJ_NAME("fd-ch3"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
 		},
 	},
 	{
-		SET_OBJECT_NAME("fd-ch4"),
+		ZIO_SET_OBJ_NAME("fd-ch4"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
 		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_OUTPUT | ZCSET_TYPE_TIME,
+		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_output),
@@ -675,7 +674,7 @@ int fd_zio_init(struct fd_dev *fd)
 
 	/* Mandatory fields */
 	fd->hwzdev->owner = THIS_MODULE;
-	fd->hwzdev->private_data = fd;
+	fd->hwzdev->priv_d = fd;
 
 	dev_id = fd->fmc->device_id;
 
