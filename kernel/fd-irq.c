@@ -17,7 +17,6 @@
 #include <linux/timer.h>
 #include <linux/jiffies.h>
 #include <linux/bitops.h>
-#include <linux/gpio.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 
