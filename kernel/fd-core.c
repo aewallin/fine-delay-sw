@@ -161,8 +161,8 @@ int fd_probe(struct fmc_device *fmc)
 
 	fwname = FDELAY_GATEWARE_NAME;
 	if (fd_drv.gw_n)
-		fwname = ""; /* ->reprogram will pick from module parameter */
-	ret = fmc->op->reprogram(fmc, &fd_drv, fwname);
+		fwname = ""; /* reprogram will pick from module parameter */
+	ret = fmc_reprogram(fmc, &fd_drv, fwname, 0 /* SDB entry point */);
 	if (ret < 0) {
 		if (ret == -ESRCH) {
 			dev_info(dev, "%s: no gateware at index %i\n",
@@ -171,20 +171,9 @@ int fd_probe(struct fmc_device *fmc)
 		}
 		return ret; /* other error: pass over */
 	}
-
-	/* All our FPGA images are expected to have SDB at offset 0 */
-	if (fmc_readl(fmc, 0) != 0x5344422d) {
-		dev_err(dev, "Can't find SDB magic (got 0x%x)\n",
-			fmc_readl(fmc, 0));
-		ret = -ENODEV;
-		goto out;
-	}
 	dev_info(dev, "Gateware successfully loaded\n");
 
-	if ( (ret = fmc_scan_sdb_tree(fmc, 0)) < 0) {
-		dev_err(dev, "scan fmc failed %i\n", ret);
-		goto out;
-	}
+	/* FIXME: this is obsoleted by fmc-bus internal parameters */
 	if (fd_show_sdb)
 		fmc_show_sdb_tree(fmc);
 
@@ -256,7 +245,6 @@ err:
 	while (--m, --i >= 0)
 		if (m->exit)
 			m->exit(fd);
-out:
 	return ret;
 }
 
