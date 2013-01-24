@@ -9,20 +9,22 @@ int main(int argc, char **argv)
 {
 	struct fdelay_board *b;
 	int i, hwval, newval;
+	int dev = 0;
 
-	if (argc > 2) {
-		fprintf(stderr, "%s: Use \"%s 1|0\n", argv[0], argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, "%s: Use %s <dev> 1|0\n", argv[0], argv[0]);
 		exit(1);
 	}
 	newval = -1;
-	if (argc > 1) {
-		if (!strcmp(argv[1], "0"))
+	if (argc > 2) {
+		dev = strtol(argv[1], NULL, 0);
+		if (!strcmp(argv[2], "0"))
 			newval = 0;
-		else if (!strcmp(argv[1], "1"))
+		else if (!strcmp(argv[2], "1"))
 			newval = 1;
 		else {
 			fprintf(stderr, "%s: arg \"%s\" is not 0 nor 1\n",
-				argv[0], argv[1]);
+				argv[0], argv[2]);
 			exit(1);
 		}
 	}
@@ -38,16 +40,18 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	if (i != 1) {
-		fprintf(stderr, "%s: found %i boards, using first one\n",
+		fprintf(stderr, "%s: found %i boards\n",
 			argv[0], i);
 	}
 
-	b = fdelay_open(0, -1);
+	b = fdelay_open(dev, -1);
 	if (!b) {
 		fprintf(stderr, "%s: fdelay_open(): %s\n", argv[0],
 			strerror(errno));
 		exit(1);
 	}
+
+	fprintf(stderr, "%s: using board %d\n", argv[0], dev);
 
 	hwval = fdelay_get_config_tdc(b);
 	switch(newval) {
@@ -60,7 +64,7 @@ int main(int argc, char **argv)
 	}
 	fdelay_set_config_tdc(b, hwval);
 	hwval = fdelay_get_config_tdc(b);
-	printf("%s: termination is %s\n", argv[0],
+	printf("%s: termination is %d %s\n", argv[0], hwval,
 	       hwval & FD_TDCF_TERM_50 ? "on" : "off");
 
 	fdelay_close(b);
