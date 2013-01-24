@@ -158,11 +158,11 @@ struct fdelay_board *fdelay_open(int offset, int dev_id)
 
 found:
 	/* Trim all block sizes to 1 sample (i.e. 4 bytes) */
-	fdelay_sysfs_set(b, "fd-input/trigger/nsamples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch1/trigger/nsamples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch2/trigger/nsamples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch3/trigger/nsamples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch4/trigger/nsamples", &nsamples);
+	fdelay_sysfs_set(b, "fd-input/trigger/post-samples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch1/trigger/post-samples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch2/trigger/post-samples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch3/trigger/post-samples", &nsamples);
+	fdelay_sysfs_set(b, "fd-ch4/trigger/post-samples", &nsamples);
 
 	return (void *)b;
 }
