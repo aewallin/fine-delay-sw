@@ -1396,13 +1396,18 @@ to validate the library works as expected:
 
 @smallexample
    spusa# ./lib/fdelay-board-time  25.5; ./lib/fdelay-board-time get
-   25.500661824
+   25.504007360
    spusa# ./lib/fdelay-board-time  get
    34.111048968
    spusa# ./lib/fdelay-board-time  host
    spusa# ./lib/fdelay-board-time  get
    1335974946.493415600
 @end smallexample
+
+If more than one @i{fine-delay} board is found, the program will also
+print to @i{stderr} how many boards it finds and which it is using.
+To select a board different from the default, you can pass
+``@t{-i <index>}'' to theprogram, where the index starts from zero.
 
 @c ==========================================================================
 @node Input Configuration
