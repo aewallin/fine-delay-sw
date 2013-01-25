@@ -52,7 +52,7 @@ static  int __fdelay_get_ch_fd(struct __fdelay_board *b,
 	char fname[128];
 
 	if (channel < 0 || channel > 3) {
-		errno = -EINVAL;
+		errno = EINVAL;
 		return -1;
 	}
 	if (b->fdc[ch14] <= 0) {
@@ -72,7 +72,7 @@ static  int __fdelay_get_ch_fd(struct __fdelay_board *b,
 	return 0;
 }
 
-extern int fdelay_config_pulse(struct fdelay_board *userb,
+int fdelay_config_pulse(struct fdelay_board *userb,
 			       int channel, struct fdelay_pulse *pulse)
 {
 	__define_board(b, userb);
