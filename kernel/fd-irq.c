@@ -72,7 +72,7 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 
 	/* Copy the sample to local storage */
 	spin_lock_irqsave(&fd->lock, flags);
-	i = fd->sw_fifo.tail & (fd_sw_fifo_len - 1);
+	i = fd->sw_fifo.tail % fd_sw_fifo_len;
 	t = fd->sw_fifo.t[i];
 	fd->sw_fifo.tail++;
 	spin_unlock_irqrestore(&fd->lock, flags);
@@ -133,7 +133,7 @@ static int fd_read_hw_fifo(struct fd_dev *fd)
 		return -EAGAIN;
 
 	t = fd->sw_fifo.t;
-	t += fd->sw_fifo.head & (fd_sw_fifo_len - 1);
+	t += fd->sw_fifo.head % fd_sw_fifo_len;
 
 	/* Fetch the fifo entry to registers, so we can read them */
 	fd_writel(fd, FD_TSBR_ADVANCE_ADV, FD_REG_TSBR_ADVANCE);
@@ -158,8 +158,10 @@ static int fd_read_hw_fifo(struct fd_dev *fd)
 
 	BUG_ON(diff < 0);
 	if (diff >= fd_sw_fifo_len)
-		dev_warn(fd->fmc->hwdev, "Fifo overlow, dropped %i samples\n",
-			 fd_sw_fifo_len / 2);
+		dev_warn(fd->fmc->hwdev, "Fifo overflow: "
+			 " dropped %i samples (%li -> %li == %li)\n",
+			 fd_sw_fifo_len / 2,
+			 fd->sw_fifo.tail, fd->sw_fifo.head, diff);
 
 	return 0;
 }
