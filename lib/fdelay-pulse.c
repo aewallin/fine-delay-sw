@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
 	/* And finally work */
 	if (fdelay_config_pulse(b, channel, &p) < 0) {
-		fprintf(stderr, "%s: fdelay_cofig_pulse(): %s\n",
+		fprintf(stderr, "%s: fdelay_config_pulse(): %s\n",
 			argv[0], strerror(errno));
 		exit(1);
 	}
