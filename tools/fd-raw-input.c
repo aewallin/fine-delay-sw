@@ -122,8 +122,9 @@ struct zio_control ctrl;
 int main(int argc, char **argv)
 {
 	glob_t glob_buf;
-	int i, j, maxfd = 0;
+	int i, j, tout = 0, maxfd = 0;
 	int fd[MAXFD], seq[MAXFD];
+	struct timeval tv, *tvp = NULL;
 	fd_set allset, curset;
 	int modemask = MODE_HEX;
 	long double t1[MAXFD] = {0.0,};
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
 	if (getenv("FD_SHOW_TIME"))
 		show_time = 1;
 
-	while ((i = getopt(argc, argv, "fprh")) != -1) {
+	while ((i = getopt(argc, argv, "fprht:")) != -1) {
 
 		switch(i) {
 		case 'f':
@@ -149,6 +150,9 @@ int main(int argc, char **argv)
 		case 'r':
 		case 'h':
 			modemask |= MODE_HEX;
+			break;
+		case 't':
+			tout = atoi(optarg);
 			break;
 		}
 	}
@@ -196,11 +200,13 @@ int main(int argc, char **argv)
 		seq[i] = -1;
 	}
 
+	if (tout == 0)
+		setlinebuf(stdout);
+	tvp = NULL;
 	/* Ok, now wait for each of them to spit a timestamp */
-	setlinebuf(stdout);
 	while (1) {
 		curset = allset;
-		switch(select(maxfd + 1, &curset, NULL, NULL, NULL)) {
+		switch(select(maxfd + 1, &curset, NULL, NULL, tvp)) {
 		case -1:
 			if (errno == EINTR)
 				continue;
@@ -208,9 +214,14 @@ int main(int argc, char **argv)
 				strerror(errno));
 			exit(1);
 		case 0:
-			continue;
+			exit(0);
 		}
-
+		if (tout) {
+			/* prepare timeout for next time */
+			tv.tv_sec = tout / (1000 * 1000);
+			tv.tv_usec = tout % (1000 * 1000);
+			tvp = &tv;
+		}
 
 		for (i = 1; i < argc; i++) {
 			if (!FD_ISSET(fd[i], &curset))

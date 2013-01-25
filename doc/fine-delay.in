@@ -1061,6 +1061,11 @@ is only printed once, and later lines begin with a single blank space
 (you may see more blanks because they are part of normal output,
 for alignment purposes).
 
+If you are using the tool in a script, and you want to capture all the
+samples in a burst and then terminate, you can specify a timeout, in
+microseconds, using @t{-t}.  The timeout is only applied after the
+first pulse is received.
+
 Finally, the program uses two environment variables, if set to any value:
 @code{FD_SHOW_TIME} make the tool report the time difference between
 sequential reads, which is mainly useful to debug the driver workings;
