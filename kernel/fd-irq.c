@@ -199,7 +199,7 @@ static void fd_tlet(unsigned long arg)
 	/* there is an active block, try reading an accumulated sample */
 	if (fd_read_sw_fifo(fd, chan) == 0) {
 		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
-		chan->cset->trig->t_op->data_done(chan->cset);
+		zio_trigger_data_done(chan->cset);
 	}
 
 out:
