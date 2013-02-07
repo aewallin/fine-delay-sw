@@ -115,8 +115,12 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 		*usr_val = fd->calib.tdc_user_offset;
 		return 0;
 	}
-
+	if (zattr->id == FD_ATTR_TDC_FLAGS) {
+		*usr_val = fd->calib.tdc_flags;
+		return 0;
+	}
 	/*
+	 * Following code is about TDC values, for the last TDC event.
 	 * For efficiency reasons at read_fifo() time, we store an
 	 * array of integers instead of filling attributes, so here
 	 * pick the values from our array.
