@@ -81,6 +81,8 @@ extern int fdelay_has_triggered(struct fdelay_board *b, int channel);
 extern int fdelay_wr_mode(struct fdelay_board *b, int on);
 extern int fdelay_check_wr_mode(struct fdelay_board *b);
 
+extern float fdelay_read_temperature(struct fdelay_board *b);
+
 #ifdef FDELAY_INTERNAL /* Libray users should ignore what follows */
 #include <unistd.h>
 #include <fcntl.h>

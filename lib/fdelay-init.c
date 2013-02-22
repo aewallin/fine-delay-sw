@@ -223,3 +223,10 @@ extern int fdelay_check_wr_mode(struct fdelay_board *userb)
 	return errno;
 }
 
+float fdelay_read_temperature(struct fdelay_board *userb)
+{
+    uint32_t t;
+    fdelay_sysfs_get(userb, "temperature", &t);
+    
+    return (float) t/ 16.0;
+}

@@ -31,6 +31,13 @@ module_param_named(calib_s, fd_calib_period_s, int, 0444);
 #define ACAM_FP_BIN	((int)(ACAM_DESIRED_BIN * (1 << 16)))
 #define ACAM_FP_TREF	(((1000LL * 1000 * 1000) << 16) / ACAM_CLOCK_FREQ_KHZ)
 
+/* Default values of control registers for the ACAM TDC working in G-Mode 
+   (eeprom values are obsolete) */
+#define ACAM_GMODE_START_OFFSET	10000
+#define ACAM_GMODE_ASOR		17000
+#define ACAM_GMODE_ATMCR	(26 | (1500 << 8))
+#define ACAM_GMODE_ADSFR 	84977
+
 static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 			 int *refdiv_out)
 {
@@ -80,7 +87,7 @@ static int acam_calc_pll(uint64_t tref, int bin, int *hsdiv_out,
 		tmpll = div_u64_rem(tref << refdiv, 216, &rem);
 		bin = div_u64_rem(tmpll, hsdiv, &rem);
 	}
-	return (bin + 1) / 3; /* We are in I-Mode, R-Mode bin is 1/3 if this */
+	return (bin + 1); /* We always return the bin size in the I mode. Other modes should scale it appropriately. */
 }
 
 static void acam_set_address(struct fd_dev *fd, int addr)
@@ -215,6 +222,32 @@ static struct acam_init_data acam_init_rmode[] = {
 	{4,	AR4_EFlagHiZN | AR4_MasterReset | AR4_StartTimer(0)},
 };
 
+/* Commented values are not constant, they are added at runtime (see later) */
+static struct acam_init_data acam_init_gmode[] = {
+	{0,	AR0_ROsc | AR0_RiseEn0 | AR0_RiseEn1 | AR0_HQSel},
+	{1,	AR1_Adj(0, 0) | AR1_Adj(1, 0) | AR1_Adj(2, 5) |
+		AR1_Adj(3, 0) | AR1_Adj(4, 5) | AR1_Adj(5, 0) | AR1_Adj(6, 5)},
+	{2,	AR2_GMode | AR2_Adj(7, 0) | AR2_Adj(8, 5) |
+		AR2_DelRise1(0) | AR2_DelFall1(0) | AR2_DelRise2(0) | AR2_DelFall2(0)},
+	{3,	AR3_DelTx(1,3) | AR3_DelTx(2,3) | AR3_DelTx(3,3) | AR3_DelTx(4,3) |
+		AR3_DelTx(5,3) | AR3_DelTx(6,3) | AR3_DelTx(7,3) | AR3_DelTx(8,3) | 
+		AR3_RaSpeed(0,3) | AR3_RaSpeed(1,3) | AR3_RaSpeed(2,3)},
+	{4,	AR4_EFlagHiZN | AR4_RaSpeed(3,3) | AR4_RaSpeed(4,3) | 
+		AR4_RaSpeed(5,3) | AR4_RaSpeed(6,3) | AR4_RaSpeed(7,3) | AR4_RaSpeed(8,3)},
+	{5,	AR5_StartRetrig
+		| 0 /* AR5_StartOff1(hw->calib.acam_start_offset) */
+		| AR5_MasterAluTrig},
+	{6,	AR6_Fill(200) | AR6_PowerOnECL},
+	{7,	/* AR7_HSDiv(hsdiv) | AR7_RefClkDiv(refdiv) */ 0
+		| AR7_ResAdj | AR7_NegPhase},
+	{11,	0x7ff0000},
+	{12,	0x0000000},
+	{14,	0},
+	/* finally, reset */
+	{4,	AR4_EFlagHiZN | AR4_MasterReset | AR4_StartTimer(0)},
+};
+
+
 static struct acam_init_data acam_init_imode[] = {
 	{0,	AR0_TRiseEn(0) | AR0_HQSel | AR0_ROsc},
 	{2,	AR2_IMode},
@@ -245,6 +278,10 @@ static struct acam_mode_setup fd_acam_table[] = {
 		ACAM_IMODE, "I",
 		acam_init_imode, ARRAY_SIZE(acam_init_imode)
 	},
+	{
+		ACAM_GMODE, "G",
+		acam_init_gmode, ARRAY_SIZE(acam_init_gmode)
+	},
 };
 
 /* To configure the thing, follow the table, but treat 5 and 7 as special */
@@ -264,12 +301,23 @@ static int __acam_config(struct fd_dev *fd, struct acam_mode_setup *s)
 	/* Disable TDC inputs prior to configuring */
 	fd_writel(fd, FD_TDCSR_STOP_DIS | FD_TDCSR_START_DIS, FD_REG_TDCSR);
 
+	/* Disable the ACAM PLL for a while to make sure it is reset */
+	acam_writel(fd, 0, 0);
+	acam_writel(fd, 7, 0);
+
+	msleep(100);
+
 	for (p = s->data, i = 0; i < s->data_size; p++, i++) {
 		regval = p->val;
 		if (p->addr == 7)
 			regval |= reg7val;
 		if (p->addr == 5 && s->mode == ACAM_RMODE)
 			regval |= AR5_StartOff1(fd->calib.acam_start_offset);
+		if (p->addr == 5 && s->mode == ACAM_GMODE)
+			regval |= AR5_StartOff1(ACAM_GMODE_START_OFFSET);
+		if (p->addr == 6 && s->mode == ACAM_GMODE)
+			regval |= AR6_StartOff2(ACAM_GMODE_START_OFFSET);
+
 		acam_writel(fd, regval, p->addr);
 	}
 
@@ -317,7 +365,7 @@ int fd_acam_init(struct fd_dev *fd)
 	if ( (ret = fd_calibrate_outputs(fd)) )
 		return ret;
 
-	if ( (ret = fd_acam_config(fd, ACAM_RMODE)) )
+	if ( (ret = fd_acam_config(fd, ACAM_GMODE)) )
 		return ret;
 
 	acam_set_bypass(fd, 0); /* Driven by core, not host */
@@ -330,10 +378,12 @@ int fd_acam_init(struct fd_dev *fd)
 	 * - bin -> internal timebase scalefactor (ADSFR),
 	 * - Start offset (must be consistent with value in ACAM reg 4)
 	 * - timestamp merging control register (ATMCR)
+	 * GMode fix: we no longer use the values from the EEPROM (they are fixed anyway)
 	 */
-	fd_writel(fd, fd->calib.adsfr_val, FD_REG_ADSFR);
-	fd_writel(fd, 3 * fd->calib.acam_start_offset, FD_REG_ASOR);
-	fd_writel(fd, fd->calib.atmcr_val, FD_REG_ATMCR);
+
+	fd_writel(fd, ACAM_GMODE_ADSFR, FD_REG_ADSFR);
+	fd_writel(fd, ACAM_GMODE_ASOR, FD_REG_ASOR);
+	fd_writel(fd, ACAM_GMODE_ATMCR, FD_REG_ATMCR);
 
 	/* Prepare the timely recalibration */
 	setup_timer(&fd->temp_timer, fd_update_calibration, (unsigned long)fd);

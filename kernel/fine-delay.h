@@ -260,7 +260,8 @@ static inline void fd_ch_writel(struct fd_dev *fd, int ch,
 /* ACAM TDC operation modes */
 enum fd_acam_modes {
 	ACAM_RMODE,
-	ACAM_IMODE
+	ACAM_IMODE,
+	ACAM_GMODE
 };
 
 /*

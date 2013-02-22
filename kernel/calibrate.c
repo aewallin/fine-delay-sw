@@ -104,11 +104,7 @@ static uint64_t output_delay_ps(struct fd_dev *fd, int ch, int fine, int n,
 		/* read the tag, convert to picoseconds (fixed point: 16.16) */
 		fr = acam_readl(fd, 8 /* fifo */) & 0x1ffff;
 
-		/*
-		 * This is I-Mode, but fd->bin is for R-Mode, so 3x
-		 * Then, fr is around 0xc00, bin is 0x50.0000: use 3LL for 64b
-		 */
-		res = fr * 3LL * fd->bin;
+		res = fr * fd->bin;
 		if (fd->verbose > 3)
 			pr_info("%s: ch %i, fine %i, bin %x got %08x, "
 				"res 0x%016llx\n", __func__, ch, fine,
