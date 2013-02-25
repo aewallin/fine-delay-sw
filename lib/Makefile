@@ -16,6 +16,7 @@ DEMOSRC += fdelay-read.c
 DEMOSRC += fdelay-fread.c
 DEMOSRC += fdelay-pulse.c
 DEMOSRC += fdelay-open-by-lun.c
+DEMOSRC += fdelay-pulse-tom.c
 
 DEMOS := $(DEMOSRC:.c=)
 
