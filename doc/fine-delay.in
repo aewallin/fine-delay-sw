@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month October 2012
+@set update-month February 2013
 @c @set release 1.1
 @set tagname fine-delay-sw-v1.1
 @c WARNING: in @example I Can't use @value{tagname}, so please look for this
