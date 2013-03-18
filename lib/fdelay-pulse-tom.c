@@ -126,6 +126,11 @@ static void parse_time(char *s, struct fdelay_time *t)
 //    printf("dbg: raw %lld, %lld, converted: %lld s %d ns %d ps\n", extra_seconds,time_ps, t->utc, t->coarse * 8, t->frac * 8000 / 4096);
 }
 
+void dump_ts(char *title, struct fdelay_time t)
+{
+    printf("%s: secs %lld coarse %d frac %d\n", title, t.utc, t.coarse, t.frac);
+}
+
 int main(int argc, char **argv)
 {
     struct fdelay_time t_start, t_delta, t_width, t_current;
@@ -136,6 +141,9 @@ int main(int argc, char **argv)
     int opt;
     int relative = 1;
     int devid = 0;
+
+
+    int64_t default_width = 250000;    fdelay_pico_to_time(&default_width, &t_width);
 
     while ((opt = getopt(argc, argv, "hctd:m:o:a:s:w:g:q:")) != -1) {
 	switch(opt)
@@ -236,6 +244,11 @@ int main(int argc, char **argv)
     p.loop = t_delta;
     p.rep = count;
     p.mode = mode;
+    
+    dump_ts("Start", p.start);
+    dump_ts("End", p.end);
+    dump_ts("Delta", p.loop);
+    
 
     printf("mode %d channel %d count %d\n", mode, channel, count);
 
