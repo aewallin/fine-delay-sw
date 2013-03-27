@@ -143,7 +143,8 @@ int main(int argc, char **argv)
     int devid = 0;
 
 
-    int64_t default_width = 250000;    fdelay_pico_to_time(&default_width, &t_width);
+    uint64_t default_width = 250000;
+    fdelay_pico_to_time(&default_width, &t_width);
 
     while ((opt = getopt(argc, argv, "hctd:m:o:a:s:w:g:q:")) != -1) {
 	switch(opt)
