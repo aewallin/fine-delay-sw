@@ -425,6 +425,7 @@ void fd_apply_offset(uint32_t *a, int32_t off_pico)
 /* Internal output engine */
 static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 {
+	struct timespec delta, width;
 	int ch = index1_4 - 1;
 	int mode = attrs[FD_ATTR_OUT_MODE];
 	int rep = attrs[FD_ATTR_OUT_REP];
@@ -473,12 +474,44 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	 * For narrowly spaced pulses, we don't have enough time to reload
 	 * the tap number into the corresponding SY89295.
 	 * Therefore, the width/spacing resolution is limited to 4 ns.
-	 * We put the threshold at 200ns ==> coarse == 25
+	 * We put the threshold at 200ns, i.e. when coarse == 25.
+	 *
+	 * Trivially it would be
+	 *    if((delta_ps - width_ps) < 200000 || (width_ps < 200000))
+	 *               dcr |= FD_DCR_NO_FINE;
+	 *
+	 * Most likely the calculation below fails with negatives, but
+	 * with negative spacing we get no pulses, and fine is irrelevant
 	 */
+	delta.tv_sec = attrs[FD_ATTR_OUT_DELTA_L];
+	delta.tv_nsec = attrs[FD_ATTR_OUT_DELTA_COARSE] * 8;
+	width.tv_sec = ((uint64_t)(attrs[FD_ATTR_OUT_END_H]) << 32
+			| attrs[FD_ATTR_OUT_END_L])
+		- ((uint64_t)(attrs[FD_ATTR_OUT_START_H]) << 32
+		   | attrs[FD_ATTR_OUT_START_L]);
+	if (attrs[FD_ATTR_OUT_END_COARSE] > attrs[FD_ATTR_OUT_START_COARSE]) {
+		width.tv_nsec = 8 * attrs[FD_ATTR_OUT_END_COARSE]
+			- 8 * attrs[FD_ATTR_OUT_START_COARSE];
+	} else {
+		width.tv_sec--;
+		width.tv_nsec = NSEC_PER_SEC 
+			- 8 * attrs[FD_ATTR_OUT_START_COARSE]
+			+ 8 * attrs[FD_ATTR_OUT_END_COARSE];
+	}
+	/* delta = delta - width (i.e.: delta is the low-signal width */
+	delta.tv_sec -= width.tv_sec;
+	if (delta.tv_nsec > width.tv_nsec) {
+		delta.tv_nsec -= width.tv_nsec;
+	} else {
+		delta.tv_sec--;
+		delta.tv_nsec = NSEC_PER_SEC - width.tv_nsec + delta.tv_nsec;
+	}
+	/* finally check */
+	if (width.tv_sec == 0 && width.tv_nsec < 200)
+		dcr |= FD_DCR_NO_FINE;;
+	if (delta.tv_sec == 0 && delta.tv_nsec < 200)
+		dcr |= FD_DCR_NO_FINE;;
 
-	/* FIXME: if((delta_ps - width_ps) < 200000 ||
-	   (width_ps < 200000)) dcr = FD_DCR_NO_FINE; */
-	//dcr |= FD_DCR_NO_FINE;
 
 	fd_ch_writel(fd, ch, dcr | FD_DCR_UPDATE, FD_REG_DCR);
 	fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE, FD_REG_DCR);
