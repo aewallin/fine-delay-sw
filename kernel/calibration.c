@@ -176,6 +176,11 @@ int fd_handle_eeprom_calibration(struct fd_dev *fd)
 			hash, horig);
 		return -EINVAL;
 	}
+	if (calib->version < 3) {
+		dev_err(d, "Calibration version %i < 3: refusing to work\n",
+			fd->calib.version);
+		return -EINVAL;
+	}
 
 	if (calibration_save) {
 		/* FIXME:  save to eeprom: re-convert endianness and hash */
