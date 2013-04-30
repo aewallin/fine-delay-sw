@@ -193,6 +193,35 @@ int fd_probe(struct fmc_device *fmc)
 	if (ret < 0)
 		return ret;
 
+	/*
+	 * Now, check the release field of the sdb record for our core.
+	 * Unfortunately we have no fmc primitive to see the device record.
+	 * So keep at the first level, knowing fdelay leaves there (FIXME)
+	 */
+	for (i = 0; i < fmc->sdb->len; i++) {
+		union  sdb_record *r;
+		struct sdb_product *p;
+		struct sdb_component *c;
+
+		r = fmc->sdb->record + i;
+		if (r->empty.record_type != sdb_type_device)
+			continue;
+		c = &r->dev.sdb_component;
+		p = &c->product;
+		if (be64_to_cpu(p->vendor_id) != 0xce42LL)
+			continue;
+		if (be32_to_cpu(p->device_id) != 0xf19ede1a)
+			continue;
+		if (be32_to_cpu(p->version) < 3) {
+			dev_err(dev, "Core version %i < 3; refusing to work\n",
+				be32_to_cpu(p->version));
+			return -EINVAL;
+		}
+		break;
+	}
+	if (i == fmc->sdb->len)
+		dev_warn(dev, "Can't find 0xf19ede1a dev for version check\n");
+
 	/* First, hardware reset */
 	fd_do_reset(fd, 1);
 
