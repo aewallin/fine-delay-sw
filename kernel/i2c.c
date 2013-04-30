@@ -250,23 +250,6 @@ int fd_i2c_init(struct fd_dev *fd)
 
 	mi2c_scan(fd);
 
-	if (0) {
-		/* Temporary - testing: read and write some stuff */
-		u8 buf[8];
-		int i;
-
-		fd_eeprom_read(fd, fd->fmc->eeprom_addr, I2C_OFFSET, buf, 8);
-		printk("read: ");
-		for (i = 0; i < 8; i++)
-			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
-
-		get_random_bytes(buf, 8);
-		printk("write: ");
-		for (i = 0; i < 8; i++)
-			printk("%02x%c", buf[i], i==7 ? '\n' : ' ');
-		fd_eeprom_write(fd, fd->fmc->eeprom_addr, I2C_OFFSET, buf, 8);
-	}
-
 	/* Retrieve and validate the calibration */
 	cal_ee = kzalloc(sizeof(*cal_ee), GFP_KERNEL);
 	if (!cal_ee)
