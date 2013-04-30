@@ -11,46 +11,12 @@
  * option, any later version.
  */
 
-#include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/time.h>
-#include <linux/pci.h>
 #include <linux/slab.h>
 #include <linux/random.h>
-#include <linux/firmware.h>
-#include <linux/jhash.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
-
-/* The eeprom is geographically addressed, and the structure lives at 6kB */
-#define I2C_OFFSET (6*1024)
-
-/* At factory config time, it's possible to load a file and/or write eeprom */
-static char *calibration_load;
-static int calibration_save;
-static int calibration_check;
-static int calibration_default;
-
-module_param(calibration_load, charp, 0444);
-module_param(calibration_default, int, 0444);
-module_param(calibration_save, int, 0444);
-module_param(calibration_check, int, 0444);
-
-/* Stupid dumping tool */
-static void dumpstruct(char *name, void *ptr, int size)
-{
-	int i;
-	unsigned char *p = ptr;
-
-	printk("%s: (size 0x%x)\n", name, size);
-	for (i = 0; i < size; ) {
-		printk("%02x", p[i]);
-		i++;
-		printk(i & 3 ? " " : i & 0xf ? "  " : "\n");
-	}
-	if (i & 0xf)
-		printk("\n");
-}
 
 static void set_sda(struct fd_dev *fd, int val)
 {
@@ -211,96 +177,9 @@ int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 	return size;
 }
 
-/* The user requested to load the configuration from file */
-static void fd_i2c_load_calib(struct fd_dev *fd,
-			      struct fd_calib_on_eeprom *cal_ee)
-{
-	const struct firmware *fw;
-	char *fwname, *newname = NULL;
-	int err;
-
-	/* the calibration_load string is known to be valid */
-
-	fwname = calibration_load;
-	err = request_firmware(&fw, calibration_load, fd->fmc->hwdev);
-	if (err < 0) {
-		dev_warn(fd->fmc->hwdev, "can't load \"%s\"\n",
-			    calibration_load);
-		return;
-	}
-	if (fw->size != sizeof(cal_ee->calib)) {
-		dev_warn(fd->fmc->hwdev, "File \"%s\" has wrong size\n",
-			    fwname);
-	} else {
-		memcpy(&cal_ee->calib, fw->data, fw->size);
-		dev_info(fd->fmc->hwdev,
-			 "calibration data loaded from \"%s\"\n", fwname);
-	}
-	release_firmware(fw);
-	kfree(newname);
-	return;
-}
-
-
 int fd_i2c_init(struct fd_dev *fd)
 {
-	struct fd_calib_on_eeprom *cal_ee;
-	u32 hash;
-	int i;
-
 	mi2c_scan(fd);
-
-	/* Retrieve and validate the calibration */
-	cal_ee = kzalloc(sizeof(*cal_ee), GFP_KERNEL);
-	if (!cal_ee)
-		return -ENOMEM;
-	i = fd_eeprom_read(fd, fd->fmc->eeprom_addr, I2C_OFFSET,
-			   cal_ee, sizeof(*cal_ee));
-	if (i != sizeof(*cal_ee)) {
-		pr_err("%s: cannot read_eeprom\n", __func__);
-		goto load;
-	}
-	if (calibration_check)
-		dumpstruct("Calibration data from eeprom:", cal_ee,
-			   sizeof(*cal_ee));
-
-	hash = jhash(&cal_ee->calib, sizeof(cal_ee->calib), 0);
-
-	/* FIXME: this is original-endian only (little endian I fear) */
-	if ((cal_ee->size != sizeof(cal_ee->calib))
-	    || (cal_ee->hash != hash)
-	    || (cal_ee->version != 1)) {
-		pr_err("%s: calibration on eeprom is invalid\n", __func__);
-		goto load;
-	}
-	if (!calibration_default)
-		fd->calib = cal_ee->calib; /* override compile-time default */
-
-load:
-	cal_ee->calib = fd->calib;
-
-	if (calibration_load)
-		fd_i2c_load_calib(fd, cal_ee);
-
-	/* Fix the local copy, for verification and maybe saving */
-	cal_ee->hash = jhash(&cal_ee->calib, sizeof(cal_ee->calib), 0);
-	cal_ee->size = sizeof(cal_ee->calib);
-	cal_ee->version = 1;
-
-	if (calibration_save) {
-		i = fd_eeprom_write(fd, fd->fmc->eeprom_addr, I2C_OFFSET,
-				    cal_ee, sizeof(*cal_ee));
-		if (i != sizeof(*cal_ee)) {
-			pr_err("%s: error in writing calibration to eeprom\n",
-			       __func__);
-		} else {
-			pr_info("%s: saved calibration to eeprom\n", __func__);
-		}
-	}
-	if (calibration_check)
-		dumpstruct("Current calibration data:", cal_ee,
-			   sizeof(*cal_ee));
-	kfree(cal_ee);
 	return 0;
 }
 

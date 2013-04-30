@@ -41,22 +41,6 @@ module_param_named(show_sdb, fd_show_sdb, int, 0444);
 
 /* FIXME: add parameters "file=" and "wrc=" like wr-nic-core does */
 
-/* This is pre-set at load time (data by Tomasz) */
-static struct fd_calib fd_default_calib = {
-	.frr_poly = {
-		[0] =     -165202LL,
-		[1] =     -29825595LL,
-		[2] = 3801939743082LL,
-	},
-	.tdc_zero_offset = 35600 -63100,
-	.atmcr_val =  4 | (1500 << 4),
-	.adsfr_val = 56648,
-	.acam_start_offset = 10000,
-	.zero_offset = {
-		14400, 14400, 14400, 14400
-	},
-};
-
 /* The reset function (by Tomasz) */
 static void fd_do_reset(struct fd_dev *fd, int hw_reset)
 {
@@ -195,7 +179,6 @@ int fd_probe(struct fmc_device *fmc)
 	fmc->mezzanine_data = fd;
 	fd->fmc = fmc;
 	fd->verbose = fd_verbose;
-	fd->calib = fd_default_calib;
 
 	/* Check the binary is there */
 	if (fd_readl(fd, FD_REG_IDR) != FD_MAGIC_FPGA) {
@@ -204,6 +187,11 @@ int fd_probe(struct fmc_device *fmc)
 	} else {
 		dev_info(dev, "%s: initializing\n", KBUILD_MODNAME);
 	}
+
+	/* Retrieve calibration from the eeprom, and validate */
+	ret = fd_handle_eeprom_calibration(fd);
+	if (ret < 0)
+		return ret;
 
 	/* First, hardware reset */
 	fd_do_reset(fd, 1);

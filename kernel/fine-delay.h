@@ -125,25 +125,24 @@ static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
 #  endif
 #endif
 
-struct fd_calib {
-	int64_t frr_poly[3];		/* SY89295 delay/temp poly coeffs */
+struct fd_calibration { /* All of these are big endian */
 	uint32_t magic;			/* magic ID: 0xf19ede1a */
-	uint32_t zero_offset[4];	/* Output zero offset, fixed point */
-	uint32_t adsfr_val;		/* ADSFR register value */
-	uint32_t acam_start_offset;	/* ACAM Start offset value */
-	uint32_t atmcr_val;		/* ATMCR register value */
-	uint32_t tdc_zero_offset;	/* Zero offset of the TDC, in ps */
-	/* The user can add a signed offset, in picoseconds */
-	int32_t tdc_user_offset;
-	int32_t ch_user_offset[4];
-	int32_t tdc_flags;
-};
+	uint32_t hash;			/* jhash of it all, with this zeroed */
+	uint16_t size;
+	uint16_t version;
+	uint32_t date;			/* hex: 0x20130410 = Apr 4th 2013 */
 
-struct fd_calib_on_eeprom {
-	u32 hash;
-	u16 size;
-	u16 version;
-	struct fd_calib calib;
+	/* SY89295 delay/temperature polynomial coefficients */
+	int64_t frr_poly[3];
+
+	/* Output-to-internal-timebase offset in ps. Add to start/end output */
+	int32_t zero_offset[4];
+
+	/* TDC-to-internal-timebase offset in ps. Add to stamps and delays */
+	int32_t tdc_zero_offset;
+
+	/* Default DAC value for VCXO. Set during init and for local timing */
+	uint32_t vcxo_default_tune;
 };
 
 /* Channels are called 1..4 in all docs. Internally it's 0..3 */
@@ -191,7 +190,7 @@ struct fd_dev {
 	struct timer_list fifo_timer;
 	struct timer_list temp_timer;
 	struct tasklet_struct tlet;
-	struct fd_calib calib;
+	struct fd_calibration calib;	/* a copy of what we have in flash */
 	struct fd_ch ch[FD_CH_NUMBER];
 	uint32_t bin;
 	int acam_addr;			/* cache of currently active addr */
@@ -202,6 +201,11 @@ struct fd_dev {
 	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
 	uint16_t mcp_iodir, mcp_olat;
 	struct fd_sw_fifo sw_fifo;
+
+	/* The following fields used to live in fd_calib */
+	int32_t tdc_user_offset;
+	int32_t ch_user_offset[4];
+	int32_t tdc_flags;
 };
 
 /* We act on flags using atomic ops, so flag is the number, not the mask */
@@ -371,6 +375,9 @@ extern int fd_eeprom_read(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			 void *buf, size_t size);
 extern int fd_eeprom_write(struct fd_dev *fd, int i2c_addr, uint32_t offset,
 			void *buf, size_t size);
+
+/* Function exported by calibration.c */
+int fd_handle_eeprom_calibration(struct fd_dev *fd);
 
 #endif /* __KERNEL__ */
 #endif /* __FINE_DELAY_H__ */

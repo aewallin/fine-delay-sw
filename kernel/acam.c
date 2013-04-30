@@ -311,8 +311,8 @@ static int __acam_config(struct fd_dev *fd, struct acam_mode_setup *s)
 		regval = p->val;
 		if (p->addr == 7)
 			regval |= reg7val;
-		if (p->addr == 5 && s->mode == ACAM_RMODE)
-			regval |= AR5_StartOff1(fd->calib.acam_start_offset);
+		if (p->addr == 5 && s->mode == ACAM_RMODE) /* FIXME: gmode? */
+			regval |= AR5_StartOff1(ACAM_GMODE_START_OFFSET);
 		if (p->addr == 5 && s->mode == ACAM_GMODE)
 			regval |= AR5_StartOff1(ACAM_GMODE_START_OFFSET);
 		if (p->addr == 6 && s->mode == ACAM_GMODE)

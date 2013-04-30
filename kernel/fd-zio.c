@@ -112,11 +112,11 @@ static int fd_zio_info_tdc(struct device *dev, struct zio_attribute *zattr,
 	fd = cset->zdev->priv_d;
 
 	if (zattr->id == FD_ATTR_TDC_USER_OFF) {
-		*usr_val = fd->calib.tdc_user_offset;
+		*usr_val = fd->tdc_user_offset;
 		return 0;
 	}
 	if (zattr->id == FD_ATTR_TDC_FLAGS) {
-		*usr_val = fd->calib.tdc_flags;
+		*usr_val = fd->tdc_flags;
 		return 0;
 	}
 	/*
@@ -147,7 +147,7 @@ static int fd_zio_info_output(struct device *dev, struct zio_attribute *zattr,
 		return 0;
 	}
 	if (zattr->id == FD_ATTR_OUT_USER_OFF) {
-		*usr_val = fd->calib.ch_user_offset[ch];
+		*usr_val = fd->ch_user_offset[ch];
 		return 0;
 	}
 	/* Reading the mode tells wether it triggered or not */
@@ -240,7 +240,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 		goto out;
 
 	case FD_ATTR_TDC_USER_OFF:
-		fd->calib.tdc_user_offset = usr_val;
+		fd->tdc_user_offset = usr_val;
 		goto out;
 
 	case FD_ATTR_TDC_FLAGS:
@@ -250,7 +250,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	}
 
 	/* This code is only about FD_ATTR_TDC_FLAGS */
-	change = fd->calib.tdc_flags ^ usr_val; /* old xor new */
+	change = fd->tdc_flags ^ usr_val; /* old xor new */
 
 	/* No need to lock, as configuration is serialized by zio-core */
 	if (change & FD_TDCF_DISABLE_INPUT) {
@@ -279,7 +279,7 @@ static int fd_zio_conf_tdc(struct device *dev, struct zio_attribute *zattr,
 	}
 out:
 	/* We need to store in the local array too (see info_tdc() above) */
-	fd->calib.tdc_flags = usr_val;
+	fd->tdc_flags = usr_val;
 
 	return 0;
 }
@@ -301,7 +301,7 @@ static int fd_zio_conf_output(struct device *dev, struct zio_attribute *zattr,
 		return 0;
 	}
 	if (zattr->id == FD_ATTR_OUT_USER_OFF) {
-		fd->calib.ch_user_offset[ch] = usr_val;
+		fd->ch_user_offset[ch] = usr_val;
 		return 0;
 	}
 	return 0;
@@ -442,7 +442,7 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	}
 
 	fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
-			  fd->calib.ch_user_offset[ch]);
+			  fd->ch_user_offset[ch]);
 
 	fd_ch_writel(fd, ch, fd->ch[ch].frr_cur,  FD_REG_FRR);
 

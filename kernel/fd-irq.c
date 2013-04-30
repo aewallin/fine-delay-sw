@@ -109,11 +109,11 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	v[FD_ATTR_TDC_FRAC]	= t.frac;
 	v[FD_ATTR_TDC_SEQ]	= t.seq_id;
 	v[FD_ATTR_TDC_CHAN]	= t.channel;
-	v[FD_ATTR_TDC_FLAGS]	= fd->calib.tdc_flags;
+	v[FD_ATTR_TDC_FLAGS]	= fd->tdc_flags;
 	v[FD_ATTR_TDC_OFFSET]	= fd->calib.tdc_zero_offset;
-	v[FD_ATTR_TDC_USER_OFF]	= fd->calib.tdc_user_offset;
+	v[FD_ATTR_TDC_USER_OFF]	= fd->tdc_user_offset;
 
-	fd_apply_offset(v + FD_ATTR_TDC_UTC_H, fd->calib.tdc_user_offset);
+	fd_apply_offset(v + FD_ATTR_TDC_UTC_H, fd->tdc_user_offset);
 
 	/* We also need a copy within the device, so sysfs can read it */
 	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));

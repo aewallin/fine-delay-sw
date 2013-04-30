@@ -23,6 +23,7 @@ obj-m := fmc-fine-delay.o
 fmc-fine-delay-objs	=  fd-zio.o fd-irq.o fd-core.o
 fmc-fine-delay-objs	+= onewire.o spi.o i2c.o gpio.o
 fmc-fine-delay-objs	+= acam.o calibrate.o pll.o time.o
+fmc-fine-delay-objs	+= calibration.o
 fmc-fine-delay-objs	+= ../sdb-lib/access.o
 fmc-fine-delay-objs	+= ../sdb-lib/glue.o
 
