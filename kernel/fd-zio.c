@@ -170,6 +170,9 @@ static int fd_wr_mode(struct fd_dev *fd, int on)
 	} else {
 		fd_writel(fd, 0, FD_REG_TCR);
 		clear_bit(FD_FLAG_WR_MODE, &fd->flags);
+		/* not white-rabbit: write default to DAC for VCXO */
+		fd_spi_xfer(fd, FD_CS_DAC, 24,
+			    fd->calib.vcxo_default_tune & 0xffff, NULL);
 	}
 	spin_unlock_irqrestore(&fd->lock, flags);
 	return 0;

@@ -46,7 +46,9 @@ int fd_spi_xfer(struct fd_dev *fd, int ss, int num_bits,
 
 int fd_spi_init(struct fd_dev *fd)
 {
-	/* nothing to do */
+	/* write default to DAC for VCXO */
+	fd_spi_xfer(fd, FD_CS_DAC, 24, fd->calib.vcxo_default_tune & 0xffff,
+		    NULL);
 	return 0;
 }
 

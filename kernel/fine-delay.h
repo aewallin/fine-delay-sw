@@ -277,9 +277,10 @@ enum fd_acam_modes {
 #define ACAM_MASK		((1<<29) - 1) /* 28 bits */
 
 /* SPI Bus chip selects */
-#define FD_CS_NONE	0	/* Nothing */
+#define FD_CS_DAC	0	/* DAC for VCXO */
 #define FD_CS_PLL	1	/* AD9516 PLL */
 #define FD_CS_GPIO	2	/* MCP23S17 GPIO */
+#define FD_CS_NONE	3	/* Unconnected, used as a delay */
 
 /* MCP23S17 register addresses (only ones which are used by the lib) */
 #define FD_MCP_IODIR	0x00
