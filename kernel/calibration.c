@@ -60,7 +60,7 @@ static void fd_i2c_load_calib(struct fd_dev *fd,
 		dev_warn(fd->fmc->hwdev, "File \"%s\" has size != %i\n",
 			 name, sizeof(*calib));
 	} else {
-		memcpy(&calib, fw->data, fw->size);
+		memcpy(calib, fw->data, fw->size);
 		dev_info(fd->fmc->hwdev,
 			 "calibration data loaded from \"%s\"\n", name);
 	}
