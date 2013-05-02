@@ -133,7 +133,7 @@ void dump_ts(char *title, struct fdelay_time t)
 
 int main(int argc, char **argv)
 {
-    struct fdelay_time t_start, t_delta, t_width, t_current;
+    struct fdelay_time t_start, t_delta, t_width;
     int mode = -1;
     int channel = -1;
     int count = 1;
