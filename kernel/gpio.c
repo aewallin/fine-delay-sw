@@ -21,9 +21,6 @@ static int gpio_writel(struct fd_dev *fd, int val, int reg)
 	int rval = fd_spi_xfer(fd, FD_CS_GPIO, 24,
 			   0x4e0000 | (reg << 8) | val, NULL);
 
-	fd_spi_xfer(fd, FD_CS_NONE, 24,
-			  0, NULL);
-
 	return rval;
 }
 
@@ -34,9 +31,6 @@ static int gpio_readl(struct fd_dev *fd, int reg)
 
 	err = fd_spi_xfer(fd, FD_CS_GPIO, 24,
 			  0x4f0000 | (reg << 8), &ret);
-
-	fd_spi_xfer(fd, FD_CS_NONE, 24,
-			  0, NULL);
 
 	if (err < 0)
 		return err;
