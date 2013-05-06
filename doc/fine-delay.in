@@ -329,13 +329,17 @@ must talk to a specific FPGA binary file running in the device.
 This version of the driver has been developed to run with
 the FPGA binary included in the
 package as @code{binaries/fine-delay.bin}, which is White-Rabbit-enabled.
+This gateware is designed to work with the PCIe carrier called
+@sc{spec}. Other carriers, like the @sc{svec} require different gateware.
+The package ships the @sc{spec} gateware because it is the most common
+use case.
 
-Earlier versions required to load a @i{wrc} (White Rabbit Core) program
-that runs in the internal LM32 soft core, but with this version this
-step is not required (the program is already part of the FPGA binary).
-However, if you want to replace it, the default name to use
-is @code{fine-delay-wrc.bin}. @b{Note}: this specific version of
-the driver does not support loading the LM32 program separately.
+@c Earlier versions required to load a @i{wrc} (White Rabbit Core) program
+@c that runs in the internal LM32 soft core, but with this version this
+@c step is not required (the program is already part of the FPGA binary).
+@c However, if you want to replace it, the default name to use
+@c is @code{fine-delay-wrc.bin}. @b{Note}: this specific version of
+@c the driver does not support loading the LM32 program separately.
 
 @c This can also be downloaded
 @c from the @i{Files} tab of the hardware project:
@@ -347,21 +351,19 @@ If the gateware is updated, I'll take care to always include in this
 package the exact binary the software is developed and verified
 against.
 
-At this point in time, the only supported carrier board is the SPEC,
-but we are working to make this driver portable to other carriers.
-
 @c ==========================================================================
 @node Gateware Installation
 @section Gateware Installation
 
 To install the FPGA image in the target system, please follow the
-instruction in the documentation of @i{spec-sw} (version 2.1 or later),
+instructions in the documentation of @i{spec-sw} (the suggested
+version to match this packages is @t{v2013-04})
 or the one for your specific FMC carrier.
 To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
 @i{/lib/firmware} or a subdirectory thereof.
 The default name used by this driver is
-@file{fmc/fine_delay.bin}.
+@file{fmc/fine-delay.bin}.
 
 If you have several @i{fine-delay} cards in the same host, you can
 load different binaries in different cards, using appropriate
@@ -373,43 +375,42 @@ module parameters.
 
 @c FIXME: wrc loading is not there.
 
-@b{Note:} if you were used to version 1.1 or earlier of this package,
-the rules about naming were different: we rearranged @i{spec-sw}
-in the meanwhile to be a more flexible framework for a wide range
-of mezzanines, up to removing the dependency of this package
-from @i{spec-sw}.
-
 @c ==========================================================================
 @node Software Dependencies
 @section Software Dependencies
 
 The kernel versions I am using during development is 3.4.  Everything
-used here is known to at least compile with version 2.6.32, and I'll
-port to version 2.6.24 (in its @i{preempt-rt} incantation) if needed.
-Other versions are currently not used in production, but I foresee
-no special problems in the whole range 2.6.32 to 3.4.
+used here is known to build with all versions since 2.6.32 and up to 3.8.
+A backport to version 2.6.24 is released as a separate @i{git} branch.
 
 The driver, then, is based on the ZIO framework, available from
-@code{ohwr.org}.  I'm developing with the @code{for-2.6.32} branch of
-the framework, as more recent feature break compatibility with older
-kernels.
+@code{ohwr.org}.  I'm developing with the @code{v1.0-fixes} branch of
+the framework.  Again, this commit of ZIO is known
+to work in the kernel range 2.6.32..3.8 and a backport to 2.6.24 is
+available.
 
 The FMC mezzanine is supported by means of the @i{fmc-bus}
 software project. Such support used to be part of the @i{spec-sw}
 package, but is not a project of its own.  This @i{fine-delay}
-kernel module registers as a @i{driver} for the FMC bus abstraction.
+kernel module registers as a @i{driver} for the FMC bus abstraction,
+and is verified with version @t{v2013-04} of the FMC package.
+The same kernel range applies.
 
-Both packages are currently checked out as @i{git submodules}
+Both packages (ZIO and @i{fmc-bus})
+are currently checked out as @i{git submodules}
 of this package, and each of them is retrieved at the right version
 to be compatible with this driver.  This means you may just
 ignore software dependencies and everything should work.
 
-Unfortunately, as I develop this (October 2012), all involved packages
-are moving fast: I try to keep everything consistent in @i{fine-delay}
-and its submodules, but I may fail sometimes. If in doubt please
-ask.
+The carrier driver is not strictly related to this package, but
+@i{fine-delay} is released against version @t{v2013-04} of
+@i{spec-sw}.  The mezzanine is also known to work with the @sc{svec}
+carrier under @sc{vme}.
 
-@c FIXME: clarify software dependencies as we stabilize.
+Unfortunately, all the packages are moving fast: we are approaching a stable
+and long-lasting status but we are not there yet.  Please stick
+to the released versions named in this section, unless you are involved
+in development.
 
 @c ==========================================================================
 @node Software Installation
@@ -458,32 +459,32 @@ other versions of the drivers. After @code{make prereq_install},
 the warning message won't be repeated any more if you change this
 driver and @code{make install} again.
 
-After installation, your carrier driver should be loaded automatically
+After installation, your carrier driver should load automatically
 (for example, the PCI bus will load @code{spec.ko}), but @code{
 fine-delay.ko} must be loaded manually, because support for
 automatic loading is not yet in place. The suggested command is
-one of the following:
+one or the other of the following two:
 
 @smallexample
-   modeprobe fmc-fine-delay [<parameter> ...]         # after make install
+   modprobe fmc-fine-delay [<parameter> ...]         # after make install
    insmod kernel/fmc-fine-delay.ko [<parameter> ...]  # if not installed
 @end smallexample
 
-Available module parameters are describibed in @ref{Module Parameters}.
-Unless you customized or want to costumize one of the three
+Available module parameters are described in @ref{Module Parameters}.
+Unless you customized or want to customize one of the three
 related packages, you can skip the rest of this section.
 
 
 @sp 1
 
-In order to compile @i{fine-delay} against a specific version of one
-of the related packages, you can one or more of the following
+In order to compile @i{fine-delay} against a specific repository of one
+of the related packages, ignoring the local @i{submodule}
+you can use one or more of the following
 environment variables:
 
 @table @code
 
 @item ZIO
-@itemx SPEC_SW
 @itemx FMC_BUS
 
 	The top-level directory of the repository checkout of each
@@ -494,8 +495,8 @@ environment variables:
 
 If any of the above is set, headers and dependencies for the
 respective package are taken from the chosen directory. If you
-@code{make prereq_install} with any of these variables set, they'll 
-be used to know where to install from.
+@code{make prereq_install} with any of these variables set, they are
+be used to know where to install from, instead of using local submodules.
 
 @c ==========================================================================
 @node Module Parameters
@@ -576,26 +577,31 @@ For example, this host has two SPEC cards:
 @end smallexample
 
 One of the cards hosts a @i{fine-delay} mezzanine and the other does
-not. FMC identifiers are not programmed to flash, at this point in time,
-but you can use @code{busid=} to choose which SPEC must use @i{fine-delay},
-leaving the other ones alone:
+not. FMC identifiers are not yet used by this driver at this point in time.
+(They will be there in  the next release: code is there but not finalized).
+So, here
+you can use @code{busid=} to choose which SPEC must use @i{fine-delay},
+leaving the other one alone:
 
 @smallexample
 spusa.root# insmod fmc-fine-delay.ko busid=0x0200
-[ 1336.539021] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
-[ 1336.771452] spec 0000:02:00.0: FPGA programming successful
-[ 1336.777063] spec 0000:02:00.0: Gateware successfully loaded
-[ 1336.920880] spec 0000:02:00.0: fmc_fine_delay: initializing
-[ 1338.381674] fd_read_temp: Scratchpad: 70:04:4b:46:7f:ff:10:10:28
-[ 1338.387888] fd_read_temp: Temperature 0x470 (12 bits: 71.000)
-[ 1339.335887] fd_calibrate_outputs: ch1: 8ns @@859 (f 827, off 32, t 71.00)
-[ 1339.521890] fd_calibrate_outputs: ch2: 8ns @@867 (f 827, off 40, t 71.00)
-[ 1339.707855] fd_calibrate_outputs: ch3: 8ns @@854 (f 827, off 27, t 71.00)
-[ 1339.893847] fd_calibrate_outputs: ch4: 8ns @@859 (f 827, off 32, t 71.00)
-[ 1339.962600] fmc_fine_delay: Found i2c device at 0x50
-[ 1339.989642] fd_i2c_init: calibration on eeprom is invalid
-[ 1339.995785] fmc_fine_delay: using interrupts for input
-[ 1340.055394] spec 0000:04:00.0: not using "fmc_fine_delay" according to modparam
+[ 4603.994936] spec 0000:02:00.0: Driver has no ID: matches all
+[ 4604.000624] spec 0000:02:00.0: reprogramming with fmc/fine-delay.bin
+[ 4604.206515] spec 0000:02:00.0: FPGA programming successful
+[ 4604.212442] spec 0000:02:00.0: Gateware successfully loaded
+[ 4604.218037] spec 0000:02:00.0: fd_regs_base is 80000
+[ 4604.223023] spec 0000:02:00.0: fmc_fine_delay: initializing
+[ 4604.228624] spec 0000:02:00.0: calibration: version 3, date 20130427
+[ 4605.691404] fd_read_temp: Scratchpad: 9f:04:4b:46:7f:ff:01:10:89
+[ 4605.697615] fd_read_temp: Temperature 0x49f (12 bits: 73.937)
+[ 4606.645545] fd_calibrate_outputs: ch1: 8ns @@859 (f 827, off 32, t 71.00)
+[ 4606.815228] fd_calibrate_outputs: ch2: 8ns @@867 (f 827, off 40, t 71.00)
+[ 4607.001027] fd_calibrate_outputs: ch3: 8ns @@854 (f 827, off 27, t 71.00)
+[ 4607.187007] fd_calibrate_outputs: ch4: 8ns @@859 (f 827, off 32, t 71.00)
+[ 4607.356103] fmc_fine_delay: Found i2c device at 0x50
+[ 4607.364039] spec 0000:02:00.0: Using interrupts for input
+[ 4607.369549] spec 0000:04:00.0: Driver has no ID: matches all
+[ 4607.375243] spec 0000:04:00.0: not using "fmc_fine_delay" according to modparam
 @end smallexample
 
 If you use @code{show_sdb=1}, you'll get the following dump of the
@@ -610,7 +616,7 @@ SDB: 00000651:eef0b198 WB4-Bridge-GSI      (bridge: 000c0000)
 SDB:    00000651:e6a542c9 WB4-Crossbar-GSI
 SDB:    0000ce42:66cfeb52 WB4-BlockRAM        (000c0000-000d5fff)
 SDB:    00000651:eef0b198 WB4-Bridge-GSI      (bridge: 000e0000)
-SDB:       00000651:e6a542c9 WB4-Crossbar-GSI 
+SDB:       00000651:e6a542c9 WB4-Crossbar-GSI
 SDB:       0000ce42:ab28633a WR-Mini-NIC         (001a0000-001a00ff)
 SDB:       0000ce42:650c2d4f WR-Endpoint         (001a0100-001a01ff)
 SDB:       0000ce42:65158dc0 WR-Soft-PLL         (001a0200-001a02ff)
@@ -618,9 +624,14 @@ SDB:       0000ce42:de0d8ced WR-PPS-Generator    (001a0300-001a03ff)
 SDB:       0000ce42:ff07fc47 WR-Periph-Syscon    (001a0400-001a04ff)
 SDB:       0000ce42:e2d13d04 WR-Periph-UART      (001a0500-001a05ff)
 SDB:       0000ce42:779c5443 WR-Periph-1Wire     (001a0600-001a06ff)
-SDB:       00000651:cababa56 WB4-Streaming-DMA_0 (001a0700-001a071f)
+SDB:       0000ce42:779c5445 WR-Periph-AuxWB     (001a0700-001a07ff)
 SDB: 0000ce42:00000013 WB-VIC-Int.Control  (00090000-000900ff)
+SDB: UNKNOWN TYPE 0x82
+SDB: UNKNOWN TYPE 0x81
 @end smallexample
+
+(The last two @t{UNKNOWN} lines are about informative structures that are
+not yet dumped by @i{fmc-bus}).
 
 The module, then supports some more parameters that are
 calibration-specific. They are described in @ref{Calibration}.
@@ -1680,7 +1691,9 @@ The following functions are offered:
 @chapter Calibration
 
 Calibration data for a fine-delay card is stored in the I2C FMC EEPROM
-device, using the SDB filesystem.
+device, using the SDB filesystem. Previous versions used a constant
+offset of 6kB, but the calibration format was different, so no
+compatibility is retained.
 
 The driver automatically loads calibration data from the flash at
 initialization time, but only uses it if its hash is valid. The
