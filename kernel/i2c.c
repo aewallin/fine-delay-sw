@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/time.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/random.h>
 #include "fine-delay.h"
 #include "hw/fd_main_regs.h"
@@ -26,6 +27,7 @@ static void set_sda(struct fd_dev *fd, int val)
 	if (val)
 		reg |= FD_I2CR_SDA_OUT;
 	fd_writel(fd, reg, FD_REG_I2CR);
+	ndelay(1250); /* 400kHz -> 2.5us/loop */
 }
 
 static void set_scl(struct fd_dev *fd, int val)
@@ -36,6 +38,7 @@ static void set_scl(struct fd_dev *fd, int val)
 	if (val)
 		reg |= FD_I2CR_SCL_OUT;
 	fd_writel(fd, reg, FD_REG_I2CR);
+	ndelay(1250); /* 400kHz -> 2.5us/loop */
 }
 
 static int get_sda(struct fd_dev *fd)
