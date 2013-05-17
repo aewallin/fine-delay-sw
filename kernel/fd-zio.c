@@ -440,9 +440,12 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	}
 
 	if (mode == FD_OUT_MODE_DELAY) {
-		fd_attr_sub(attrs + FD_ATTR_OUT_START_H,
-			    fd->calib.zero_offset[ch]);
+		fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
+			    fd->calib.tdc_zero_offset);
 	}
+
+	fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
+			    fd->calib.zero_offset[ch]);
 
 	fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
 			  fd->ch_user_offset[ch]);

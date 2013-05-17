@@ -55,6 +55,29 @@ static void fd_ts_sub(struct fd_time *t, uint64_t pico)
 	}
 }
 
+static void fd_ts_add(struct fd_time *t, int64_t pico)
+{
+	uint32_t coarse, frac;
+
+	/* FIXME: we really need to pre-convert pico to internal repres. */
+	if (pico < 0) {
+		fd_ts_sub(t, -pico);
+		return;
+	}
+
+	fd_split_pico(pico, &coarse, &frac);
+	t->frac += frac;
+	t->coarse += coarse;
+	if (t->frac >= 4096) {
+		t->frac -= 4096;
+		t->coarse++;
+	}
+	if (t->coarse >= 125*1000*1000) {
+		t->coarse -= 125*1000*1000;
+		t->utc++;
+	}
+}
+
 /* This is called from outside, too */
 int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 {
@@ -88,7 +111,7 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 		t.utc++;
 	}
 
-	fd_ts_sub(&t, fd->calib.tdc_zero_offset);
+	fd_ts_add(&t, fd->calib.tdc_zero_offset);
 
 	/* Write the timestamp in the trigger, it will reach the control */
 	ti->tstamp.tv_sec = t.utc;
