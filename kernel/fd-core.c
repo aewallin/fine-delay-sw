@@ -166,9 +166,10 @@ int fd_probe(struct fmc_device *fmc)
 		fmc_find_sdb_device(fmc->sdb, 0xce42, 0xf19ede1a, NULL);
 
 	/* ugly hack for svec testing*/
-	if (fmc->slot_id == 1) {
-		fd->fd_regs_base = 0x10000;
-	}
+	/* FIXME: this depends on 0x10000/0x20000 being the FD cores
+	 * base addresses */
+	if (!strcmp(fmc->carrier_name, "SVEC") && fmc->slot_id == 1)
+		fd->fd_regs_base += 0x10000;
 	dev_info(dev, "fd_regs_base is %x\n", fd->fd_regs_base);
 
 	fd->fd_vic_base =
