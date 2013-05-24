@@ -57,7 +57,7 @@ static void fd_i2c_load_calib(struct fd_dev *fd,
 		return;
 	}
 	if (fw->size != sizeof(*calib)) {
-		dev_warn(fd->fmc->hwdev, "File \"%s\" has size != %i\n",
+		dev_warn(fd->fmc->hwdev, "File \"%s\" has size != %zi\n",
 			 name, sizeof(*calib));
 	} else {
 		memcpy(calib, fw->data, fw->size);
