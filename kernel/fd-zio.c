@@ -407,7 +407,7 @@ static void fd_attr_add(uint32_t *a, uint32_t pico)
 		coarse++;
 	}
 	a[__COARSE] += coarse;
-	if (a[__COARSE] > 125*1000*1000) {
+	if (a[__COARSE] >= 125*1000*1000) {
 		a[__COARSE] -= 125*1000*1000;
 		a[__UTC_L]++;
 		if (unlikely(a[__UTC_L] == 0))

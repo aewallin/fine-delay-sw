@@ -106,7 +106,7 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 		t.coarse += 125000000;
 		t.coarse &= 0xfffffff;
 		t.utc--;
-	} else if(t.coarse > 125000000) {
+	} else if(t.coarse >= 125000000) {
 		t.coarse -= 125000000;
 		t.utc++;
 	}
