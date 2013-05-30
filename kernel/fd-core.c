@@ -325,4 +325,5 @@ static void fd_exit(void)
 module_init(fd_init);
 module_exit(fd_exit);
 
+MODULE_VERSION(GIT_VERSION);
 MODULE_LICENSE("GPL and additional rights"); /* LGPL */
