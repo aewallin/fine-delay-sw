@@ -476,6 +476,7 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 
 	if (mode == FD_OUT_MODE_DELAY) {
 		dcr = 0;
+		rep = 1;	/* ignore repetition in delay mode */
 		fd_ch_writel(fd, ch, FD_RCR_REP_CNT_W(rep - 1)
 			     | (rep < 0 ? FD_RCR_CONT : 0), FD_REG_RCR);
 	} else {
