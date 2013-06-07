@@ -442,9 +442,8 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	}
 
 	if (mode == FD_OUT_MODE_DELAY) {
-		/* check delay lower limits */
-		delay.tv_sec = (uint64_t)attrs[FD_ATTR_OUT_START_H] << 32
-				| attrs[FD_ATTR_OUT_START_L];
+		/* check delay lower limits. FIXME: raise an alarm */
+		delay.tv_sec = attrs[FD_ATTR_OUT_START_L];
 		delay.tv_nsec = attrs[FD_ATTR_OUT_START_COARSE] * 8;
 		if (delay.tv_sec == 0 && delay.tv_nsec < 600)
 			return;
