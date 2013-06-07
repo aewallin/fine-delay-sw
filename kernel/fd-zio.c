@@ -527,6 +527,7 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 		dcr |= FD_DCR_NO_FINE;;
 
 
+	fd_ch_writel(fd, ch, dcr, FD_REG_DCR);
 	fd_ch_writel(fd, ch, dcr | FD_DCR_UPDATE, FD_REG_DCR);
 	fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE, FD_REG_DCR);
 	if (mode == FD_OUT_MODE_PULSE)
