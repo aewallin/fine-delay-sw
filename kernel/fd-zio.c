@@ -428,7 +428,7 @@ void fd_apply_offset(uint32_t *a, int32_t off_pico)
 /* Internal output engine */
 static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 {
-	struct timespec delta, width;
+	struct timespec delta, width, delay;
 	int ch = index1_4 - 1;
 	int mode = attrs[FD_ATTR_OUT_MODE];
 	int rep = attrs[FD_ATTR_OUT_REP];
@@ -440,6 +440,13 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	}
 
 	if (mode == FD_OUT_MODE_DELAY) {
+		/* check delay lower limits */
+		delay.tv_sec = (uint64_t)attrs[FD_ATTR_OUT_START_H] << 32
+				| attrs[FD_ATTR_OUT_START_L];
+		delay.tv_nsec = attrs[FD_ATTR_OUT_START_COARSE] * 8;
+		if (delay.tv_sec == 0 && delay.tv_nsec < 600)
+			return;
+
 		fd_apply_offset(attrs + FD_ATTR_OUT_START_H,
 			    fd->calib.tdc_zero_offset);
 		fd_apply_offset(attrs + FD_ATTR_OUT_END_H,
