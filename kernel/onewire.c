@@ -141,8 +141,7 @@ static int ow_read_block(struct fd_dev *fd, int port, uint8_t *block, int len)
 static int ds18x_read_serial(struct fd_dev *fd)
 {
 	if(!ow_reset(fd, 0)) {
-		pr_err("%s: Failure in resetting one-wire channel\n",
-		       KBUILD_MODNAME);
+		dev_err(&fd->fmc->dev, "Failure in resetting one-wire channel\n");
 		return -EIO;
 	}
 
@@ -165,7 +164,7 @@ static int ds18x_access(struct fd_dev *fd)
 		return ow_write_byte(fd, FD_OW_PORT, CMD_ROM_SKIP);
 	}
 out:
-	pr_err("%s: Failure in one-wire communication\n", KBUILD_MODNAME);
+	dev_err(&fd->fmc->dev, "Failure in one-wire communication\n");
 	return -EIO;
 }
 
@@ -185,6 +184,7 @@ int fd_read_temp(struct fd_dev *fd, int verbose)
 	int i, temp;
 	unsigned long j;
 	uint8_t data[9];
+	struct device *dev = &fd->fmc->dev;
 
 	/* If first conversion, ask for it first */
 	if (fd->next_t == 0)
@@ -204,7 +204,7 @@ int fd_read_temp(struct fd_dev *fd, int verbose)
 	ow_read_block(fd, FD_OW_PORT, data, 9);
 
 	if (verbose > 1) {
-		pr_info("%s: Scratchpad: ", __func__);
+		dev_info(dev, "%s: Scratchpad: ", __func__);
 		for (i = 0; i < 9; i++)
 			printk("%02x%c", data[i], i == 8 ? '\n' : ':');
 	}
@@ -213,7 +213,7 @@ int fd_read_temp(struct fd_dev *fd, int verbose)
 		temp = -0x10000 + temp;
 	fd->temp = temp;
 	if (verbose) {
-		pr_info("%s: Temperature 0x%x (%i bits: %i.%03i)\n", __func__,
+		dev_info(dev, "%s: Temperature 0x%x (%i bits: %i.%03i)\n", __func__,
 			temp, 9 + (data[4] >> 5),
 			temp / 16, (temp & 0xf) * 1000 / 16);
 	}
@@ -234,7 +234,7 @@ int fd_onewire_init(struct fd_dev *fd)
 		return -EIO;
 
 	if (fd->verbose) {
-		pr_info("%s: Found DS18xx sensor: ", __func__);
+		dev_info(&fd->fmc->dev, "%s: Found DS18xx sensor: ", __func__);
 		for (i = 0; i < 8; i++)
 			printk("%02x%c", fd->ds18_id[i], i == 7 ? '\n' : ':');
 	}

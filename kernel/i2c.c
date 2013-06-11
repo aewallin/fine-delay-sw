@@ -118,8 +118,9 @@ void mi2c_scan(struct fd_dev *fd)
 	for(i = 0; i < 256; i += 2) {
 		mi2c_start(fd);
 		if(!mi2c_put_byte(fd, i))
-			pr_info("%s: Found i2c device at 0x%x\n",
-			       KBUILD_MODNAME, i >> 1);
+			dev_info(&fd->fmc->dev,
+				 "%s: Found i2c device at 0x%x\n",
+			         KBUILD_MODNAME, i >> 1);
 		mi2c_stop(fd);
 	}
 }

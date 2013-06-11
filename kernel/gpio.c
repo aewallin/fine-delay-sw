@@ -47,7 +47,8 @@ static int gpio_writel_with_retry(struct fd_dev *fd, int val, int reg)
 		if(rv >= 0 && (rv == val))
 		{
 			if(SPI_RETRIES-1-retries > 0)
-				pr_info("%s: succeded after %d retries\n",
+				dev_info(&fd->fmc->dev,
+					"%s: succeded after %d retries\n",
 				       __func__, SPI_RETRIES - 1 - retries);
 			return 0;
 		}
@@ -86,6 +87,7 @@ void fd_gpio_set_clr(struct fd_dev *fd, int mask, int set)
 int fd_gpio_init(struct fd_dev *fd)
 {
 	int i, val;
+	struct device *dev = &fd->fmc->dev;
 
 	fd->mcp_iodir = 0xffff;
 	fd->mcp_olat = 0;
@@ -101,16 +103,16 @@ int fd_gpio_init(struct fd_dev *fd)
 		if (i < 0)
 			goto out;
 		if (i != val) {
-			pr_err("%s: Error in GPIO communication\n",
+			dev_err(dev, "%s: Error in GPIO communication\n",
 			       KBUILD_MODNAME);
-			pr_err("   (got 0x%x, expected 0x%x)\n", i, val);
+			dev_err(dev, "   (got 0x%x, expected 0x%x)\n", i, val);
 			return -EIO;
 		}
 	}
 	/* last time we wrote 0, ok */
 	return 0;
 out:
-	pr_err("%s: Error in SPI communication\n", KBUILD_MODNAME);
+	dev_err(dev, "%s: Error in SPI communication\n", KBUILD_MODNAME);
 	return -EIO;
 }
 

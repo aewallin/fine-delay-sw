@@ -91,7 +91,8 @@ int fd_reset_again(struct fd_dev *fd)
 		msleep(10);
 	}
 	if (time_after_eq(jiffies, j)) {
-		pr_err("%s: timeout waiting for GCR lock bit\n", __func__);
+		dev_err(&fd->fmc->dev,
+			"%s: timeout waiting for GCR lock bit\n", __func__);
 		return -EIO;
 	}
 
@@ -126,7 +127,7 @@ int fd_probe(struct fmc_device *fmc)
 {
 	struct fd_modlist *m;
 	struct fd_dev *fd;
-	struct device *dev = fmc->hwdev;
+	struct device *dev = &fmc->dev;
 	char *fwname;
 	int i, index, ret;
 
@@ -228,12 +229,12 @@ int fd_probe(struct fmc_device *fmc)
 
 	/* init all subsystems */
 	for (i = 0, m = mods; i < ARRAY_SIZE(mods); i++, m++) {
-		pr_debug("%s: Calling init for \"%s\"\n", __func__,
-			 m->name);
+		dev_dbg(dev, "%s: Calling init for \"%s\"\n", __func__,
+			  m->name);
 		ret = m->init(fd);
 		if (ret < 0) {
-			pr_err("%s: error initializing %s\n", __func__,
-				 m->name);
+			dev_err(dev, "%s: error initializing %s\n", __func__,
+				m->name);
 			goto err;
 		}
 	}

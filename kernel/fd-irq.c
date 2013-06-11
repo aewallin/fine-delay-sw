@@ -290,8 +290,9 @@ int fd_irq_init(struct fd_dev *fd)
 
 	/* Check that the sw fifo size is a power of two */
 	if (fd_sw_fifo_len & (fd_sw_fifo_len - 1)) {
-		pr_err("%s: fifo len must be a power of 2 (not %d = 0x%x)\n",
-		       KBUILD_MODNAME, fd_sw_fifo_len, fd_sw_fifo_len);
+		dev_err(&fd->fmc->dev,
+			"fifo len must be a power of 2 (not %d = 0x%x)\n",
+		        fd_sw_fifo_len, fd_sw_fifo_len);
 		return -EINVAL;
 	}
 
@@ -309,7 +310,7 @@ int fd_irq_init(struct fd_dev *fd)
 	tasklet_init(&fd->tlet, fd_tlet, (unsigned long)fd);
 
 	if (fd_timer_period_ms) {
-		dev_info(fd->fmc->hwdev,"Using a timer for input (%i ms)\n",
+		dev_info(&fd->fmc->dev,"Using a timer for input (%i ms)\n",
 			 jiffies_to_msecs(fd_timer_period_jiffies));
 		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 	} else {

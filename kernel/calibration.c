@@ -111,7 +111,7 @@ static int fd_read_calibration_eeprom(struct fmc_device *fmc,
 int fd_handle_eeprom_calibration(struct fd_dev *fd)
 {
 	struct fd_calibration *calib;
-	struct device *d = fd->fmc->hwdev;
+	struct device *d = &fd->fmc->dev;
 	int i;
 	u32 hash, horig;
 

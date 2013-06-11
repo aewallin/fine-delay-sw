@@ -39,6 +39,7 @@ int fd_pll_init(struct fd_dev *fd)
 	int i;
 	unsigned long j;
 	const struct ad9516_reg *r;
+	struct device *dev = &fd->fmc->dev;
 
 	if (pll_writel(fd, 0x99, 0x000) < 0)
 		goto out;
@@ -48,16 +49,15 @@ int fd_pll_init(struct fd_dev *fd)
 	if (i < 0)
 		goto out;
 	if (i != 0xc3) {
-		pr_err("%s: Error in PLL communication\n", KBUILD_MODNAME);
-		pr_err("   (got 0x%x, expected 0xc3)\n", i);
+		dev_err(dev, "Error in PLL communication\n");
+		dev_err(dev, "   (got 0x%x, expected 0xc3)\n", i);
 		return -EIO;
 	}
 
 	/* Write the magic config */
 	for (i = 0, r = __9516_regs; i < ARRAY_SIZE(__9516_regs); i++, r++) {
 		if (pll_writel(fd, r->val, r->reg) < 0) {
-			pr_err("%s: Error in configuring PLL (step %i)\n",
-			       KBUILD_MODNAME, i);
+			dev_err(dev, "Error in configuring PLL (step %i)\n", i);
 			return -EIO;
 		}
 	}
@@ -95,7 +95,7 @@ int fd_pll_init(struct fd_dev *fd)
 	return 0;
 
 out:
-	pr_err("%s: Error in SPI communication\n", KBUILD_MODNAME);
+	dev_err(dev, "Error in SPI communication\n");
 	return -EIO;
 }
 

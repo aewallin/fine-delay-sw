@@ -64,6 +64,7 @@ static uint64_t output_delay_ps(struct fd_dev *fd, int ch, int fine, int n,
 	uint64_t *results;
 	uint64_t res, acc = 0;
 	int rem;
+	struct device *dev = &fd->fmc->dev;
 
 	results = kmalloc(n * sizeof(*results), GFP_KERNEL);
 	if (!results)
@@ -106,9 +107,9 @@ static uint64_t output_delay_ps(struct fd_dev *fd, int ch, int fine, int n,
 
 		res = fr * fd->bin;
 		if (fd->verbose > 3)
-			pr_info("%s: ch %i, fine %i, bin %x got %08x, "
-				"res 0x%016llx\n", __func__, ch, fine,
-				fd->bin, fr, res);
+			dev_info(dev, "%s: ch %i, fine %i, bin %x got %08x, "
+				 "res 0x%016llx\n", __func__, ch, fine,
+				 fd->bin, fr, res);
 		results[i] = res;
 		acc += res;
 	}
@@ -125,9 +126,9 @@ static uint64_t output_delay_ps(struct fd_dev *fd, int ch, int fine, int n,
 			if (results[i] < stats->min) stats->min = results[i];
 		}
 		if (fd->verbose > 2)
-			pr_info("%s: ch %i, taps %i, count %i, result %llx "
-				"(max-min %llx)\n", __func__, ch, fine, n,
-				stats->avg, stats->max - stats->min);
+			dev_info(dev, "%s: ch %i, taps %i, count %i, result %llx "
+				 "(max-min %llx)\n", __func__, ch, fine, n,
+				 stats->avg, stats->max - stats->min);
 	}
 	kfree(results);
 
@@ -145,6 +146,7 @@ static int fd_find_8ns_tap(struct fd_dev *fd, int ch)
 	int l = 0, mid, r = FD_NUM_TAPS - 1;
 	uint64_t bias, dly;
 	struct delay_stats stats;
+	struct device *dev = &fd->fmc->dev;
 
 	/*
 	 * Measure the delay at zero setting, so it can be further
@@ -156,7 +158,7 @@ static int fd_find_8ns_tap(struct fd_dev *fd, int ch)
 		mid = ( l + r) / 2;
 		dly = output_delay_ps(fd, ch, mid, FD_CAL_STEPS, &stats) - bias;
 		if (fd->verbose > 1) {
-			printk("%s: ch%i @ %-5i: ", __func__, ch, mid);
+			dev_info(dev, "%s: ch%i @ %-5i: ", __func__, ch, mid);
 			__pr_fixed("bias ", bias, ", ");
 			__pr_fixed("min ", stats.min - bias, ", ");
 			__pr_fixed("avg ", stats.avg - bias, ", ");
@@ -194,10 +196,11 @@ int fd_calibrate_outputs(struct fd_dev *fd)
 		fd_ch_writel(fd, ch, new, FD_REG_FRR);
 		fd->ch[ch].frr_cur = new;
 		if (1) {
-			pr_info("%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
-				__func__, FD_CH_EXT(ch),
-				new, fitted, fd->ch[ch].frr_offset,
-				fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+			dev_info(&fd->fmc->dev,
+				 "%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
+				 __func__, FD_CH_EXT(ch),
+				 new, fitted, fd->ch[ch].frr_offset,
+				 fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
 		}
 	}
 	return 0;
@@ -217,10 +220,11 @@ void fd_update_calibration(unsigned long arg)
 		fd_ch_writel(fd, ch, new, FD_REG_FRR);
 		fd->ch[ch].frr_cur = new;
 		if (0) {
-			pr_info("%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
-				__func__, FD_CH_EXT(ch),
-				new, fitted, fd->ch[ch].frr_offset,
-				fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
+			dev_info(&fd->fmc->dev,
+				 "%s: ch%i: 8ns @%i (f %i, off %i, t %i.%02i)\n",
+				 __func__, FD_CH_EXT(ch),
+				 new, fitted, fd->ch[ch].frr_offset,
+				 fd->temp / 16, (fd->temp & 0xf) * 100 / 16);
 		}
 	}
 
