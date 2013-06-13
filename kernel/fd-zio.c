@@ -435,7 +435,9 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	int dcr;
 
 	if (mode == FD_OUT_MODE_DISABLED) {
-		fd_gpio_clr(fd, FD_GPIO_OUTPUT_EN(index1_4));
+		/* disable output via DCR register */
+		dcr = 0;
+		fd_ch_writel(fd, ch, dcr, FD_REG_DCR);
 		return;
 	}
 
@@ -538,11 +540,9 @@ static void __fd_zio_output(struct fd_dev *fd, int index1_4, uint32_t *attrs)
 	fd_ch_writel(fd, ch, dcr, FD_REG_DCR);
 	fd_ch_writel(fd, ch, dcr | FD_DCR_UPDATE, FD_REG_DCR);
 	fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE, FD_REG_DCR);
-	if (mode == FD_OUT_MODE_PULSE)
-		fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE | FD_DCR_PG_ARM,
-			     FD_REG_DCR);
-
-	fd_gpio_set(fd, FD_GPIO_OUTPUT_EN(index1_4));
+	if (mode == FD_OUT_MODE_PULSE) {
+		fd_ch_writel(fd, ch, dcr | FD_DCR_ENABLE | FD_DCR_PG_ARM,  FD_REG_DCR);
+	}
 }
 
 /* This is called on user write */

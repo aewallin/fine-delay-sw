@@ -129,7 +129,7 @@ int fd_probe(struct fmc_device *fmc)
 	struct fd_dev *fd;
 	struct device *dev = &fmc->dev;
 	char *fwname;
-	int i, index, ret;
+	int i, index, ret, ch;
 
 	fd = kzalloc(sizeof(*fd), GFP_KERNEL);
 	if (!fd) {
@@ -258,6 +258,10 @@ int fd_probe(struct fmc_device *fmc)
 		       ts3.tv_sec, ts3.tv_nsec);
 	}
 	set_bit(FD_FLAG_INITED, &fd->flags);
+
+	/* set all output enable stages */
+	for (ch = 1; ch <= FD_CH_NUMBER; ch++)
+		fd_gpio_set(fd, FD_GPIO_OUTPUT_EN(ch));
 	return 0;
 
 err:
