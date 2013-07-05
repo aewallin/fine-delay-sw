@@ -210,10 +210,13 @@ static int fd_zio_info_get(struct device *dev, struct zio_attribute *zattr,
 	fd = zdev->priv_d;
 
 	if (zattr->id == FD_ATTR_DEV_TEMP) {
-		attr[FD_ATTR_DEV_TEMP].value = fd_read_temp(fd, 0);
-		return 0;
+		if (fd->temp_ready)
+		{
+			attr[FD_ATTR_DEV_TEMP].value = fd->temp;
+			return 0;
+		} else
+			return -EAGAIN;
 	}
-
 	/* following is whole-dev */
 	if (zattr->id != FD_ATTR_DEV_UTC_H)
 		return 0;

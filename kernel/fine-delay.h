@@ -197,6 +197,7 @@ struct fd_dev {
 	uint8_t ds18_id[8];
 	unsigned long next_t;
 	int temp;			/* temperature: scaled by 4 bits */
+	int temp_ready;			/* temperature: measurement ready flag */
 	int verbose;
 	uint32_t tdc_attrs[FD_ATTR_TDC__LAST - FD_ATTR_DEV__LAST];
 	uint16_t mcp_iodir, mcp_olat;

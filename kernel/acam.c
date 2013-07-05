@@ -20,7 +20,7 @@
 #include "hw/fd_main_regs.h"
 #include "hw/acam_gpx.h"
 
-int fd_calib_period_s = 30;
+int fd_calib_period_s = 5;
 module_param_named(calib_s, fd_calib_period_s, int, 0444);
 
 /*
@@ -384,6 +384,8 @@ int fd_acam_init(struct fd_dev *fd)
 	fd_writel(fd, ACAM_GMODE_ADSFR, FD_REG_ADSFR);
 	fd_writel(fd, ACAM_GMODE_ASOR, FD_REG_ASOR);
 	fd_writel(fd, ACAM_GMODE_ATMCR, FD_REG_ATMCR);
+
+	fd->temp_ready = 0;
 
 	/* Prepare the timely recalibration */
 	setup_timer(&fd->temp_timer, fd_update_calibration, (unsigned long)fd);

@@ -211,7 +211,10 @@ int fd_read_temp(struct fd_dev *fd, int verbose)
 	temp = ((int)data[1] << 8) | ((int)data[0]);
 	if(temp & 0x1000)
 		temp = -0x10000 + temp;
+
 	fd->temp = temp;
+	fd->temp_ready = 1;
+
 	if (verbose) {
 		dev_info(dev, "%s: Temperature 0x%x (%i bits: %i.%03i)\n", __func__,
 			temp, 9 + (data[4] >> 5),
