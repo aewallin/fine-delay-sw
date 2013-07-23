@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "fdelay-lib.h"
 
 int main(int argc, char **argv)
 {
 	struct fdelay_board *b;
-	int i, get = 0, host = 0;
+	int i, get = 0, host = 0, wr_on = 0, wr_off = 0;
 	struct fdelay_time t;
 	int dev = 0;
 
@@ -21,17 +22,21 @@ int main(int argc, char **argv)
 	}
 
 	if (argc != 2) {
-		fprintf(stderr, "%s: Use \"%s [-i <devindex> \"get\"|\"host\"|"
+		fprintf(stderr,
+			"%s: Use \"%s [-i <devindex> \"get\"|\"host\"|\"local\"|\"wr\"|"
 			"<float-value>\"\n", argv[0], argv[0]);
 		exit(1);
 	}
-
 
 	/* Crappy parser */
 	if (!strcmp(argv[1], "get"))
 		get = 1;
 	else if (!strcmp(argv[1], "host"))
 		host = 1;
+	else if (!strcmp(argv[1], "wr"))
+		wr_on = 1;
+	else if (!strcmp(argv[1], "local"))
+		wr_off = 1;
 	else {
 		double nano;
 		long long sec;
@@ -88,6 +93,38 @@ int main(int argc, char **argv)
 				argv[0], strerror(errno));
 			exit(1);
 		}
+		fdelay_close(b);
+		fdelay_exit();
+		return 0;
+	}
+
+	if (wr_on) {
+		printf("Locking the card to WR: ");
+
+		if (fdelay_wr_mode(b, 1) < 0) {
+			fprintf(stderr, "%s: fdelay_wr_mode(): %s\n",
+				argv[0], strerror(errno));
+			exit(1);
+		}
+
+		while (fdelay_check_wr_mode(b) != 0) {
+			printf(".");
+			sleep(1);
+		}
+
+		printf(" locked!\n");
+		fdelay_close(b);
+		fdelay_exit();
+		return 0;
+	}
+
+	if (wr_off) {
+		if (fdelay_wr_mode(b, 0) < 0) {
+			fprintf(stderr, "%s: fdelay_wr_mode(): %s\n",
+				argv[0], strerror(errno));
+			exit(1);
+		}
+
 		fdelay_close(b);
 		fdelay_exit();
 		return 0;
