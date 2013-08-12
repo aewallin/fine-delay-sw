@@ -35,9 +35,9 @@
 
 @setchapternewpage off
 
-@set update-month April 2013
+@set update-month August 2013
 @c @set release 1.1
-@set tagname fine-delay-sw-v1.1
+@set tagname fine-delay-sw-v2.0
 @c WARNING: in @example I Can't use @value{tagname}, so please look for this
 @c string when updating the document.
 
@@ -55,6 +55,13 @@
 @iftex
 @contents
 @end iftex
+
+@unnumbered Revision history
+@multitable  @columnfractions .10 .15 .25 .50
+@headitem Revision @tab Date @tab Author @tab Changes
+@item 1.0 @tab April 2012 @tab AR, TW @tab Initial version
+@item 2.0 @tab August 2013 @tab AR, TW @tab Updated to 2.0 software/gateware release
+@end multitable
 
 @c ##########################################################################
 @node Top
@@ -131,21 +138,23 @@ name will be further abbreviated as @i{FmcDelay}.
 @node Requirements and Supported Platforms
 @section Requirements and Supported Platforms
 
-@i{FmcDelay} can work with any VITA 57-compliant FMC carrier, provided that the carrier's FPGA has enough logic resources. 
-So far, FmcDelay has been only tested with the CERN's SPEC (Simple PCI-Express Carrier) board and the provided drivers currently
-work only with that carrier. A VME version using the SVEC carrier is currently being developed and should be available soon.
-
-In order to operate @i{FmcDelay}, the following hardware/software components are required:
+@i{FmcDelay} can work with any VITA 57-compliant FMC carrier, provided that the carrier's FPGA has enough logic resources. The current software/gateware release (2.0), officially supports the following carrier and mezzanine combinations:
 
 @itemize @bullet
-@item A standard PC with at least one free 4x (or wider) PCI-Express slot,
-@item A SPEC PCI-Express FMC carrier (supplied with the @i{FmcDelay}),
-@item 50-ohm cables with 1-pin LEMO 00 plugs for connecting the I/O signals,
-@item Any Linux (kernel 2.6 or 3.0+) distribution,
+@item CERN's SPEC (Simple PCI-Express Carrier) with one @i{FmcDelay} mezzanine.
+@item CERN's SVEC (Simple VME64x Carrier) with one or two @i{FmcDelay} mezzanines. 
+Note that if only one @i{FmcDelay} is in use, the other slot should be left empty.
 @end itemize
+ 
+Aside from the FMC and its carrier, the following hardware/software components 
+are required:
 
-@b{Note}: currently this is only being developed on Linux-3.4, backports
-will happen later.
+@itemize @bullet
+@item For the PCI version: a standard PC with at least one free 4x (or wider) PCI-Express slot.
+@item For the VME version: a VME64x crate with a MEN A20 CPU (fixme: can the driver work on RIO or something else?).
+@item 50-ohm cables with 1-pin LEMO 00 plugs for connecting the I/O signals.
+@item Any Linux (kernel 2.6 or 3.0+) distribution. Backports are provided down to kernel @code{2.6.24}.
+@end itemize
 
 @c ==========================================================================
 @node Modes of Operation
@@ -154,7 +163,7 @@ will happen later.
 @i{FmcDelay} can work in one or more of the following modes:
 @itemize @bullet
 @item @b{Pulse Delay}: produces one or more pulse(s) on selected outputs
-a given time after an input trigger pulse (fig. 1a)
+a given time after an input trigger pulse (fig. 1a).
 @item @b{Pulse Generator}: produces one or more pulse(s) on selected outputs starting at an
 absolute time value programmed by the user (fig. 1b). In this mode, time base is usually provided by the White Rabbit network.
 @item @b{Time to Digital Converter}: tags all trigger pulses and delivers the timestamps to the user's application.
@@ -176,9 +185,9 @@ does not interfere with the operation of the channels being time tagged.
 
 @noindent @b{Mechanical and environmental specs:}
 @itemize @bullet
-@item Format: FMC (VITA 57), with rear zone for conduction cooling
+@item Format: FMC (VITA 57), with rear zone for conduction cooling.
 @item Operating temperature range: 0 - 90 degC.
-@item Carrier connection: 160-pin Low Pin Count FMC connector
+@item Carrier connection: 160-pin Low Pin Count FMC connector.
 @end itemize
 
 @c ==========================================================================
@@ -187,10 +196,10 @@ does not interfere with the operation of the channels being time tagged.
 
 @noindent @b{Inputs/Outputs:}
 @itemize @bullet
-@item 1 trigger input (LEMO 00)
-@item 4 pulse outputs (LEMO 00)
-@item 2 LEDs
-@item Carrier communication via 160-pin Low Pin Count FMC connector
+@item 1 trigger input (LEMO 00).
+@item 4 pulse outputs (LEMO 00).
+@item 2 LEDs (termination status and trigger indicator).
+@item Carrier communication via 160-pin Low Pin Count FMC connector.
 @end itemize
 
 @noindent @b{Trigger input:}
@@ -205,8 +214,8 @@ does not interfere with the operation of the channels being time tagged.
 @noindent @b{Outputs:}
 @itemize
 @item TTL-compatible levels DC-coupled: Voh = 3 V, Vol = 200 mV (50 Ohm load), Voh = 6 V, Vol = 400 mV (high impedance).
-@item Output impedance: 50 Ohm (source-terminated)
-@item Rise/fall time: 2.5 ns (10%% - 90%%, 50 Ohm load)
+@item Output impedance: 50 Ohm (source-terminated).
+@item Rise/fall time: 2.5 ns (10%% - 90%%, 50 Ohm load).
 @item Power-up state: LOW (2 kOhm pulldown), guaranteed glitch-free.
 @item Protected against continuous short circuit, overcurrent and overvoltage (up to +28 V).
 @end itemize
@@ -236,8 +245,8 @@ does not interfere with the operation of the channels being time tagged.
 @noindent @b{Input timing:}
 @itemize @bullet
 @item Minimum pulse width: @math{t_{IW}} = 50 ns. Pulses below 24 ns are rejected.
-@item Minimum gap between the last delayed output pulse and subsequent trigger pulse: @math{T_{LT}} = 50 ns
-@item Input TDC performance: 400 ps pp accuracy, 27 ps resolution, 70 ps trigger-to-trigger rms jitter (measured at 500 kHz pulse rate)
+@item Minimum gap between the last delayed output pulse and subsequent trigger pulse: @math{T_{LT}} = 50 ns.
+@item Input TDC performance: 400 ps pp accuracy, 27 ps resolution, 70 ps trigger-to-trigger rms jitter (measured at 500 kHz pulse rate).
 @end itemize
 
 @noindent @b{Output timing:}
@@ -255,7 +264,7 @@ does not interfere with the operation of the channels being time tagged.
 @itemize @bullet
 @item Delay accuracy: < 1 ns.
 @item Trigger-to-output jitter: 80 ps rms.
-@item Trigger-to-output delay: minimum @math{T_{DLY}} = 500 ns, maximum @math{T_{DLY}} = 120 s.
+@item Trigger-to-output delay: minimum @math{T_{DLY}} = 600 ns, maximum @math{T_{DLY}} = 120 s.
 @item Maximum trigger pulse rate: @math{T_{DLY} + N*(T_{SP} + T_{GAP}) +} 100 ns, where N = number of output pulses. 
 @item Trigger pulses are ignored until the output with the biggest delay has finished generation of the pulse(s).
 @end itemize
@@ -310,15 +319,11 @@ driver functionality, if we don't consider it important enough.
 @item An example program based on that API.
 @end itemize
 
-Additionally, the @code{NewLogger} directory includes the
-(uncommented, undocumented) program that has been used (at least for a
-while) in the Gran Sasso labs to log neutrino catches.
-
 @c ##########################################################################
 @node Installation
 @chapter Installation
 
-This driver depends on three other modules (three @code{ohwr.org}
+This driver depends on four other modules (four @code{ohwr.org}
 packages), as well as the Linux kernel.  Also, it
 must talk to a specific FPGA binary file running in the device.
 
@@ -327,12 +332,11 @@ must talk to a specific FPGA binary file running in the device.
 @section Gateware Dependencies
 
 This version of the driver has been developed to run with
-the FPGA binary included in the
-package as @code{binaries/fine-delay.bin}, which is White-Rabbit-enabled.
-This gateware is designed to work with the PCIe carrier called
-@sc{spec}. Other carriers, like the @sc{svec} require different gateware.
-The package ships the @sc{spec} gateware because it is the most common
-use case.
+the FPGA binaries included in the package as:
+@itemize @bullet
+@item @code{binaries/svec-fine-delay.bin} for the SVEC (VME64x) carrier,
+@item @code{binaries/spec-fine-delay.bin} for the SPEC (PCI-Express) carrier.
+@end itemize
 
 @c Earlier versions required to load a @i{wrc} (White Rabbit Core) program
 @c that runs in the internal LM32 soft core, but with this version this
@@ -357,13 +361,13 @@ against.
 
 To install the FPGA image in the target system, please follow the
 instructions in the documentation of @i{spec-sw} (the suggested
-version to match this packages is @t{v2013-04})
+version to match this packages is @t{v2013-04}) or @i{svec-sw} (fixme: which version?),
 or the one for your specific FMC carrier.
 To summarize, you'll
 need to place the @code{.bin} file, properly renamed, in
 @i{/lib/firmware} or a subdirectory thereof.
 The default name used by this driver is
-@file{fmc/fine-delay.bin}.
+@file{fmc/[carrier]-fine-delay.bin}.
 
 If you have several @i{fine-delay} cards in the same host, you can
 load different binaries in different cards, using appropriate
@@ -390,8 +394,7 @@ to work in the kernel range 2.6.32..3.8 and a backport to 2.6.24 is
 available.
 
 The FMC mezzanine is supported by means of the @i{fmc-bus}
-software project. Such support used to be part of the @i{spec-sw}
-package, but is not a project of its own.  This @i{fine-delay}
+software project. This @i{fine-delay}
 kernel module registers as a @i{driver} for the FMC bus abstraction,
 and is verified with version @t{v2013-04} of the FMC package.
 The same kernel range applies.
@@ -404,10 +407,9 @@ ignore software dependencies and everything should work.
 
 The carrier driver is not strictly related to this package, but
 @i{fine-delay} is released against version @t{v2013-04} of
-@i{spec-sw}.  The mezzanine is also known to work with the @sc{svec}
-carrier under @sc{vme}.
+@i{spec-sw} and version @t{fixme} of @i{svec-sw}. 
 
-Unfortunately, all the packages are moving fast: we are approaching a stable
+(fixme) Unfortunately, all the packages are moving fast: we are approaching a stable
 and long-lasting status but we are not there yet.  Please stick
 to the released versions named in this section, unless you are involved
 in development.
@@ -461,7 +463,7 @@ driver and @code{make install} again.
 
 After installation, your carrier driver should load automatically
 (for example, the PCI bus will load @code{spec.ko}), but @code{
-fine-delay.ko} must be loaded manually, because support for
+fmc-fine-delay.ko} must be loaded manually, because support for
 automatic loading is not yet in place. The suggested command is
 one or the other of the following two:
 
@@ -838,14 +840,14 @@ write-only file in @i{sysfs}:
 
 	Tell the user the status of White-Rabbit mode. This is a hack, as
         the return value is reported using error codes. Success means
-        White-Rabbit is synchronized.  @code{ENODEV} means WR mode is inactive,
+        White-Rabbit is synchronized.  @code{ENODEV} means WR mode is not supported or inactive,
         @code{EAGAIN} means it is not synchronized yet.
         The error is returned to the @i{write} system call.
 
-@item 4 = FD_CMD_DUMP_MCP
+@item 4 = FD_CMD_DUMP_MCP 
 
 	Force dumping to log messages (using a plain @i{printk} the
-        GPIO registers in the MCP23S17 device.
+        GPIO registers in the MCP23S17 device (fixme: is it really needed).
 
 @item 5 = FD_CMD_PURGE_FIFO
 
@@ -1422,7 +1424,7 @@ to validate the library works as expected:
 @end smallexample
 
 If more than one @i{fine-delay} board is found, the program will also
-print to @i{stderr} how many boards it finds and which it is using.
+print to @i{stderr} how many boards it finds and which one it is using.
 To select a board different from the default, you can pass
 ``@t{-i <index>}'' to theprogram, where the index starts from zero.
 
@@ -1664,6 +1666,21 @@ pretty clear to looks at on the scope).
   ./lib/fdelay-pulse delay 1 6   0.15 0.01 0.1; \
 @end smallexample 
 
+There is an additional pulse generator test program, called @code{delay-pulse-tom}.
+It has different input semantics, which may be easier to understand. For instance, command:
+@smallexample
+  ./lib/fdelay-pulse-tom -d 0 -m pulse -o 1 -a 10s+200n -w 100n -g 1u -q 5 -t
+@end smallexample 
+will tell the card 0 to produce 5 100ns-wide pulses, spaced by 1 us on output 1, 
+when the card's time counter hits 10s plus 200 ns. 
+The @code{-t} switch tells the program to wait until the selected channel has triggered.
+
+@code{fdelay-pulse-tom} also provides shortcuts for outputting WR-aligned 1-PPS and 10 MHz signals. The commands:
+@smallexample
+  ./lib/fdelay-pulse-tom -d 0 -m pulse -o 1 -1 
+  ./lib/fdelay-pulse-tom -d 0 -m pulse -o 2 -p -t
+@end smallexample 
+Will configure the card 0 to produce 10 MHz on output 1 and 1-PPS on output 2.
 
 @c ==========================================================================
 @node White-Rabbit Configuration
@@ -1684,6 +1701,18 @@ The following functions are offered:
         (an integer) if it is enabled by not yet synchronized and @code{ENODEV}
         if WR-mode is currently disabled.
 
+The @code{fdelay-board-time} test program provides two commands for controlling the card's WR operation.
+In order to enable WR mode, call it with @code{wr} command parameter:
+@smallexample
+   spusa# ./lib/fdelay-board-time  wr
+   Locking the card to WR: ...... locked!
+@end smallexample
+
+Switching back to internal timebase is done with @code{local} command:
+@smallexample
+   spusa# ./lib/fdelay-board-time  local
+@end smallexample
+
 @end table
 
 @c ##########################################################################
@@ -1693,7 +1722,8 @@ The following functions are offered:
 Calibration data for a fine-delay card is stored in the I2C FMC EEPROM
 device, using the SDB filesystem. Previous versions used a constant
 offset of 6kB, but the calibration format was different, so no
-compatibility is retained.
+compatibility is retained. The driver will refuse to work with cards that have
+incompatible EEPROMs, these must be re-calibrated.
 
 The driver automatically loads calibration data from the flash at
 initialization time, but only uses it if its hash is valid. The
