@@ -183,6 +183,11 @@ does not interfere with the operation of the channels being time tagged.
 @node Mechanical/Environmental
 @section Mechanical/Environmental
 
+@float
+@center @image{drawings/front_panels, 16cm,,,pdf}
+@caption{Fig. 2. @i{FmcDelay} front panel connector layout.}
+@end float
+
 @noindent @b{Mechanical and environmental specs:}
 @itemize @bullet
 @item Format: FMC (VITA 57), with rear zone for conduction cooling.
@@ -1891,7 +1896,7 @@ The @i{fdelay} library may report a version mismatch like this:
    fdelay_init: version mismatch, lib(1) != drv(2)
    ./lib/fdelay-board-time: fdelay_init(): Input/output error
 @end example
-
+     
 This reports a difference in the way ZIO attributes are laid out, so user
 space may exchange wrong data in the ZIO control block, or may try to
 access inexistent files in @i{/sys}. I suggest recompiling both the kernel
