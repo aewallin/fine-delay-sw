@@ -35,17 +35,15 @@
 
 @setchapternewpage off
 
-@set update-month August 2013
-@c @set release 1.1
-@set tagname fine-delay-sw-v2.0
-@c WARNING: in @example I Can't use @value{tagname}, so please look for this
-@c string when updating the document.
+@set update-month September 2013
+@c the release name below is substituted at build time
+@set release __RELEASE_GIT_ID__
 
 @finalout
 
 @titlepage
 @title Fine Delay User's Manual
-@subtitle @value{update-month}
+@subtitle @value{update-month} (@value{release})
 @subtitle FMC Delay 1ns-4cha hardware and software manual
 @author CERN BE-CO-HT / Tomasz Wlostowski, Alessandro Rubini
 @end titlepage
@@ -138,7 +136,7 @@ name will be further abbreviated as @i{FmcDelay}.
 @node Requirements and Supported Platforms
 @section Requirements and Supported Platforms
 
-@i{FmcDelay} can work with any VITA 57-compliant FMC carrier, provided that the carrier's FPGA has enough logic resources. The current software/gateware release (2.0), officially supports the following carrier and mezzanine combinations:
+@i{FmcDelay} can work with any VITA 57-compliant FMC carrier, provided that the carrier's FPGA has enough logic resources. The current software/gateware release officially supports the following carrier and mezzanine combinations:
 
 @itemize @bullet
 @item CERN's SPEC (Simple PCI-Express Carrier) with one @i{FmcDelay} mezzanine.
