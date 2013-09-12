@@ -20,7 +20,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdint.h>
-#include <fine-delay.h>
+#include "fine-delay.h"
 
 /* Opaque data type used as token */
 struct fdelay_board;
