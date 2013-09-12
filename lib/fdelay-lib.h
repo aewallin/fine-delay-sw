@@ -11,6 +11,14 @@
  */
 #ifndef __FDELAY_H__
 #define __FDELAY_H__
+
+/**
+ * Most of the client are written in C++
+ */
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdint.h>
 #include <fine-delay.h>
 
@@ -165,8 +173,10 @@ static inline int __fdelay_command(struct __fdelay_board *b, uint32_t cmd)
 {
 	return fdelay_sysfs_set(b, "command", &cmd);
 }
-
-
-
 #endif /* FDELAY_INTERNAL */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* __FDELAY_H__ */
