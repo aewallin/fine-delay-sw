@@ -131,8 +131,13 @@ void fdelay_exit(void)
 struct fdelay_board *fdelay_open(int offset, int dev_id)
 {
 	struct __fdelay_board *b = NULL;
-	uint32_t nsamples = 1;
+	uint32_t nsamples;
 	int i;
+	char name[64], **np, *channels[] = {
+		"fd-input",
+		"fd-ch1", "fd-ch2", "fd-ch3", "fd-ch4",
+		NULL
+	};
 
 	if (offset >= fd_nboards) {
 		errno = ENODEV;
@@ -157,12 +162,15 @@ struct fdelay_board *fdelay_open(int offset, int dev_id)
 	return NULL;
 
 found:
-	/* Trim all block sizes to 1 sample (i.e. 4 bytes) */
-	fdelay_sysfs_set(b, "fd-input/trigger/post-samples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch1/trigger/post-samples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch2/trigger/post-samples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch3/trigger/post-samples", &nsamples);
-	fdelay_sysfs_set(b, "fd-ch4/trigger/post-samples", &nsamples);
+	/* Check and set all block sizes to 1 sample (i.e. 4 bytes) */
+	for (np = channels; *np; np++) {
+		sprintf(name, "%s/trigger/post-samples", *np);
+		fdelay_sysfs_get(b, name, &nsamples);
+		if (nsamples == 1)
+			continue;
+		nsamples = 1;
+		fdelay_sysfs_set(b, name, &nsamples);
+	}
 
 	return (void *)b;
 }
