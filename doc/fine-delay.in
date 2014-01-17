@@ -1287,7 +1287,7 @@ system time.
 The following example sets card time to 0 and programs 10 pulses at
 the beginning of the next second.  The pulses are 8usec long and
 repeat after 16usec.  The next example runs 1s of 1kHz square wave.
-For readability, numbers are grouped as @i{(mode, delay), (start --
+For readability, numbers are grouped as @i{(mode, count), (start --
 utc-h, utc-l, coarse, frac), (stop -- utc-h, utc-l, coarse, frac),
 (delta - utc-l, coarse, frac)}.
 
