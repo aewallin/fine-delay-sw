@@ -334,29 +334,17 @@ must talk to a specific FPGA binary file running in the device.
 @node Gateware Dependencies
 @section Gateware Dependencies
 
-This version of the driver has been developed to run with
-the FPGA binaries included in the package as:
-@itemize @bullet
-@item @code{binaries/svec-fine-delay.bin} for the SVEC (VME64x) carrier,
-@item @code{binaries/spec-fine-delay.bin} for the SPEC (PCI-Express) carrier.
-@end itemize
+While previous versions of this package included a gateware binary
+in the @t{binaries/} subdirectory, in JAn 2014 we decided not to do
+there any more.  Release versions of this package are expected to
+point to ``current'' gateware images for different carriers.
+Clearly the driver is expected to work on any @sc{fmc} carrier,
+even those ignored to us, and we can't provide all binaries.
 
-@c Earlier versions required to load a @i{wrc} (White Rabbit Core) program
-@c that runs in the internal LM32 soft core, but with this version this
-@c step is not required (the program is already part of the FPGA binary).
-@c However, if you want to replace it, the default name to use
-@c is @code{fine-delay-wrc.bin}. @b{Note}: this specific version of
-@c the driver does not support loading the LM32 program separately.
-
-@c This can also be downloaded
-@c from the @i{Files} tab of the hardware project:
-@c @code{http://www.ohwr.org/projects/fmc-delay-1ns-8cha/files} (direct
-@c link:
-@c @code{http://www.ohwr.org/attachments/download/1179/spec_top.bin}.
-
-If the gateware is updated, I'll take care to always include in this
-package the exact binary the software is developed and verified
-against.
+As I write this, the gateware binary for the @sc{spec} card is
+available from the @i{files} tab of the @sc{ohwr} hardware project:
+@t{fmc-delay-1ns-8cha}. The file name is @i{spec-fine-delay-20140117.bin}
+and the direct link is @url{http://www.ohwr.org/attachments/download/2621/spec-fine-delay-20140117.bin}.
 
 @c ==========================================================================
 @node Gateware Installation
