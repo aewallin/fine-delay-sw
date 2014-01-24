@@ -73,7 +73,6 @@ int fdelay_init(void)
 		sscanf(b->sysbase, "%*[^f]fd-%x", &b->dev_id);
 		for (j = 0; j < ARRAY_SIZE(b->fdc); j++) {
 			b->fdc[j] = -1;
-			b->fdd[j] = -1;
 		}
 		if (fdelay_is_verbose()) {
 			fprintf(stderr, "%s: %04x %s %s\n", __func__,
@@ -109,11 +108,6 @@ void fdelay_exit(void)
 			if (b->fdc[j] >= 0) {
 				close(b->fdc[j]);
 				b->fdc[j] = -1;
-				err++;
-			}
-			if (b->fdd[j] >= 0) {
-				close(b->fdd[j]);
-				b->fdd[j] = -1;
 				err++;
 			}
 		}
@@ -162,16 +156,10 @@ struct fdelay_board *fdelay_open(int offset, int dev_id)
 	return NULL;
 
 found:
-	/* Check and set all block sizes to 1 sample (i.e. 4 bytes) */
-	for (np = channels; *np; np++) {
-		sprintf(name, "%s/trigger/post-samples", *np);
-		fdelay_sysfs_get(b, name, &nsamples);
-		if (nsamples == 1)
-			continue;
-		nsamples = 1;
-		fdelay_sysfs_set(b, name, &nsamples);
-	}
-
+	/*
+	 * We used to force post-samples to 1 here, but now
+	 * sample-size is zero and post-samples is not used
+	 */
 	return (void *)b;
 }
 
@@ -206,9 +194,6 @@ int fdelay_close(struct fdelay_board *userb)
 		if (b->fdc[j] >= 0)
 			close(b->fdc[j]);
 		b->fdc[j] = -1;
-		if (b->fdd[j] >= 0)
-			close(b->fdd[j]);
-		b->fdd[j] = -1;
 	}
 	return 0;
 

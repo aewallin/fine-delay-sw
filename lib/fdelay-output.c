@@ -46,7 +46,7 @@ void fdelay_time_to_pico(struct fdelay_time *time, uint64_t *pico)
 }
 
 static  int __fdelay_get_ch_fd(struct __fdelay_board *b,
-			       int channel, int *fdc, int *fdd)
+			       int channel, int *fdc)
 {
 	int ch14 = channel + 1;
 	char fname[128];
@@ -61,14 +61,7 @@ static  int __fdelay_get_ch_fd(struct __fdelay_board *b,
 		if (b->fdc[ch14] < 0)
 			return -1;
 	}
-	if (b->fdd[ch14] <= 0) {
-		sprintf(fname, "%s-%i-0-data", b->devbase, ch14);
-		b->fdd[ch14] = open(fname, O_WRONLY | O_NONBLOCK);
-		if (b->fdd[ch14] < 0)
-			return -1;
-	}
 	*fdc = b->fdc[ch14];
-	*fdd = b->fdd[ch14];
 	return 0;
 }
 
@@ -78,9 +71,9 @@ int fdelay_config_pulse(struct fdelay_board *userb,
 	__define_board(b, userb);
 	struct zio_control ctrl = {0,};
 	uint32_t *a;
-	int fdc, fdd;
+	int fdc;
 
-	if (__fdelay_get_ch_fd(b, channel, &fdc, &fdd) < 0)
+	if (__fdelay_get_ch_fd(b, channel, &fdc) < 0)
 		return -1; /* errno already set */
 
 	a = ctrl.attr_channel.ext_val;
@@ -108,7 +101,6 @@ int fdelay_config_pulse(struct fdelay_board *userb,
 	ctrl.nbits = 32;
 
 	write(fdc, &ctrl, sizeof(ctrl));
-	write(fdd, "1234", 4); /* we need to write data to push it out */
 	return 0;
 }
 
