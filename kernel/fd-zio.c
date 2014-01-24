@@ -628,7 +628,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-input"),
 		.raw_io =	fd_zio_input,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_input,
@@ -639,7 +639,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch1"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -650,7 +650,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch2"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -661,7 +661,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch3"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -672,7 +672,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch4"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,

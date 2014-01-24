@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 {
 	glob_t glob_buf;
 	struct zio_control ctrl;
-	int fdc, fdd;
+	int fdc;
 	char *s;
 	int i, j, val, ch;
 	uint32_t *attrs;
@@ -59,13 +59,6 @@ int main(int argc, char **argv)
 		fprintf(stderr, "%s: %s: %s\n", argv[0], s, strerror(errno));
 		exit(1);
 	}
-	/* Open the data file too, lazily */
-	strcpy(s + strlen(s) - 4, "data");
-	fdd = open(s, O_WRONLY);
-	if (fdd < 0) {
-		fprintf(stderr, "%s: %s: %s\n", argv[0], s, strerror(errno));
-		exit(1);
-	}
 
 	memset(&ctrl, 0, sizeof(ctrl));
 	attrs = ctrl.attr_channel.ext_val;
@@ -88,6 +81,5 @@ int main(int argc, char **argv)
 	ctrl.nbits = 32;
 
 	write(fdc, &ctrl, sizeof(ctrl));
-	write(fdd, "1234", 4); /* we need to write data to push it out */
 	exit(0);
 }
