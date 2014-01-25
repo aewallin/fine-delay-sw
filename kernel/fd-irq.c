@@ -78,14 +78,31 @@ static void fd_ts_add(struct fd_time *t, int64_t pico)
 	}
 }
 
+static inline void fd_normalize_time(struct fd_dev *fd, struct fd_time *t)
+{
+	/* The coarse count may be negative, because of how it works */
+	if (t->coarse & (1<<27)) { // coarse is 28 bits
+		/* we may get 0xfff.ffef..0xffff.ffff -- 125M == 0x773.5940 */
+		t->coarse += 125000000;
+		t->coarse &= 0xfffffff;
+		t->utc--;
+	} else if(t->coarse >= 125000000) {
+		t->coarse -= 125000000;
+		t->utc++;
+	}
+
+	fd_ts_add(t, fd->calib.tdc_zero_offset);
+}
+
+
 /* This is called from outside, too */
 int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 {
 	struct zio_control *ctrl;
 	struct zio_ti *ti = chan->cset->ti;
 	uint32_t *v;
-	int i;
-	struct fd_time t;
+	int i, j;
+	struct fd_time t, *tp;
 	unsigned long flags;
 
 	if (fd->sw_fifo.tail == fd->sw_fifo.head)
@@ -104,18 +121,7 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	fd->sw_fifo.tail++;
 	spin_unlock_irqrestore(&fd->lock, flags);
 
-	/* The coarse count may be negative, because of how it works */
-	if (t.coarse & (1<<27)) { // coarse is 28 bits
-		/* we may get 0xfff.ffef..0xffff.ffff -- 125M == 0x773.5940 */
-		t.coarse += 125000000;
-		t.coarse &= 0xfffffff;
-		t.utc--;
-	} else if(t.coarse >= 125000000) {
-		t.coarse -= 125000000;
-		t.utc++;
-	}
-
-	fd_ts_add(&t, fd->calib.tdc_zero_offset);
+	fd_normalize_time(fd, &t);
 
 	/* Write the timestamp in the trigger, it will reach the control */
 	ti->tstamp.tv_sec = t.utc;
@@ -145,6 +151,33 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	/* We also need a copy within the device, so sysfs can read it */
 	memcpy(fd->tdc_attrs, v + FD_ATTR_DEV__LAST, sizeof(fd->tdc_attrs));
 
+	if (ctrl->ssize == 0) /* normal TDC device: no data */
+		return 0;
+
+	/*
+	 * If we are returning raw data in the payload, cluster as many
+	 * samples as they fit, or as many as the fifo has. If a block is there.
+	 */
+	if (!chan->active_block)
+		return 0;
+
+	tp = chan->active_block->data;
+	*tp++ = t; /* already normalized, above */
+
+	for (j = 1; j < ctrl->nsamples; j++, tp++) {
+		spin_lock_irqsave(&fd->lock, flags);
+		if (fd->sw_fifo.tail == fd->sw_fifo.head) {
+			spin_unlock_irqrestore(&fd->lock, flags);
+			break;
+		}
+		i = fd->sw_fifo.tail % fd_sw_fifo_len;
+		*tp = fd->sw_fifo.t[i];
+		fd->sw_fifo.tail++;
+		spin_unlock_irqrestore(&fd->lock, flags);
+		fd_normalize_time(fd, tp);
+	}
+	ctrl->nsamples = j;
+	chan->active_block->datalen = j * ctrl->ssize;
 	return 0;
 }
 

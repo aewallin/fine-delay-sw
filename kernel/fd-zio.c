@@ -31,6 +31,10 @@
 
 #define _RW_ (S_IRUGO | S_IWUGO) /* I want 80-col lines so this lazy thing */
 
+static int fd_use_raw_tdc;
+
+/* The user may want to use raw TDC registers for faster input */
+module_param_named(raw_tdc, fd_use_raw_tdc, int, 0444);
 
 /* The sample size. Mandatory, device-wide */
 ZIO_ATTR_DEFINE_STD(ZIO_DEV, fd_zattr_dev_std) = {
@@ -714,6 +718,12 @@ static struct zio_driver fd_zdrv = {
 int fd_zio_register(void)
 {
 	int err;
+
+	if (fd_use_raw_tdc) {
+		/* Hack: change the input channel to return raw registers */
+		fd_cset[0].ssize = sizeof(struct fd_time);
+		fd_cset[0].flags = ZIO_DIR_INPUT | ZIO_CSET_TYPE_RAW;
+	}
 
 	err = zio_register_driver(&fd_zdrv);
 	if (err)
