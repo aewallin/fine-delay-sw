@@ -629,7 +629,8 @@ static struct zio_cset fd_cset[] = {
 		.raw_io =	fd_zio_input,
 		.n_chan =	1,
 		.ssize =	0,
-		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME,
+		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME
+				| ZIO_CSET_SELF_TIMED,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_input,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_input),
