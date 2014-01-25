@@ -202,20 +202,13 @@ static int fd_timer_period_jiffies; /* converted from ms at init time */
 static void fd_tlet(unsigned long arg)
 {
 	struct fd_dev *fd = (void *)arg;
-	struct zio_channel *chan = NULL;
 	struct zio_device *zdev = fd->zdev;
+	struct zio_channel *chan = zdev->cset[0].chan;
 	struct fmc_device *fmc = fd->fmc;
 
 	/* Always read the hardware fifo until empty */
 	while (!fd_read_hw_fifo(fd))
 		;
-
-	if (zdev) {
-		chan = zdev->cset[0].chan;
-	} else {
-		/* nobody read the device so far: we lack the information */
-		goto out;
-	}
 
 	/* FIXME: race condition */
 	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
