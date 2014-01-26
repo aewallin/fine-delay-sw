@@ -97,7 +97,7 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	 * !chan->active_block is null, we'll miss an irq to restar the loop.
 	 */
 
-	/* Copy the sample to local storage */
+	/* Copy the sample to a local variable, to release the lock soon */
 	spin_lock_irqsave(&fd->lock, flags);
 	i = fd->sw_fifo.tail % fd_sw_fifo_len;
 	t = fd->sw_fifo.t[i];
@@ -159,6 +159,7 @@ static int fd_read_hw_fifo(struct fd_dev *fd)
 	if ((fd_readl(fd, FD_REG_TSBCR) & FD_TSBCR_EMPTY))
 		return -EAGAIN;
 
+	spin_lock_irqsave(&fd->lock, flags);
 	t = fd->sw_fifo.t;
 	t += fd->sw_fifo.head % fd_sw_fifo_len;
 
@@ -176,7 +177,6 @@ static int fd_read_hw_fifo(struct fd_dev *fd)
 	t->seq_id = FD_TSBR_FID_SEQID_R(reg);
 
 	/* Then, increment head and make some checks */
-	spin_lock_irqsave(&fd->lock, flags);
 	diff = fd->sw_fifo.head - fd->sw_fifo.tail;
 	fd->sw_fifo.head++;
 	if (diff >= fd_sw_fifo_len)
@@ -209,23 +209,22 @@ static void fd_tlet(unsigned long arg)
 	struct zio_device *zdev = fd->zdev;
 	struct zio_channel *chan = zdev->cset[0].chan;
 
-	/* Always read the hardware fifo until empty */
-	while (!fd_read_hw_fifo(fd))
-		;
+	/* If we have no interrupt, read the hw fifo now */
+	if (fd_timer_period_ms) {
+		while (!fd_read_hw_fifo(fd))
+			;
+		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
+	}
 
 	/* FIXME: race condition */
 	if (!test_bit(FD_FLAG_INPUT_READY, &fd->flags))
-		goto out;
+		return;
 
 	/* there is an active block, try reading an accumulated sample */
 	if (fd_read_sw_fifo(fd, chan) == 0) {
 		clear_bit(FD_FLAG_INPUT_READY, &fd->flags);
 		zio_trigger_data_done(chan->cset);
 	}
-
-out:
-	if (fd_timer_period_ms)
-		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
 }
 
 irqreturn_t fd_irq_handler(int irq, void *dev_id)
