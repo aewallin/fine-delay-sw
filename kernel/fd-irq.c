@@ -208,7 +208,6 @@ static void fd_tlet(unsigned long arg)
 	struct fd_dev *fd = (void *)arg;
 	struct zio_device *zdev = fd->zdev;
 	struct zio_channel *chan = zdev->cset[0].chan;
-	struct fmc_device *fmc = fd->fmc;
 
 	/* Always read the hardware fifo until empty */
 	while (!fd_read_hw_fifo(fd))
@@ -227,11 +226,6 @@ static void fd_tlet(unsigned long arg)
 out:
 	if (fd_timer_period_ms)
 		mod_timer(&fd->fifo_timer, jiffies + fd_timer_period_jiffies);
-	else {
-		/* ack at this point, but may be redundant */
-		fmc->op->irq_ack(fmc);
-		fmc_writel(fmc, 0, fd->fd_vic_base + VIC_REG_EOIR);
-	}
 }
 
 irqreturn_t fd_irq_handler(int irq, void *dev_id)
