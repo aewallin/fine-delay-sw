@@ -88,10 +88,14 @@ int fd_read_sw_fifo(struct fd_dev *fd, struct zio_channel *chan)
 	struct fd_time t;
 	unsigned long flags;
 
-	if (!chan->active_block)
-		return -EAGAIN;
 	if (fd->sw_fifo.tail == fd->sw_fifo.head)
 		return -EAGAIN;
+	/*
+	 * Proceed even if no active block is there. The buffer may be
+	 * full, but we need to keep the trigger armed for next time,
+	 * so deal with data and return success. If we -EAGAIN when
+	 * !chan->active_block is null, we'll miss an irq to restar the loop.
+	 */
 
 	/* Copy the sample to local storage */
 	spin_lock_irqsave(&fd->lock, flags);
