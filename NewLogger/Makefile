@@ -1,5 +1,5 @@
-CFLAGS=-I../lib -I.. -g
-LDFLAGS=-L../lib -lfdelay
+CFLAGS=-I../lib -I../kernel -g
+LDFLAGS=-L../lib -L../kernel -lfdelay
 
 all:	fdelay-gs fdelay-dumplog
 
