@@ -1,6 +1,7 @@
 /* fmc-fine-delay raw_tdc example program
  * AW 2014-02-05
  * based on  /fine-delay-sw/NewLogger/fdelay-gs.c
+ * and       /fine-delay-sw/zio/tools/zio-dump.c
  * 
  * as of 2014-02-04, raw_tdc is experimental and works with:
  * $ modinfo zio
@@ -11,7 +12,11 @@
  * load kernel module using raw-mode: 
  * $ sudo modprobe fmc-fine-delay raw_tdc=1 fifo_len=16384
  * 
+ * the maximum number of time-stamps per ZIO block is set by
+ * echo 1000 > /sys/bus/zio/devices/fd-0200/fd-input/trigger/post-samples
  * 
+ * the number of ZIO blocks in the buffer is set by
+ * echo 1000 > /sys/bus/zio/devices/fd-0200/fd-input/chan0/buffer/max-buffer-len
  * 
  * */
 
@@ -199,6 +204,7 @@ void handle_readout(struct board_def *bdef) {
 		
 		for (j = 0; j < nsamples; j++) {
 			
+			// print out raw 24-byte timestamp
 			/*
 			printf("Data:");
 			for (i=0;i<24;i++)  // each timestamp-sample is 24 bytes
