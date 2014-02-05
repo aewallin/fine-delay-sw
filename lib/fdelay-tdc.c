@@ -56,11 +56,11 @@ int fdelay_get_config_tdc(struct fdelay_board *userb)
 static int __fdelay_open_tdc_data(struct __fdelay_board *b)
 {
 	char fname[128];
-	if (b->fdc[0] <= 0) {
+	if (b->fdd <= 0) {
 		sprintf(fname, "%s-0-0-data", b->devbase);
-		b->fdc[0] = open(fname, O_RDONLY | O_NONBLOCK);
+		b->fdd = open(fname, O_RDONLY | O_NONBLOCK);
 	}
-	return b->fdc[0];
+	return b->fdd;
 }
 
 /* file-descriptor to data, when kernel-module loaded with raw_tdc=1 */
@@ -149,6 +149,85 @@ int fdelay_fread(struct fdelay_board *userb, struct fdelay_time *t, int n)
 		if (loop < 0)
 			return -1;
 		i += loop;
+	}
+	return i;
+}
+
+/* raw_tdc=1 version of read
+ * 
+ * read n ZIO blocks
+ * each block consists of
+ *  ctrl contains first time-stamp
+ *  data contains up to fd-input/trigger/post-samples more samples
+ * 
+ * */
+//unsigned char buf[1024*1024]; // a large buffer
+
+int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
+				unsigned char *databuffer, int *nsamples,
+		       int flags)
+{
+	__define_board(b, userb);
+	struct zio_control ctrl;
+	uint32_t *attrs;
+	int i, j, m;
+	int cfd; // control
+	int dfd; // data
+	fd_set set;
+
+	cfd = __fdelay_open_tdc(b); // fd of ctrl
+	dfd = __fdelay_open_tdc_data(b); // fd of data
+	if (cfd < 0)
+		return cfd; /* errno already set */
+
+	for (i = 0; i < n;) {
+		
+		j = read(cfd, &ctrl, sizeof(ctrl)); // read ctrl data
+		if (j < 0 && errno != EAGAIN)
+			return -1;
+		if (j == sizeof(ctrl)) { /* one sample: pick it */
+			attrs = ctrl.attr_channel.ext_val;
+			t->utc = (uint64_t)attrs[FD_ATTR_TDC_UTC_H] << 32
+				| attrs[FD_ATTR_TDC_UTC_L];
+			t->coarse = attrs[FD_ATTR_TDC_COARSE];
+			t->frac = attrs[FD_ATTR_TDC_FRAC];
+			t->seq_id = attrs[FD_ATTR_TDC_SEQ];
+			t->channel = attrs[FD_ATTR_TDC_CHAN];
+			
+			*nsamples = ctrl.nsamples;
+			//attrd[FD_ATTR_TDC_RAW_NSAMPLES];
+
+			// now read data
+			m = read(dfd, databuffer, ctrl.nsamples * ctrl.ssize);
+			if (m < 0) {
+				fprintf(stderr, "ERROR! read data %i\n",m);
+				return; 
+			}
+			if (m != ctrl.nsamples * ctrl.ssize) {
+				fprintf(stderr, "ERROR! got %i, expected %i\n",m,ctrl.nsamples * ctrl.ssize);
+			}
+			
+			//printf("nsamples = %d\n", nsamples);
+			i++;
+			continue;
+		}
+		if (j > 0) { // got != sizeof(ctrl) 
+			errno = EIO;
+			return -1;
+		}
+		/* so, it's EAGAIN: if we already got something, we are done */
+		if (i)
+			return i;
+		/* EAGAIN at first sample */
+		if (j < 0 && flags == O_NONBLOCK)
+			return -1;
+
+		/* So, first sample and blocking read. Wait.. */
+		FD_ZERO(&set);
+		FD_SET(cfd, &set);
+		if (select(cfd+1, &set, NULL, NULL, NULL) < 0)
+			return -1;
+		continue;
 	}
 	return i;
 }
