@@ -157,12 +157,11 @@ int fdelay_fread(struct fdelay_board *userb, struct fdelay_time *t, int n)
  * 
  * read n ZIO blocks
  * each block consists of
- *  ctrl contains first time-stamp
- *  data contains up to fd-input/trigger/post-samples more samples
+ *  ctrl contains first time-stamp of this block
+ *  data contains all nsamples number of 24-byte time-stamps
  * 
- * */
-//unsigned char buf[1024*1024]; // a large buffer
-
+ * maximum number of samples in one block: fd-input/trigger/post-samples
+*/
 int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
 				unsigned char *databuffer, int *nsamples,
 		       int flags)
@@ -194,8 +193,7 @@ int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
 			t->seq_id = attrs[FD_ATTR_TDC_SEQ];
 			t->channel = attrs[FD_ATTR_TDC_CHAN];
 			
-			*nsamples = ctrl.nsamples;
-			//attrd[FD_ATTR_TDC_RAW_NSAMPLES];
+			*nsamples = ctrl.nsamples; // should be?? attrd[FD_ATTR_TDC_RAW_NSAMPLES];
 
 			// now read data
 			m = read(dfd, databuffer, ctrl.nsamples * ctrl.ssize);
@@ -207,7 +205,6 @@ int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
 				fprintf(stderr, "ERROR! got %i, expected %i\n",m,ctrl.nsamples * ctrl.ssize);
 			}
 			
-			//printf("nsamples = %d\n", nsamples);
 			i++;
 			continue;
 		}

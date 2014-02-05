@@ -103,7 +103,7 @@ struct __fdelay_board {
 	char *devbase;
 	char *sysbase;
 	int fdc[5]; /* The 5 control channels */
-	int fdd; /* data channel in trc_raw=1 mode */
+	int fdd; /* data channel in tdc_raw=1 mode */
 };
 
 static inline int fdelay_is_verbose(void)
