@@ -159,12 +159,21 @@ int prev_id=0,next=0;
 		uint32_t channel;
     };
  
+ each raw sample is in fd_time format (fine-delay.h)
+ * struct fd_time {
+	uint64_t utc;      // 8 bytes
+	uint32_t coarse;   // 4
+	uint32_t frac;     // 4
+	uint32_t channel;  // 4
+	uint32_t seq_id;   // 4
+};
  * */
 
 unsigned char buf[1024*1024]; // large buffer
 
 void handle_readout(struct board_def *bdef) {
     struct fdelay_time t;
+    struct fd_time ts;
 	int nsamples;
 	int i,j;
     	
@@ -180,6 +189,21 @@ void handle_readout(struct board_def *bdef) {
 			for (i=0;i<24;i++)  // each timestamp-sample is 24 bytes
 				printf(" %02x", buf[j*24+i]);
 			printf("\n");
+			// unpack data into human-readable form:
+			ts.utc = (uint64_t)buf[j*24] + 
+			         (uint64_t)(buf[j*24+1]<<8)+
+			         (uint64_t)(buf[j*24+2]<<16)+
+			         (uint64_t)(buf[j*24+3]<<24);
+			ts.coarse = (uint32_t)buf[j*24+8] + (uint32_t)(buf[j*24+9]<<8) + 
+			           (uint32_t)(buf[j*24+10]<<16) + (uint32_t)(buf[j*24+11]<<24);
+			ts.frac = (uint32_t)buf[j*24+12] + (uint32_t)(buf[j*24+13]<<8)+
+				      (uint32_t)(buf[j*24+14]<<16) + (uint32_t)(buf[j*24+15]<<24);
+			ts.channel = (uint32_t)buf[j*24+16] + (uint32_t)(buf[j*24+17]<<8)+
+			                (uint32_t)(buf[j*24+18]<<16) + (uint32_t)(buf[j*24+19]<<24);
+			ts.seq_id = (uint32_t)buf[j*24+20] + (uint32_t)(buf[j*24+21]<<8)+ 
+			            (uint32_t)(buf[j*24+22]<<16) + (uint32_t)(buf[j*24+23]<<24);;
+			printf("   %5i  %lli.%09li + %04x\n",
+		      ts.seq_id, ts.utc, ts.coarse * 8, ts.frac); // , t.channel, t.utc, , );
 		}
 		
 		next = prev_id+1;
