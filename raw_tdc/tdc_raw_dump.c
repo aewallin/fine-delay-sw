@@ -146,11 +146,22 @@ int configure_board(struct board_def *bdef) {
 }
 
 
+/*
 long long int prev_ps;
 long long int start_of_program;
 int first = 1;
-int prev_id=0,next=0;
-/* remoder to self: timestamp looks like this (fdelay-lib.h)
+
+*/
+
+void coarse_fract_to_picos(struct fd_time *time, uint64_t *pico) {
+	uint64_t p; 
+	p = time->frac * 8000 / 4096; // fractions of the 8 ns clock.
+	p += time->coarse * 8000; // 8ns per coarse tic (125 MHz fpga clock)
+  	*pico = p;
+}
+
+/* 
+ * reminder to self: timestamp looks like this (fdelay-lib.h)
    struct fdelay_time {
 		uint64_t utc;
 		uint32_t coarse;
@@ -170,30 +181,41 @@ int prev_id=0,next=0;
  * */
 
 unsigned char buf[1024*1024]; // large buffer
+int next=0; // keep track of missing samples
 
 void handle_readout(struct board_def *bdef) {
     struct fdelay_time t;
     struct fd_time ts;
 	int nsamples;
 	int i,j;
-    	
+    uint64_t picos;
+    
     while( fdelay_read_raw(bdef->b, &t, 1, buf, &nsamples, O_NONBLOCK) == 1) {	    // while there are samples to read
-		
+
 		// print the time-stamp
 		printf("seq_id %5i channel: %5i stamp: %lli.%09li + %04x\n",
 		       t.seq_id, t.channel, t.utc, (long)t.coarse * 8, t.frac);
 		printf(" nsamples %i\n", nsamples);
 		
 		for (j = 0; j < nsamples; j++) {
+			
+			/*
 			printf("Data:");
 			for (i=0;i<24;i++)  // each timestamp-sample is 24 bytes
 				printf(" %02x", buf[j*24+i]);
 			printf("\n");
+			*/
+			
 			// unpack data into human-readable form:
 			ts.utc = (uint64_t)buf[j*24] + 
 			         (uint64_t)(buf[j*24+1]<<8)+
 			         (uint64_t)(buf[j*24+2]<<16)+
-			         (uint64_t)(buf[j*24+3]<<24);
+			         (uint64_t)(buf[j*24+3]<<24)+
+			         (uint64_t)(buf[j*24+4]<<32)+ // this byte will be zero in the foreseeable future..
+			         (uint64_t)(buf[j*24+5]<<40)+
+			         (uint64_t)(buf[j*24+6]<<48)+
+			         (uint64_t)(buf[j*24+7]<<56);
+			         
 			ts.coarse = (uint32_t)buf[j*24+8] + (uint32_t)(buf[j*24+9]<<8) + 
 			           (uint32_t)(buf[j*24+10]<<16) + (uint32_t)(buf[j*24+11]<<24);
 			ts.frac = (uint32_t)buf[j*24+12] + (uint32_t)(buf[j*24+13]<<8)+
@@ -202,17 +224,24 @@ void handle_readout(struct board_def *bdef) {
 			                (uint32_t)(buf[j*24+18]<<16) + (uint32_t)(buf[j*24+19]<<24);
 			ts.seq_id = (uint32_t)buf[j*24+20] + (uint32_t)(buf[j*24+21]<<8)+ 
 			            (uint32_t)(buf[j*24+22]<<16) + (uint32_t)(buf[j*24+23]<<24);;
-			printf("   %5i  %lli.%09li + %04x\n",
-		      ts.seq_id, ts.utc, ts.coarse * 8, ts.frac); // , t.channel, t.utc, , );
+			printf("   %5i  %lli.%09li + %04x ",
+		      ts.seq_id, ts.utc, ts.coarse * 8, ts.frac);
+		    coarse_fract_to_picos(&ts, &picos);
+		    printf("   =  %lli.%012lli \n",
+		      ts.utc, picos); 
 		}
+		printf("\n");
 		
-		next = prev_id+1;
+		// check for missing samples
+		if ( next != t.seq_id  )
+			printf("ERROR! next seq_id = %06d but current seq_id = %06d\n",next,t.seq_id);
+			
+		next = t.seq_id+nsamples;
 		if (next > 65535 )
 			next = 0;
 		
-		//if ( next != t.seq_id  )
-		//	printf("ERROR! next seq_id = %06d but current seq_id = %06d\n",next,t.seq_id);
-		prev_id = t.seq_id;
+
+		//prev_id = t.seq_id;
 			
 		fflush(stdout);
     }
