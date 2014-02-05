@@ -53,6 +53,23 @@ int fdelay_get_config_tdc(struct fdelay_board *userb)
 	return val;
 }
 
+static int __fdelay_open_tdc_data(struct __fdelay_board *b)
+{
+	char fname[128];
+	if (b->fdc[0] <= 0) {
+		sprintf(fname, "%s-0-0-data", b->devbase);
+		b->fdc[0] = open(fname, O_RDONLY | O_NONBLOCK);
+	}
+	return b->fdc[0];
+}
+
+/* file-descriptor to data, when kernel-module loaded with raw_tdc=1 */
+int fdelay_fileno_tdc_data(struct fdelay_board *userb)
+{
+	__define_board(b, userb);
+	return __fdelay_open_tdc_data(b);
+}
+
 static int __fdelay_open_tdc(struct __fdelay_board *b)
 {
 	char fname[128];
