@@ -208,7 +208,7 @@ void handle_readout(struct board_def *bdef) {
 			
 		next = t.seq_id+nsamples;
 		if (next > 65535 )
-			next = next-65535-1; 
+			next = next % 65536; 
 		nstamps += nsamples;
 		//if (nsamples>nsamples_max)
 		//	nsamples_max = nsamples;

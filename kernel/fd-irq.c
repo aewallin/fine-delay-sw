@@ -347,7 +347,7 @@ int fd_irq_init(struct fd_dev *fd)
 		 */
 
 		/* current VHDL has a buglet: timeout is 8ns, not 1ms each */
-		fd_writel(fd, FD_TSBIR_TIMEOUT_W(10) /* should be ms */
+		fd_writel(fd, FD_TSBIR_TIMEOUT_W(768) /* should be ms */
 			  | FD_TSBIR_THRESHOLD_W(15), /* samples */
 			  FD_REG_TSBIR);
 		fd_writel(fd, FD_EIC_IER_TS_BUF_NOTEMPTY, FD_REG_EIC_IER);
