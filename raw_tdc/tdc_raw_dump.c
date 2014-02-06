@@ -214,14 +214,14 @@ void handle_readout(struct board_def *bdef) {
 			*/
 			
 			// unpack data into human-readable form:
-			ts.utc = (uint64_t)buf[j*24] + 
-			         (uint64_t)buf[j*24+1]<<8+
-			         (uint64_t)buf[j*24+2]<<16+
-			         (uint64_t)buf[j*24+3]<<24+
-			         (uint64_t)buf[j*24+4]<<32+ // this byte will be zero in the foreseeable future..
-			         (uint64_t)buf[j*24+5]<<40+
-			         (uint64_t)buf[j*24+6]<<48+
-			         (uint64_t)buf[j*24+7]<<56;
+			ts.utc = (uint64_t)(buf[j*24]) + 
+			         (uint64_t)(buf[j*24+1]<<8)+
+			         (uint64_t)(buf[j*24+2]<<16)+
+			         (uint64_t)(buf[j*24+3]<<24)+
+			         (uint64_t)(buf[j*24+4]<<32)+ // this byte, and onwards, 
+			         (uint64_t)(buf[j*24+5]<<40)+ // will be zero in the foreseeable future..
+			         (uint64_t)(buf[j*24+6]<<48)+
+			         (uint64_t)(buf[j*24+7]<<56);
 			         
 			ts.coarse = (uint32_t)buf[j*24+8] + (uint32_t)(buf[j*24+9]<<8) + 
 			           (uint32_t)(buf[j*24+10]<<16) + (uint32_t)(buf[j*24+11]<<24);
@@ -309,11 +309,11 @@ int main(int argc, char *argv[])
 			// my_board.fd_ctrl
 		if ( poll( &fd, 1, timeout) <= 0) { 
 			// we should not get here !?
-			printf("ERROR poll() <=0\n");
-			exit(-1);
+			printf(" poll()<=0, waiting for time-stamps...\n");
+			//exit(-1);
 			
-			//fflush(stdout);
-			//continue; /* signal handler did it... */
+			fflush(stdout);
+			continue; /* signal handler did it... */
 		}
 		//for(i=0;i<MAX_BOARDS;i++) {
 			//if(!boards[i].in_use)
