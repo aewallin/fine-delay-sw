@@ -109,6 +109,7 @@ int main(int argc, char **argv)
 
 		while (fdelay_check_wr_mode(b) != 0) {
 			printf(".");
+			fflush(stdout);
 			sleep(1);
 		}
 
