@@ -8,3 +8,6 @@ tdc_raw_dump: tdc_raw_dump.o
 	
 speed_test: speed_test.o
 	gcc -o $@ $^ $(LDFLAGS)
+	
+clean:
+	rm -rf *o tdc_raw_dump speed_test

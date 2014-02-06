@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <sys/select.h>
 
+
 #include "linux/zio-user.h"
 
 #define FDELAY_INTERNAL // for sysfs_get/set
@@ -214,13 +215,13 @@ void handle_readout(struct board_def *bdef) {
 			
 			// unpack data into human-readable form:
 			ts.utc = (uint64_t)buf[j*24] + 
-			         (uint64_t)(buf[j*24+1]<<8)+
-			         (uint64_t)(buf[j*24+2]<<16)+
-			         (uint64_t)(buf[j*24+3]<<24)+
-			         (uint64_t)(buf[j*24+4]<<32)+ // this byte will be zero in the foreseeable future..
-			         (uint64_t)(buf[j*24+5]<<40)+
-			         (uint64_t)(buf[j*24+6]<<48)+
-			         (uint64_t)(buf[j*24+7]<<56);
+			         (uint64_t)buf[j*24+1]<<8+
+			         (uint64_t)buf[j*24+2]<<16+
+			         (uint64_t)buf[j*24+3]<<24+
+			         (uint64_t)buf[j*24+4]<<32+ // this byte will be zero in the foreseeable future..
+			         (uint64_t)buf[j*24+5]<<40+
+			         (uint64_t)buf[j*24+6]<<48+
+			         (uint64_t)buf[j*24+7]<<56;
 			         
 			ts.coarse = (uint32_t)buf[j*24+8] + (uint32_t)(buf[j*24+9]<<8) + 
 			           (uint32_t)(buf[j*24+10]<<16) + (uint32_t)(buf[j*24+11]<<24);
@@ -229,9 +230,10 @@ void handle_readout(struct board_def *bdef) {
 			ts.channel = (uint32_t)buf[j*24+16] + (uint32_t)(buf[j*24+17]<<8)+
 			                (uint32_t)(buf[j*24+18]<<16) + (uint32_t)(buf[j*24+19]<<24);
 			ts.seq_id = (uint32_t)buf[j*24+20] + (uint32_t)(buf[j*24+21]<<8)+ 
-			            (uint32_t)(buf[j*24+22]<<16) + (uint32_t)(buf[j*24+23]<<24);;
-			printf("   %5i  %lli.%09li + %04x ",
-		      ts.seq_id, ts.utc, ts.coarse * 8, ts.frac);
+			            (uint32_t)(buf[j*24+22]<<16) + (uint32_t)(buf[j*24+23]<<24);
+			            
+			printf("   %5i  %lli.%09lli + %04x ",
+		      ts.seq_id, ts.utc, (long long)ts.coarse * 8, ts.frac);
 		    coarse_fract_to_picos(&ts, &picos);
 		    printf("   =  %lli.%012lli \n",
 		      ts.utc, picos); 

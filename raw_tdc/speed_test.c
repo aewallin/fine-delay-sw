@@ -1,7 +1,8 @@
 /* fmc-fine-delay raw_tdc example program
  * AW 2014-02-05
- * based on  /fine-delay-sw/NewLogger/fdelay-gs.c
- * and       /fine-delay-sw/zio/tools/zio-dump.c
+ * loosely based on
+ *        /fine-delay-sw/NewLogger/fdelay-gs.c
+ * and    /fine-delay-sw/zio/tools/zio-dump.c
  * 
  * as of 2014-02-04, raw_tdc is experimental and works with:
  * $ modinfo zio
