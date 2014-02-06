@@ -208,14 +208,15 @@ void handle_readout(struct board_def *bdef) {
 			
 		next = t.seq_id+nsamples;
 		if (next > 65535 )
-			next = next-65535-1; 
+			next = next % 65536; 
 		nstamps += nsamples;
 		//if (nsamples>nsamples_max)
 		//	nsamples_max = nsamples;
 		nblocks++;
     }
     if ( t.utc >= previous_utc+1 ) { // if more than one second elapsed since last printout
-		printf(" f_in= %lli Hz. Got %lli blocks/s with %5.2f stamps/block \n", nstamps,nblocks,(double)nstamps/(double)nblocks);
+		printf(" f_in= %lli Hz. Got %lli blocks/s with %5.2f stamps/block, ca %2.2f Mb/s \n", 
+		          nstamps,nblocks,(double)nstamps/(double)nblocks, (double)(nstamps*24)/(double)1e6);
 		previous_utc = t.utc;
 		nstamps = 0;
 		nblocks = 0;
