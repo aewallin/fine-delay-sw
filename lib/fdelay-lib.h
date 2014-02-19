@@ -76,7 +76,10 @@ extern int fdelay_fread(struct fdelay_board *b, struct fdelay_time *t, int n);
 extern int fdelay_fileno_tdc(struct fdelay_board *b);
 extern int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
 		       int flags);
-
+/* raw_tdc=1 version of fdelay_read() */
+extern int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
+				unsigned char *databuffer, int *nsamples, int flags);
+		       
 extern void fdelay_pico_to_time(uint64_t *pico, struct fdelay_time *time);
 extern void fdelay_time_to_pico(struct fdelay_time *time, uint64_t *pico);
 
