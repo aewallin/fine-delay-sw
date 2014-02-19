@@ -1,0 +1,23 @@
+message StampBlock {
+  required string messageType =1; // zeromq message start string
+  required int32 n=2; // number of stamps
+
+    repeated uint64 utc = 3 [packed=true];
+	repeated uint64 ps = 4 [packed=true];
+
+}
+/*
+ each raw sample is in fd_time format (fine-delay.h)
+  struct fd_time {
+	uint64_t utc;      // 8 bytes
+	uint32_t coarse;   // 4
+	uint32_t frac;     // 4
+	uint32_t channel;  // 4
+	uint32_t seq_id;   // 4
+}; */
+
+
+message Histogram {
+	required int32 bins=1;
+	repeated int32 hist=2 [packed=true];
+}
