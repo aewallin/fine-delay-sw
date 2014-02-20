@@ -1,9 +1,9 @@
 message StampBlock {
-  required string messageType =1; // zeromq message start string
-  required int32 n=2; // number of stamps
-
-    repeated uint64 utc = 3 [packed=true];
-	repeated uint64 ps = 4 [packed=true];
+	required string messageType =1; // zeromq message start string
+	required int32 n=2; // number of stamps
+	repeated int32 id = 3; // sequence id of stamp
+	repeated uint64 utc = 4 [packed=true];
+	repeated uint64 ps = 5 [packed=true];
 
 }
 /*

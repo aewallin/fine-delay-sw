@@ -13,6 +13,8 @@ ENDIF()
 # ZeroMQ_INCLUDE_DIRS - the libzmq include directories
 # ZeroMQ_LIBRARIES - link these to use libzmq
 
+
+
 FIND_PACKAGE(Protobuf REQUIRED)
 #   PROTOBUF_FOUND - Found the Google Protocol Buffers library
 #   PROTOBUF_INCLUDE_DIRS - Include directories for Google Protocol Buffers
@@ -52,7 +54,7 @@ target_link_libraries(tdc2zmq  ${FDELAY_LIBRARY} ${PROTOBUF_LIBRARY} ${ZeroMQ_LI
 
 # average frequency counter
 ADD_EXECUTABLE       (fcounter  fcounter.cpp ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(fcounter  ${PROTOBUF_LIBRARY} ${ZeroMQ_LIBRARIES} ) 
+target_link_libraries(fcounter    ${PROTOBUF_LIBRARY} ${ZeroMQ_LIBRARIES} ) 
 
 # modulo-t histogram calculation
 ADD_EXECUTABLE       (histogram  histogram.cpp ${PROTO_SRCS} ${PROTO_HDRS})
