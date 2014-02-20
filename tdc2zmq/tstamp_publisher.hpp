@@ -25,7 +25,7 @@ class Tspub {
 
 			socket->bind("ipc:///tmp/tstamp.pipe");
 			// change permissions so everyone can read
-			chmod( "/tmp/tstamp.pipe", S_IWOTH); // http://linux.die.net/man/3/chmod			
+			chmod( "/tmp/tstamp.pipe", S_IWOTH); // http://linux.die.net/man/3/chmod
 			pb_msg.set_messagetype( "TT"); 
 			
 			stamp_current=0;

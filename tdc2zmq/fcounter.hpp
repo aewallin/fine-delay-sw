@@ -10,12 +10,10 @@
 #include <cstdio> // printf()
 
 #include <deque>
+#include <sys/stat.h> // chmod()
 
 #include "tdc.pb.h"
-
 #include "ts.hpp"
-
-
 
 // simple frequency counter, with given gate-time
 // count input events during the gate-time
@@ -94,10 +92,19 @@ class Tssub {
 		Tssub() {
 			context = new zmq::context_t(1); // what's the "1" ?
 			socket = new zmq::socket_t(*context, ZMQ_SUB);
-			socket->connect("ipc:///tmp/tstamp.pipe");			
+			socket->connect("ipc:///tmp/tstamp.pipe");
 			char messageType[] = { 0x0a, 0x02, 0x54, 0x54 }; // protobuf + "TT"
 			socket->setsockopt( ZMQ_SUBSCRIBE, messageType, 4 );
-			gate = TS(0,3e11);
+			
+			// PUB socket
+			publisher = new zmq::socket_t(*context, ZMQ_PUB);
+			publisher->bind("ipc:///tmp/frequency.pipe");
+			// change permissions so everyone can read
+			chmod( "/tmp/frequency.pipe", S_IWOTH); // http://linux.die.net/man/3/chmod
+			
+			
+			// counter
+			gate = TS(1,0); //TS(0,5e11);
 			cnt = new GateCounter( gate );
 			prev_id = -1;
 			last_f_calc = TS(0,0);
@@ -138,9 +145,25 @@ class Tssub {
 				TS elapsed = (last_stamp - last_f_calc);
 				if ( elapsed > gate ) {
 					// frequency calculation
+					double f = cnt->f();
 					printf("f= %.06f deqN=%d deltaT=%lli.%012lli gate=%lli.%012lli\n", 
-					cnt->f(), cnt->deq_size(), cnt->deq_delta().s, cnt->deq_delta().ps,
+					f, cnt->deq_size(), cnt->deq_delta().s, cnt->deq_delta().ps,
 					 cnt->gatet().s, cnt->gatet().ps );
+					
+					pb_f_msg.set_f( f);
+					pb_f_msg.set_s( last_stamp.s );
+					pb_f_msg.set_ps( last_stamp.ps );
+
+					zmq::message_t zmq_pub_msg( pb_f_msg.ByteSize() );
+					pb_f_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_f_msg.ByteSize() );
+					printf("PUB[ %d ] : ", // hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli\n",  
+					zmq_pub_msg.size() ); //, hist->hcount(), hist_mod.s, hist_mod.ps, elapsed.s, elapsed.ps );
+					fflush(stdout);
+					// actual send , , msg.ByteSize()
+					publisher->send( zmq_pub_msg );
+					
+					
+					 
 					//printf("last ts = %lli.%012lli \n", last_stamp.s,last_stamp.ps);
 					//printf("last f  = %lli.%012lli \n", last_f_calc.s,last_f_calc.ps);
 					//printf("elapsed = %lli.%012lli \n", elapsed.s,elapsed.ps);
@@ -153,8 +176,11 @@ class Tssub {
 		};
 	private:
 		zmq::context_t* context;
-		zmq::socket_t* socket;
+		zmq::socket_t* socket; // for SUB
+		zmq::socket_t* publisher;
+		
 		StampBlock pb_msg; // protobuf message type
+		Frequency  pb_f_msg; // frequency message
 		GateCounter* cnt;
 		TS last_f_calc; // the last time we called cnt->f() for output
 		TS gate;
