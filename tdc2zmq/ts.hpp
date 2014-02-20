@@ -41,13 +41,16 @@ public:
 		//printf("> second: %lli.%012lli \n", t.s, t.ps );
 		if (s > t.s) {
 			return true;
-		} else if (s < t.s)
+		} else if (s < t.s) {
 			return false;
+		}
 		
 		assert( s == t.s );
+		//assert( 0 );
 		if ( ps >= t.ps)
 			return true;
-		return false;
+		else
+			return false;
 	};
 	TS &operator=(const TS &t) {
 			if (this == &t)
