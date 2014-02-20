@@ -9,70 +9,14 @@
 #include <iostream>
 #include <cstdio> // printf()
 
-//#include <deque>
 #include <math.h>  // floorf()
+#include <sys/stat.h> // chmod()
 
 #include "tdc.pb.h"
 
-class TS {
-public:
-	int64_t s;
-	int64_t ps;
-	TS() {s=0;ps=0;};
-	TS(int64_t sec, int64_t pico) { // fixme: use initializer list
-		s = sec;
-		ps = pico;
-	};
-	// subtract t
-	TS &operator-=(const TS &t) {
-		//std::cout << " first " << s << "." << ps << "\n";
-		//std::cout << " second" << t.s << "." << t.ps << "\n";
-		//printf("  first: %lli.%012lli \n", s, ps );
-		//printf(" second: %lli.%012lli \n", t.s, t.ps );
-	    if (ps >= t.ps) {
-			ps -= t.ps;
-		} else {
-			ps = 1e12 + ps - t.ps;
-			s--;
-		}
-		s -= t.s;
-		//printf("   diff: %lli.%012lli \n", s, ps );
-		return *this;
-	};
-	
-	const TS operator-(TS &t) const {
-		return TS(*this) -= t;
-	};
-	bool operator>(const TS &t) const {
-		//printf(">  first: %lli.%012lli %d %d\n", s, ps , s>t.s, ps>t.ps);
-		//printf("> second: %lli.%012lli \n", t.s, t.ps );
-		if (s>=t.s)
-			return true;
-		else if (s < t.s)
-			return false;
-		else if (ps > t.ps) // here s==t.s
-			return true;
-		return false;
-	};
-	TS operator%(const TS &t) const {
-		printf("     ts: %lli.%012lli \n", s, ps );
-		printf("     tau: %lli.%012lli \n", t.s, t.ps );
-		
-		int64_t smod;
-		if (t.s > 0 ) 
-			smod = s % t.s;
-		else
-			smod = s;
-		int64_t psmod;
-		if (t.ps > 0 )
-			psmod = ps % t.ps;
-		else
-			psmod = ps;
-		printf("mod(ts,tau): %lli.%012lli \n", smod, psmod );
-		
-		return TS(smod,psmod);
-	};
-};
+#include "ts.hpp"
+
+
 
 // simple frequency counter, with given gate-time
 // count input events during the gate-time
@@ -84,6 +28,8 @@ class Histogrammer {
 			t0.s = -1; // uninitialized!
 			bins = 100;
 			hist = new std::vector<int>(bins);
+			count=0;
+			
 		}
 		Histogrammer(TS tau0, int nbins) {
 			tau.s = tau0.s;
@@ -91,6 +37,9 @@ class Histogrammer {
 			t0.s = -1; // uninitialized!
 			bins = nbins;
 			hist = new std::vector<int>(bins);
+			count=0;
+			printf("     tau0: %lli.%012lli \n", tau0.s, tau0.ps );
+			printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
 		}
 		~Histogrammer() {
 			delete hist;
@@ -99,29 +48,38 @@ class Histogrammer {
 		// add time-stamp
 		void append(TS ts) {
 			TS modt = ts % tau ; // modulus operator of TS!
-			// find the bin where modt belongs
-			printf("  append: %lli.%012lli \n", ts.s, ts.ps );
+			//printf("  append: %lli.%012lli \n", ts.s, ts.ps );
+			//printf("    modt: %lli.%012lli \n", modt.s, modt.ps );
+			//printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
 			
+			// find the bin where modt belongs
 			// histogram bins correspond to time:
 		    // hist[0]      = 0 ... tau/bins
 		    // hist[bins-1] = (bins-1)*tau/bins ... tau
             double t = modt.s + modt.ps/1e12; // looses precision??
-            double binwidth = (tau.s + tau.ps/1e12)/bins;
+            double binwidth = ((double)tau.s + (double)tau.ps/1e12)/bins;
             int bin_number = floorf( t/binwidth );
+            if (!( bin_number >= 0 ))
+				printf("ERROR bin_number=%d \n",bin_number);
             assert( bin_number >= 0 );
             assert( bin_number < bins );
-            (*hist)[bin_number] = (*hist)[bin_number] + 1;	
-            printf("    modt: %lli.%012lli bin= %d\n", modt.s, modt.ps , bin_number);	
+            (*hist)[bin_number] = (*hist)[bin_number] + 1;
+            count++;
+            //printf("    modt: %lli.%012lli bin= %d\n", modt.s, modt.ps , bin_number);	
 		}
 		// access the histogram
 		int histogram_n(int nbin) {
 			return (*hist)[nbin];
 		};
 		int get_bins() { return bins; }
+		int hcount() {
+			return count;
+		}
 	private:
 		TS tau; // histogram modulo this time-interval
 		TS t0; // first observation
 		int bins; // number of bins in the histogram
+		int count; // number of counts in the histogram
 		std::vector<int>* hist; // the histogram itself
 
 };
@@ -136,12 +94,19 @@ class TsHist {
 			char messageType[] = { 0x0a, 0x02, 0x54, 0x54 }; // protobuf + "TT"			
 			subscriber->setsockopt( ZMQ_SUBSCRIBE, messageType, 4 );
 			
+			// PUB socket
 			publisher = new zmq::socket_t(*context, ZMQ_PUB);
 			publisher->bind("ipc:///tmp/histogram.pipe");
+			// change permissions so everyone can read
+			chmod( "/tmp/histogram.pipe", S_IWOTH); // http://linux.die.net/man/3/chmod
 			
-			
+			// 10ms = 100Hz =   (int64_t)10000000000
+			// 100us = 1 kHz =    (int64_t)100000000
+			hist_mod = TS( (int64_t)0,(int64_t)100000000);
 			// this class does the work
-			hist = new Histogrammer( TS(20,0), 100 );
+			hist = new Histogrammer( hist_mod, 10000 );
+			update_timeout = TS(2,0); // update once/twice per second
+			last_calc = TS(0,0);
 		};
 		
 		void sub() {
@@ -151,28 +116,37 @@ class TsHist {
 			
 			while (1) {
 				// Subscribe to time-stamps
-				subscriber->recv(zmq_msg);		
-				printf("SUB[ %d ] :",  zmq_msg->size() );
+				subscriber->recv(zmq_msg);
+				//printf("SUB[ %d ] :",  zmq_msg->size() );
 				pb_msg.ParseFromArray( (char *)zmq_msg->data(), zmq_msg->size() );
-				std::cout << "type=" << pb_msg.messagetype() << " n="<< pb_msg.n() << "\n"; 
-				for (int n = 0; n<pb_msg.utc_size(); n++) {
-					
-					printf(" %i stamp: %lli.%012lli \n", n, pb_msg.utc(n), pb_msg.ps(n) );
+				//std::cout << "type=" << pb_msg.messagetype() << " n="<< pb_msg.n() << "\n"; 
+				int nstamps = pb_msg.utc_size();
+				for (int n = 0; n<nstamps; n++) {
+					// printf(" %i stamp: %lli.%012lli \n", n, pb_msg.utc(n), pb_msg.ps(n) );
 					hist->append( TS( pb_msg.utc(n), pb_msg.ps(n) ) );
 				}
 				
+				TS last_stamp( pb_msg.utc(nstamps-1), pb_msg.ps(nstamps-1), pb_msg.id(nstamps-1) );
+				TS elapsed = (last_stamp - last_calc);
+				
 				// Publish histogram
-				pb_hist_msg.set_bins( hist->get_bins() );
-				pb_hist_msg.clear_hist();
-				for (int n = 0; n< hist->get_bins() ; n++ ) {
-					pb_hist_msg.add_hist(  hist->histogram_n(n) );
+				if ( elapsed > update_timeout ) {
+					pb_hist_msg.set_bins( hist->get_bins() );
+					pb_hist_msg.set_s( hist_mod.s );
+					pb_hist_msg.set_ps( hist_mod.ps );
+					pb_hist_msg.clear_hist();
+					for (int n = 0; n< hist->get_bins() ; n++ ) {
+						pb_hist_msg.add_hist(  hist->histogram_n(n) );
+					}
+					zmq::message_t zmq_pub_msg( pb_hist_msg.ByteSize() );
+					pb_hist_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_hist_msg.ByteSize() );
+					printf("PUB[ %d ] : hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli\n",  
+					zmq_pub_msg.size(), hist->hcount(), hist_mod.s, hist_mod.ps, elapsed.s, elapsed.ps );
+					fflush(stdout);
+					// actual send , , msg.ByteSize()
+					publisher->send( zmq_pub_msg );
+					last_calc = last_stamp;
 				}
-				zmq::message_t zmq_pub_msg( pb_hist_msg.ByteSize() );
-				pb_hist_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_hist_msg.ByteSize() );
-				
-				// actual send , , msg.ByteSize()
-				publisher->send( zmq_pub_msg );
-				
 			}
 			delete zmq_msg;
 		};
@@ -183,4 +157,7 @@ class TsHist {
 		StampBlock pb_msg; // protobuf time-stamp message type
 		Histogram pb_hist_msg; // protobuf histogram message type
 		Histogrammer* hist;
+		TS hist_mod;
+		TS last_calc;
+		TS update_timeout;
 };

@@ -59,4 +59,24 @@ public:
 		ps=t.ps;
 		return *this;
 	}
+	
+	// modulo operator, for histogramming
+	TS operator%(const TS &t) const {
+		//printf("     ts: %lli.%012lli \n", s, ps );
+		//printf("     tau: %lli.%012lli \n", t.s, t.ps );
+		assert( t.s >= 0);
+		int64_t smod = 0;
+		if (t.s > 0 ) 
+			smod = s % t.s;
+		//else
+		//	smod = s;
+		int64_t psmod;
+		if (t.ps > 0 )
+			psmod = ps % t.ps;
+		else
+			psmod = ps;
+		//printf("mod(ts,tau): %lli.%012lli \n", smod, psmod );
+		
+		return TS(smod,psmod);
+	};
 };
