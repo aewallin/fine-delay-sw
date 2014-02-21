@@ -54,6 +54,8 @@ def run():
 		plt.ylabel('Counts')
 		plt.title('TIme-stamp histogram test. AW 2014-02-20')
 		print "plotted %d histogram" % (sum(hvals))
+		print " max count ", max(hvals)
+		plt.ylim((1e0,1e4))
 		plt.draw()
 		filename = "frame_%03d" % nframe
 		nframe = nframe+1
