@@ -1,6 +1,7 @@
 import zmq
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from scipy.optimize import curve_fit
 
 from scipy.optimize import curve_fit
 
