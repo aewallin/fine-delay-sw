@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <cstdio> // printf()
+#include <deque>
 
 #include <math.h>  // floorf()
 #include <sys/stat.h> // chmod()
@@ -25,16 +26,16 @@ class Histogrammer {
 		Histogrammer() {
 			tau.s = 1;
 			tau.ps = 0;
-			t0.s = -1; // uninitialized!
+			//t0.s = -1; // uninitialized!
 			bins = 100;
 			hist = new std::vector<int>(bins);
 			count=0;
-			
 		}
-		Histogrammer(TS tau0, int nbins) {
-			tau.s = tau0.s;
-			tau.ps = tau0.ps;
-			t0.s = -1; // uninitialized!
+		Histogrammer(TS tau0, int nbins, TS g0) {
+			tau = tau0;
+			gate = g0;
+			
+			//t0.s = -1; // uninitialized!
 			bins = nbins;
 			hist = new std::vector<int>(bins);
 			count=0;
@@ -44,14 +45,15 @@ class Histogrammer {
 		~Histogrammer() {
 			delete hist;
 		};
-		
+
 		// add time-stamp
 		void append(TS ts) {
+			
 			TS modt = ts % tau ; // modulus operator of TS!
 			//printf("  append: %lli.%012lli \n", ts.s, ts.ps );
 			//printf("    modt: %lli.%012lli \n", modt.s, modt.ps );
 			//printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
-			
+
 			// find the bin where modt belongs
 			// histogram bins correspond to time:
 		    // hist[0]      = 0 ... tau/bins
@@ -63,8 +65,18 @@ class Histogrammer {
 				printf("ERROR bin_number=%d \n",bin_number);
             assert( bin_number >= 0 );
             assert( bin_number < bins );
+            
             (*hist)[bin_number] = (*hist)[bin_number] + 1;
             count++;
+            deq.push_back( std::make_pair(ts,bin_number) );
+            
+            // remove elements from the deq:
+			while ( deq_full() && deq.size() > 1 ) {
+				(*hist)[ deq.front().second ]--; // decrease hisogram count for this element
+				count--;
+				deq.pop_front(); // remove elements
+			}
+			
             //printf("    modt: %lli.%012lli bin= %d\n", modt.s, modt.ps , bin_number);	
 		}
 		// access the histogram
@@ -72,16 +84,36 @@ class Histogrammer {
 			return (*hist)[nbin];
 		};
 		int get_bins() { return bins; }
-		int hcount() {
-			return count;
+		int hcount() { return count; }
+		
+		bool deq_full() {
+			if (deq.size()<=1)
+				return false;			
+			//TS diff = ( deq.back()-deq.front() );
+			//printf(" %d diff  = %lli.%012lli \n", deq.size(), diff.s, diff.ps );
+			//printf("    gate  = %lli.%012lli \n",  gate.s, gate.ps );
+			//printf("    test = %d \n", ( diff ) > gate );
+			if (  deq_delta() > gate ) {
+				//std::cout << " deq full!\n";
+				return true;
+			} else
+				return false;
+		}
+		int deq_size() {
+			return deq.size();
+		}
+		TS deq_delta() {
+			return deq.back().first - deq.front().first ;
 		}
 	private:
 		TS tau; // histogram modulo this time-interval
-		TS t0; // first observation
+		// TS t0; // first observation
 		int bins; // number of bins in the histogram
 		int count; // number of counts in the histogram
 		std::vector<int>* hist; // the histogram itself
-
+		
+		TS gate; // gate time
+		std::deque< std::pair<TS, int> > deq; // deq of time-stamps, and histogram-bins
 };
 
 // subscribe to Tstamp, and create histogram.
@@ -100,11 +132,13 @@ class TsHist {
 			// change permissions so everyone can read
 			chmod( "/tmp/histogram.pipe", S_IWOTH); // http://linux.die.net/man/3/chmod
 			
-			// 10ms = 100Hz =   (int64_t)10000000000
-			// 100us = 1 kHz =    (int64_t)100000000
-			hist_mod = TS( (int64_t)0,(int64_t)100000000);
+			// 10ms = 100 Hz   =   (int64_t)10000000000
+			// 1 ms = 1  kHz =      (int64_t)1000000000
+			// 100us = 10 kHz =      (int64_t)100000000
+			hist_mod = TS( (int64_t)0,(int64_t)1000000000);
+			TS gate = TS(2,0);
 			// this class does the work
-			hist = new Histogrammer( hist_mod, 10000 );
+			hist = new Histogrammer( hist_mod, 10000 , gate);
 			update_timeout = TS(2,0); // update once/twice per second
 			last_calc = TS(0,0);
 		};
@@ -140,8 +174,8 @@ class TsHist {
 					}
 					zmq::message_t zmq_pub_msg( pb_hist_msg.ByteSize() );
 					pb_hist_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_hist_msg.ByteSize() );
-					printf("PUB[ %d ] : hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli\n",  
-					zmq_pub_msg.size(), hist->hcount(), hist_mod.s, hist_mod.ps, elapsed.s, elapsed.ps );
+					printf("PUB[ %d ] : deq_count=%d hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli\n",  
+					zmq_pub_msg.size(), hist->deq_size(), hist->hcount(), hist_mod.s, hist_mod.ps, elapsed.s, elapsed.ps );
 					fflush(stdout);
 					// actual send , , msg.ByteSize()
 					publisher->send( zmq_pub_msg );
