@@ -20,7 +20,7 @@ message StampBlock {
 message Histogram {
 	required int32 bins=1;
 	required uint64 s = 2;  // histogram tau
-	required uint64 ps = 3; 
+	required uint64 ps = 3; // histogram tau
 	
 	repeated int32 hist=4 [packed=true]; // vector of histogram counts
 	// len(hist) == bins

@@ -135,10 +135,13 @@ class TsHist {
 			// 10ms = 100 Hz   =   (int64_t)10000000000
 			// 1 ms = 1  kHz =      (int64_t)1000000000
 			// 100us = 10 kHz =      (int64_t)100000000
-			hist_mod = TS( (int64_t)0,(int64_t)1000000000);
-			TS gate = TS(2,0);
+			// 1 MHz =                 (int64_t)1000000
+			// 12 MHz =                  (int64_t)83333
+			hist_mod = TS( (int64_t)0,(int64_t)83333);
+			hist_gate = TS(30,0);
+			int n_bins = 100;
 			// this class does the work
-			hist = new Histogrammer( hist_mod, 10000 , gate);
+			hist = new Histogrammer( hist_mod, n_bins , hist_gate);
 			update_timeout = TS(2,0); // update once/twice per second
 			last_calc = TS(0,0);
 		};
@@ -174,8 +177,9 @@ class TsHist {
 					}
 					zmq::message_t zmq_pub_msg( pb_hist_msg.ByteSize() );
 					pb_hist_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_hist_msg.ByteSize() );
-					printf("PUB[ %d ] : deq_count=%d hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli\n",  
-					zmq_pub_msg.size(), hist->deq_size(), hist->hcount(), hist_mod.s, hist_mod.ps, elapsed.s, elapsed.ps );
+					printf("PUB[ %d ] : deq_count=%d hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli gate_time.ps=%lli ps \n",  
+					zmq_pub_msg.size(), hist->deq_size(), hist->hcount(), hist_mod.s, hist_mod.ps, 
+					elapsed.s, elapsed.ps );
 					fflush(stdout);
 					// actual send , , msg.ByteSize()
 					publisher->send( zmq_pub_msg );
@@ -192,6 +196,7 @@ class TsHist {
 		Histogram pb_hist_msg; // protobuf histogram message type
 		Histogrammer* hist;
 		TS hist_mod;
+		TS hist_gate;
 		TS last_calc;
 		TS update_timeout;
 };
