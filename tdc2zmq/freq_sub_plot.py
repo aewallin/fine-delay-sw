@@ -60,7 +60,7 @@ def run():
 		plt.draw()
 		filename = "fcnt_frame_%03d" % nframe
 		nframe = nframe+1
-		plt.savefig(filename)
+		#plt.savefig(filename)
 
 
 
