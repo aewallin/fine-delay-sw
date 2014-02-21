@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month September 2013
+@set update-month February 2014
 @c the release name below is substituted at build time
 @set release __RELEASE_GIT_ID__
 
@@ -300,7 +300,7 @@ a TDC, pulse generator or a pulse delay.
 @node Driver Features
 @chapter Driver Features
 
-This driver is based on ZIO and @i{fmc-bus}.  It supports initial
+This driver is based on @sc{zio} and @i{fmc-bus}.  It supports initial
 setup of the board, setting and reading time, run-time continuous
 calibration, input timestamping and output pulse generation.  It
 supports user-defined offsets, so our users can tell the driver
@@ -378,9 +378,9 @@ The kernel versions I am using during development is 3.4.  Everything
 used here is known to build with all versions since 2.6.32 and up to 3.8.
 A backport to version 2.6.24 is released as a separate @i{git} branch.
 
-The driver, then, is based on the ZIO framework, available from
+The driver, then, is based on the @sc{zio} framework, available from
 @code{ohwr.org}.  I'm developing with the @code{v1.0-fixes} branch of
-the framework.  Again, this commit of ZIO is known
+the framework.  Again, this commit of @sc{zio} is known
 to work in the kernel range 2.6.32..3.8 and a backport to 2.6.24 is
 available.
 
@@ -390,7 +390,7 @@ kernel module registers as a @i{driver} for the FMC bus abstraction,
 and is verified with version @t{v2013-04} of the FMC package.
 The same kernel range applies.
 
-Both packages (ZIO and @i{fmc-bus})
+Both packages (@sc{zio} and @i{fmc-bus})
 are currently checked out as @i{git submodules}
 of this package, and each of them is retrieved at the right version
 to be compatible with this driver.  This means you may just
@@ -655,7 +655,7 @@ programs should not refer to.  Both are different from the original
 implementation (@code{fdelay_lib.h}) to avoid trying to compile older
 code with new headers.
 
-@item The @i{tools} directory includes standalone tools that access ZIO
+@item The @i{tools} directory includes standalone tools that access @sc{zio}
 directly. Their name begins with @code{fd-raw-} (but there is a
 non-fine-delay tool to generate pulses on the parallel port, which has
 a different name pattern).
@@ -670,13 +670,13 @@ Unfortunately sources of programs and library files both begin with
 @node Using the Driver Directly
 @chapter Using the Driver Directly
 
-The driver is designed as a ZIO driver that offers 1 input channel and
+The driver is designed as a @sc{zio} driver that offers 1 input channel and
 4 output channels. Since each output channel is independent (they do
 not output at the same time) the device is modeled as 5 separate
 @i{csets}.
 
-The reader of this chapter is expected to be confident with basic ZIO
-concepts, available in ZIO documentation (ZIO is an @code{ohwr.org}
+The reader of this chapter is expected to be confident with basic @sc{zio}
+concepts, available in @sc{zio} documentation (@sc{zio} is an @code{ohwr.org}
 project).
 
 @c ==========================================================================
@@ -687,7 +687,7 @@ The overall device includes a few device attributes and a few attributes
 specific to the csets (some attributes for input and some attributes for
 output).
 The attributes allow to read and write the internal timing of the
-card, as well as other internal parameters, documented below. Since ZIO
+card, as well as other internal parameters, documented below. Since @sc{zio}
 has no support for @i{ioctl}, all the attributes appear in @i{sysfs}.
 For multi-valued attributes (like a time tag, which is more than 32
 bits) the order of reading and writing is mandated by the driver
@@ -888,24 +888,24 @@ example program using the official API (see @ref{Time Management}).
 @node The Input cset
 @section The Input cset
 
-The input cset returns fake data, with timestamp information in the
-control block (the meta-information associated to data). This is
-suboptimal, but it is a ``good enough'' first implementation until
-time permits to refine it.
+The input cset returns blocks with no data and timestamp information in the
+control structure (the meta-information associated to data).  Before
+January 2014 the driver was suboptimal, but now those limitations are
+gone and the driver uses the ``self-timed'' @sc{zio} abstraction, which
+allows it to push blocks to the buffer even if no process is yet reading.
 
-Currently, no input timestamp is collected until some process calls
-the @i{read} function on the control or data char device.
+Collecting event in empty blocks, with full meta-data description, brings
+some overhead in the data flow, mainly for the marshalling of meta-data.
+If you need to stamp pulse rates higher than 10kHz we advise you to
+rely on the @i{raw_tdc} support, which on an average computer can
+timestamp up to 100-150 kHz without data loss. This is described
+in @ref{Raw TDC}.  The internals of the input data flow are
+described in @ref{The Input Data Flow}, that may help fine-tune
+driver parameters to match your timestamping needs.
 
-In a perfect world we would have a custom @i{trigger} module that
-stuffs the timestamp information directly in the proper place within
-the ZIO control block.  This version of the code uses the default ZIO
-trigger, which is user-driven.  In other words, data is only requested
-to hardware if a user process is actually reading.  This ``software''
-trigger sticks a software timestamp in the control block, so the hardware
-timestamp must be provided elsewhere.
-
-The hardware timestamp and other information is returned as @i{channel
-attributes}, which you can look at using @i{zio-dump} (part of the ZIO
+For normal @sc{zio} blocks, with meta-data and no data, the hardware
+timestamp and other information is returned as @i{channel
+attributes}, which you can look at using @i{zio-dump} (part of the @sc{zio}
 package) or
 @i{tools/fd-raw-input} which is part of this package.
 
@@ -1151,6 +1151,212 @@ of the motherboard, the address is @code{378}):
    ./parport-burst d080 1000 100
 @end example
 
+@c --------------------------------------------------------------------------
+@node Raw TDC
+@subsection Raw TDC
+
+If your rate of input pulses is above a dozen kHz, the overheader of
+setting up a full @sc{zio} block with proper control information may cause
+some data loss; the actual threshold depends on the speed of your
+computer and the amount of other activities that are going on.
+
+By loading the module with the parameter ``@t{raw_tdc=1}'', you force
+the input channel to carry timestamps in the data area; only the first
+timestamp is properly converted to meta-data for the control
+structure.  This allow timestamping without data loss trains of pulses
+of up to 150kHz; again, the actual limit depends on the performance of
+your host computer and concurrent load.
+
+Timestamps are returned as 24-byte-long data samples, i.e.
+@t{struct fd_time}, as defined in the header file:
+
+@smallexample
+   struct fd_time {
+           uint64_t utc;
+           uint32_t coarse;
+           uint32_t frac;
+           uint32_t channel;
+           uint32_t seq_id;
+   };
+@end smallexample
+
+For a simple pulse logging, the following shell command will work:
+
+@smallexample
+   insmod kernel/fmc-fine-delay.ko raw_tdc=1 fifo_len=16384
+   cat /dev/zio/fd-0200-0-0-data > logfile
+@end smallexample
+
+Anders Walling provided tools for use with @t{raw_tdc=1}. I'll try to
+merge them with this package; meanwhile please find them in
+@url{https://github.com/aewallin/fine-delay-sw}.
+
+@c --------------------------------------------------------------------------
+@node The Input Data Flow
+@subsection The Input Data Flow
+
+This section described the input data flow, after a summary about
+the basic @sc{zio} concept, because most readers are not expected to be
+confident with it.
+
+Fdelay-sw implements a @sc{zio} device. @sc{zio} is a framework to
+transport I/O data, its own atomic unit is a "block",
+i.e. meta-information (@i{control}, or @t{ctrl}) and actual samples
+(@i{data}).  Each block is like a network frame, in a way: header and
+payload.  The header/ctrl is 512 bytes and includes a very sharp
+timestamp plus both standardized and device-specific "attribute"
+values.
+
+TDC/DTC devices are best represented as an empty block: the header
+carries the timestamp and the attributes, and no data is associated
+with the event.  This however has an overhead: each timestamp is 512
+bytes big, and is delivered as a separate object.  With
+@t{fd-raw-input} I can collect 30-40kHz square waves, but not more
+than that.  This means my computer takes 25-30 microseconds per
+sample, including the user-space overhead.  This time is mainly taken
+by the data conversion and attribute setting to provide high-level
+information; the overhead of a @sc{zio} block is less than one
+microsecond, as documented elsewhere.
+
+By using the new module parameter @t{raw_tdc=1} the data flow is
+slightly modified and timestamps are delivered to user space in a much
+lower-level format.  The sample-size of the input channel is now 24
+bytes (@t{struct fd_time}, defined in the header) and each block can
+transport several samples in its data area.  Thus, if configured for N
+samples per block, @sc{zio} allocates payload areas of @t{24*N} bytes;
+when the input interrupt is served, the driver fills as many samples
+as it can, up to N, it then stores the block to the @sc{zio} buffer.
+Thus, each block in the buffer will host 1 or more "raw" timestamps,
+up to the configured value N.  This lowers the computational load and
+allows capturing fast bursts of many thousands pulses.
+
+The data path is then split in the following steps
+
+@itemize @bullet
+   @item In the gateware, timestamps are placed in a ring buffer (FIFO) that
+   is currently 1024-samples long (set by @t{c_RING_BUFFER_SIZE_LOG2} in
+   @t{fine_delay_pkg.vhd}).
+
+   @item The irq handler pulls the hardware fifo and places samples into a
+   software ring buffer (fifo).  The software fifo is an array of "struct
+   fd_time".  Its size is configured by the insmod parameter
+   @t{fifo_len=} (default is 1024 as I write this). The handler finally
+   sends acknowledgement to the hardware and awakes the software
+   interrupt.
+
+   @item The software interrupt handler pulls the software fifo and fills the
+   already-allocated @sc{zio} block, finally storing it to the buffer.
+   Both the block size and the number of blocks in the buffer are
+   configurable at run time.  When @sc{zio} allocates the next block, the
+   driver pulls the software fifo too, so any sample received in the
+   store-allocate interval is recovered in the new block.  When using
+   @t{raw_tdc=1}, the @sc{zio} control represents the first time stamp (so
+   consistency of the meta-information is preserved), and all stamps
+   including the first are included in the data area after a simple
+   normalization step.  So the samples are not @i{very} raw, some
+   calculation is still performed, but much less than setting all
+   the @sc{zio} attributes.
+@end itemize
+
+
+
+Thus, the critical points are the following ones:
+
+@itemize @bullet
+   @item Hardware can timestamp up to its maximum speed (I tested 1MHz with no
+   issues) as long as the burst fits in the hw fifo.
+
+   @item The irq handler moves the samples to the software fifo, while
+   splitting bit fields. Several samples are handled by each interrupt.
+   I think I can pull up to 300-500 kilosamples per second. But I didn't
+   prepare a specific test.  This works with no loss as long as the
+   software fifo is not overflown. Clearly the sw fifo can be increased
+   at will: making it 64-ksample or more is not a problem, but the size
+   is constrained to be a power of two.
+
+   @item  Moving the samples from the software fifo to the @sc{zio} buffer is
+   another step, which requires a little more data conversion
+   (normalization and addition of the user-defined constant offset).
+   There is a per-sample overhead and a (bigger) per-block overhead.
+   This step detects if an overflow of the software fifo happened. IF so,
+   it discards half of the fifo size to recover some margin.
+@end itemize
+
+The number of samples per @sc{zio} block is configured by the "post-samples"
+attribute (or pre-samples, which is usually left as 0 because stamps
+are taken after the trigger event):
+
+@smallexample
+  echo 1000 > /sys/bus/zio/devices/fd-0200/fd-input/trigger/post-samples
+@end smallexample
+
+A bigger size for the block means more wasted memory if pulses are
+slow (the block is used almost-empty); a smaller size means more
+overhead and thus a smaller maximum bursts frequency.
+
+The buffer length (number of blocks), can be increased at will:
+
+@smallexample
+  echo 1000 > /sys/bus/zio/devices/fd-0200/fd-input/chan0/buffer/max-buffer-len
+@end smallexample
+
+There is nothing against using a very long list of blocks in the
+buffer, if user-space is slow in pulling data: blocks are only
+allocated when needed.  Federico recently added an attribute to
+monitor buffer usage: @t{allocated-buffer-len} (which is always at
+least 1, because one block is always ready to be filled by the next
+interrupt).
+
+Data can be read by user-space simply by reading
+
+@smallexample
+  /dev/zio/fd-0200-0-0-data
+@end smallexample
+
+The file is a continuous stream of samples. Meta-information is
+delivered to another device name: by reading data alone, the
+application ignores the control structures that are properly released.
+
+Each sample includes a 16-bit sequence number, so the final consumer
+can detect overflows.  This doesn't apply if the software fifo is 128k
+samples, because samples are dropped half-a-fifosize each time --
+maybe I can change this).  If the @sc{zio} buffer is overflown,
+@sc{zio} must discard one or more blocks.  This is reported in the
+@i{alarms} field of the control, also readable as @t{alarms} in sysfs. The
+sysfs attribute is write-1-to-clear and there's  no other way to
+clear alarms.
+
+In order to see how @sc{zio} blocks flow, you can 
+
+@smallexample
+   ./zio/tools/zio-dump /dev/zio/fd-0200-0-0-*
+@end smallexample
+
+or just @i{grep} the number of samples in each block, without even
+reading the payload:
+
+@smallexample
+  ./zio/tools/zio-dump /dev/zio/fd-0200-0-0-* | grep ", n "
+@end smallexample
+
+You'll get something like this:
+
+@smallexample
+   Ctrl: seq 2257, n 26, size 24, bits 32, flags 01000001 (little-endian)
+   Ctrl: seq 2258, n 436, size 24, bits 32, flags 01000001 (little-endian)
+   Ctrl: seq 2259, n 2684, size 24, bits 32, flags 01000001 (little-endian)
+   Ctrl: seq 2260, n 4000, size 24, bits 32, flags 01000001 (little-endian)
+   [...]
+   Ctrl: seq 2268, n 4000, size 24, bits 32, flags 01000001 (little-endian)
+   Ctrl: seq 2269, n 854, size 24, bits 32, flags 01000001 (little-endian)
+@end smallexample
+
+
+The log above is 40000 samples streamed at 200kHz into 4000-big
+@sc{zio} blocks.  In the log above, @t{n} is the number of samples in
+each block, @t{seq} is the @sc{zio} sequence number for the block. The
+number of bits (32) is wrong, I apologize.
+
 @c ==========================================================================
 @node The Output cset
 @section The Output cset
@@ -1162,7 +1368,7 @@ is done using attributes. Attributes can either be written in
 This driver defines the sample size as 4 bytes and the trigger should
 be configured for a 1-sample block (the library does it at open
 time). We should aim at a zero-size data block, but this would require
-a patch to ZIO, and I'd better not change version during development.
+a patch to @sc{zio}, and I'd better not change version during development.
 
 The output is configured and activated by writing a control block
 with proper attributes set. Then a write to the data channel will
@@ -1206,8 +1412,8 @@ other attributes are ignored.  To configure pulse or delay, all
 attributes must be set to valid values.
 
 @b{Note:} writing the output configuration (mode, rep, start, end,
-delta) to @i{sysfs} is not working with this version of ZIO. And I've
-been too lazy to add code to do that.  While recent developments in ZIO
+delta) to @i{sysfs} is not working with this version of @sc{zio}. And I've
+been too lazy to add code to do that.  While recent developments in @sc{zio}
 introduced more complete consistency between the various places where
 attributes live, with this version you can only write these attributes to
 the control block.
@@ -1259,7 +1465,7 @@ Configuration} instead.
 For the bravest people, the low
 level way to generate output is using @i{fd-raw-output}, part
 of the @i{tools} directory of this package.  The tool writes a control
-block to the ZIO control file, setting the block size to 1 32-bit
+block to the @sc{zio} control file, setting the block size to 1 32-bit
 sample; it then writes 4 bytes to the data file to force output of the
 attributes.
 
@@ -1313,7 +1519,7 @@ designed for user applications to use.  The code lives in the @i{lib}
 subdirectory of this package. The directory uses a plain Makefile (not
 a Kbuild one) so it can be copied elsewhere and compiled stand-alone.
 Only, it needs a copy of @code{fine-delay.h} (which it currently pulls
-from the parent directory) and the ZIO headers, retrieved using the
+from the parent directory) and the @sc{zio} headers, retrieved using the
 @code{ZIO} environment variable).
 
 @c ==========================================================================
@@ -1488,9 +1694,9 @@ There are two example programs here: one using @i{read} and one using
 @i{fread}.
 
 Unfortunately, even if there are samples pending, @i{read}
-will only return one of them, because the ZIO device will only see the
+will only return one of them, because the @sc{zio} device will only see the
 next sample slightly after returning the previous one. This is a buffering
-problem with our use of ZIO. Here below there were three stamps enqueued,
+problem with our use of @sc{zio}. Here below there were three stamps enqueued,
 1ms spaced in time:
 
 @smallexample
@@ -1786,7 +1992,7 @@ the following known issues exposed by @i{fine-delay}:
 @itemize @bullet
 @item The auto-loading of @i{fmc} modules is not yet working:
 
-@item The @i{user} trigger of ZIO is really user-driven, so the driver
+@item The @i{user} trigger of @sc{zio} is really user-driven, so the driver
 can't push stuff to the buffer until asked to. Also, a related buglet
 prevents to return data immediately when asked. This will be fixed,
 but it currently results in the @i{read} function only returning one
@@ -1819,8 +2025,8 @@ urgent as I write this:
 
 @itemize 
 
-@item The driver should register its own ZIO trigger, or use the new
-attribute for ``greedy-input'' planned in new versions of ZIO
+@item The driver should register its own @sc{zio} trigger, or use the new
+attribute for ``greedy-input'' planned in new versions of @sc{zio}
 (thank you Federico). Currently there's no buffering and reading is
 slower than it could be.
 
@@ -1835,22 +2041,6 @@ slower than it could be.
 
 This chapters lists a few errors that may happen and how to deal with
 them.
-
-@c ==========================================================================
-@node ZIO Doesn't Compile
-@section ZIO Doesn't Compile
-
-Compilation of ZIO ma fail with error like:
-
-@smallexample
-   zio-ad788x.c:180: error: implicit declaration of function "spi_async_locked"
-@end smallexample
-
-This happens because the function wasn't there in your older kernel
-version, and your system is configured to enable @code{CONFIG_SPI}.
-
-To fix, please just remove the @i{zio-ad788x} line from
-@code{drivers/Makefile}.
 
 @c ==========================================================================
 @node make modules_install misbehaves
