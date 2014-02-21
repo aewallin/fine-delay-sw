@@ -375,19 +375,19 @@ module parameters.
 @section Software Dependencies
 
 The kernel versions I am using during development is 3.4.  Everything
-used here is known to build with all versions since 2.6.32 and up to 3.8.
-A backport to version 2.6.24 is released as a separate @i{git} branch.
+used here is known to build with all versions from 2.6.35 to
+3.12.  A backport to version 2.6.24 is released as a
+separate @i{git} branch, but we won't maintain it any more.
 
 The driver, then, is based on the @sc{zio} framework, available from
-@code{ohwr.org}.  I'm developing with the @code{v1.0-fixes} branch of
-the framework.  Again, this commit of @sc{zio} is known
-to work in the kernel range 2.6.32..3.8 and a backport to 2.6.24 is
-available.
+@code{ohwr.org}. This version of @sc{zio} doesn't build with 3.13, for
+a minor incompatibility, so this version of @i{fine-delay-sw} is
+limited to Linux 3.12 as well.
 
 The FMC mezzanine is supported by means of the @i{fmc-bus}
 software project. This @i{fine-delay}
 kernel module registers as a @i{driver} for the FMC bus abstraction,
-and is verified with version @t{v2013-04} of the FMC package.
+and is verified with version @t{v2014-02} of the FMC package.
 The same kernel range applies.
 
 Both packages (@sc{zio} and @i{fmc-bus})
@@ -396,14 +396,15 @@ of this package, and each of them is retrieved at the right version
 to be compatible with this driver.  This means you may just
 ignore software dependencies and everything should work.
 
-The carrier driver is not strictly related to this package, but
-@i{fine-delay} is released against version @t{v2013-04} of
-@i{spec-sw} and version @t{fixme} of @i{svec-sw}. 
+@sc{fmc} support is a @i{bus} in the Linux way, so you need both
+a @i{device} and a @i{driver}. This driver is known to work both
+with the @sc{spec} carrier on @sc{pci} and the @sc{svec} carrier
+on @sc{vme}. The software packages that provide the respective @i{device}
+are called @i{spec-sw} and @i{svec-sw}; both are hosted on @t{ohwr.org}.
 
-(fixme) Unfortunately, all the packages are moving fast: we are approaching a stable
-and long-lasting status but we are not there yet.  Please stick
-to the released versions named in this section, unless you are involved
-in development.
+Most of the non-@sc{cern} users are expected to run the @sc{spec}
+carrier, so a compatible version of @i{spec-sw} is downloaded
+as a submodule, too.
 
 @c ==========================================================================
 @node Software Installation
@@ -479,6 +480,7 @@ environment variables:
 
 @item ZIO
 @itemx FMC_BUS
+@itemx SPEC_SW
 
 	The top-level directory of the repository checkout of each
         package. Most users won't need to set them, as the Makefiles

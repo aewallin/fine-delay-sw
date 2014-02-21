@@ -5,8 +5,8 @@
 DIRS = kernel tools lib
 
 all clean modules install modules_install: gitmodules
-	for d in $(DIRS); do $(MAKE) -C $$d $@ || exit 1; done
 	@if echo $@ | grep -q install; then $(MAKE) prereq_install_warn; fi
+	for d in $(DIRS); do $(MAKE) -C $$d $@ || exit 1; done
 
 all modules: prereq
 
@@ -23,7 +23,8 @@ gitmodules:
 # The user can override, using environment variables, all these three:
 FMC_BUS ?= fmc-bus
 ZIO ?= zio
-SUBMOD = $(FMC_BUS) $(ZIO)
+SPEC_SW ?= spec-sw
+SUBMOD = $(FMC_BUS) $(ZIO) $(SPEC_SW)
 
 prereq:
 	for d in $(SUBMOD); do $(MAKE) -C $$d || exit 1; done
