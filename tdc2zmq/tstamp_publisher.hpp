@@ -12,8 +12,6 @@
 #include <sys/stat.h> // chmod()
 
 #include "tdc.pb.h"
-
-
 #include "ts.hpp"
 
 
@@ -135,7 +133,6 @@ struct fd_time {
 		TS stamp_timeout; // send a ZMQ message if timeout milliseconds has passed
 		TS sendtime;
 		//boost::timer::cpu_timer cpu_timer;
-
 		//fd_time ts;
 		//fd_time t0; // first time-stamp seen, use as offset for all others
 		//bool initialized;

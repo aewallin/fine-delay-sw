@@ -51,7 +51,6 @@ public:
 			return true;
 		else
 			return false;
-
 	};
 	TS &operator=(const TS &t) {
 			if (this == &t)
