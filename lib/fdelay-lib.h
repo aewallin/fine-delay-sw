@@ -76,6 +76,8 @@ extern int fdelay_fread(struct fdelay_board *b, struct fdelay_time *t, int n);
 extern int fdelay_fileno_tdc(struct fdelay_board *b);
 extern int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
 		       int flags);
+/* fd for data device in raw_tdc=1 mode */
+extern int fdelay_fileno_tdc_data(struct fdelay_board *userb); 
 /* raw_tdc=1 version of fdelay_read() */
 extern int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
 				unsigned char *databuffer, int *nsamples, int flags);

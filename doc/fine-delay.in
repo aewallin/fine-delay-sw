@@ -539,7 +539,9 @@ The following parameters are used:
 
 	The parameter defaults to 0. If set, it enables the raw tdc mode
         for fast collection of time-stamps. See @ref{Raw TDC}.@ref{Module Parameters}
-        
+
+@c FIXME documentation for fifo_len
+   
 @end table
 
 The module also uses the two parameters provided by the @i{fmc}
@@ -1687,13 +1689,25 @@ The library offers the following functions that deal with the input stamps:
         argument is used to pass 0 or @code{O_NONBLOCK}. If a non-blocking
         read is performed, the function may return -1 with @code{EAGAIN}
         if nothing is pending in the hardware FIFO.
-        
+
+@item int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
+            unsigned char *databuffer, int *nsamples, int flags);
+
+	Similar to fdelay_read(), but for the raw_tdc=1 mode. The user must provide
+        a pointer to a char databuffer and and an integer nsamples. After this function 
+        call the databuffer is populated with nsamples number of raw 24-byte
+        time-stamps.
+
 @item int fdelay_fileno_tdc(struct fdelay_board *b);
 
 	This returns the file descriptor associated to the TDC device,
         so you can @i{select} or @i{poll} before calling @i{fdelay_read}.
         If access fails (e.g., for permission problems), the functions
         returns -1 with @code{errno} properly set.
+
+@item int int fdelay_fileno_tdc_data(struct fdelay_board *userb)
+
+	In raw_tdc=1 mode, this returns the file descriptor to the data ZIO device.
 
 @end table
 
