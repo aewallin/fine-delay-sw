@@ -215,7 +215,8 @@ void handle_readout(struct board_def *bdef) {
 		nblocks++;
     }
     if ( t.utc >= previous_utc+1 ) { // if more than one second elapsed since last printout
-		printf(" f_in= %lli Hz. Got %lli blocks/s with %5.2f stamps/block \n", nstamps,nblocks,(double)nstamps/(double)nblocks);
+		printf(" f_in= %lli Hz. Got %lli blocks/s with %5.2f stamps/block, ca %2.2f Mb/s \n", 
+		          nstamps,nblocks,(double)nstamps/(double)nblocks, (double)(nstamps*24)/(double)1e6);
 		previous_utc = t.utc;
 		nstamps = 0;
 		nblocks = 0;
