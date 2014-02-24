@@ -96,6 +96,18 @@ enum fd_output_mode {
  */
 #define FD_CSET_INDEX(i) ((i) - FD_ATTR_DEV__LAST)
 
+/*
+ * Internal time: the first three fields should be converted to zio time.
+ * This is exported to user space if raw_tdc is selected.
+ */
+struct fd_time {
+	uint64_t utc;
+	uint32_t coarse;
+	uint32_t frac;
+	uint32_t channel;
+	uint32_t seq_id;
+};
+
 
 
 #ifdef __KERNEL__ /* All the rest is only of kernel users */
@@ -163,16 +175,7 @@ struct fd_ch {
 	uint32_t frr_cur;
 };
 
-/* Internal time: the first three fields should be converted to zio time */
-struct fd_time {
-	uint64_t utc;
-	uint32_t coarse;
-	uint32_t frac;
-	uint32_t channel;
-	uint32_t seq_id;
-};
-
-/* The software fifo is a circular buffer */
+/* The software fifo is a circular buffer of fd_time structures */
 struct fd_sw_fifo {
 	unsigned long head, tail;
 	struct fd_time *t;

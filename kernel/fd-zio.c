@@ -31,6 +31,10 @@
 
 #define _RW_ (S_IRUGO | S_IWUGO) /* I want 80-col lines so this lazy thing */
 
+static int fd_use_raw_tdc;
+
+/* The user may want to use raw TDC registers for faster input */
+module_param_named(raw_tdc, fd_use_raw_tdc, int, 0444);
 
 /* The sample size. Mandatory, device-wide */
 ZIO_ATTR_DEFINE_STD(ZIO_DEV, fd_zattr_dev_std) = {
@@ -628,8 +632,9 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-input"),
 		.raw_io =	fd_zio_input,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
-		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME,
+		.ssize =	0,
+		.flags =	ZIO_DIR_INPUT | ZIO_CSET_TYPE_TIME
+				| ZIO_CSET_SELF_TIMED,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_input,
 			.n_ext_attr = ARRAY_SIZE(fd_zattr_input),
@@ -639,7 +644,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch1"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -650,7 +655,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch2"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -661,7 +666,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch3"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -672,7 +677,7 @@ static struct zio_cset fd_cset[] = {
 		ZIO_SET_OBJ_NAME("fd-ch4"),
 		.raw_io =	fd_zio_output,
 		.n_chan =	1,
-		.ssize =	4, /* FIXME: 0? */
+		.ssize =	0,
 		.flags =	ZIO_DIR_OUTPUT | ZIO_CSET_TYPE_TIME,
 		.zattr_set = {
 			.ext_zattr = fd_zattr_output,
@@ -713,6 +718,12 @@ static struct zio_driver fd_zdrv = {
 int fd_zio_register(void)
 {
 	int err;
+
+	if (fd_use_raw_tdc) {
+		/* Hack: change the input channel to return raw registers */
+		fd_cset[0].ssize = sizeof(struct fd_time);
+		fd_cset[0].flags = ZIO_DIR_INPUT | ZIO_CSET_TYPE_RAW;
+	}
 
 	err = zio_register_driver(&fd_zdrv);
 	if (err)
