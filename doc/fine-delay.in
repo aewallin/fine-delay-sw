@@ -535,6 +535,11 @@ The following parameters are used:
         the output delays. Defaults to 30. If set to zero, the
         re-calibration timer is not activated.
 
+@item raw_tdc=
+
+	The parameter defaults to 0. If set, it enables the raw tdc mode
+        for fast collection of time-stamps. See @ref{Raw TDC}.@ref{Module Parameters}
+        
 @end table
 
 The module also uses the two parameters provided by the @i{fmc}
