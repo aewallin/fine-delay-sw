@@ -1,6 +1,7 @@
 import zmq
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+
 from scipy.optimize import curve_fit
 
 import tdc_pb2 # generated from .proto by "protoc tdc.proto --python_out=." 
@@ -18,6 +19,7 @@ socket.setsockopt(zmq.SUBSCRIBE, "")
 
 fig = plt.figure()
 ax1 = fig.add_subplot(1,1,1)
+
 mng = plt.get_current_fig_manager()
 mng.resize(*mng.window.maxsize())
 
@@ -89,6 +91,7 @@ def run():
 
 if __name__ == "__main__":
 	run()
+
 
 
 

@@ -194,7 +194,11 @@ void coarse_fract_to_picos(struct fd_time *time, uint64_t *pico) {
  * */
 
 unsigned char buf[1024*1024]; // large buffer
+<<<<<<< HEAD
 int next=-1; // keep track of missing samples
+=======
+int next=0; // keep track of missing samples
+>>>>>>> initial zmq work
 uint64_t previous_utc=0; // keep track of seconds
 uint64_t nstamps;
 uint64_t nblocks;
@@ -206,6 +210,7 @@ void handle_readout(struct board_def *bdef) {
 	int i,j;
     uint64_t picos;
     
+<<<<<<< HEAD
     while( fdelay_read_raw(bdef->b, &t, 1, buf, &nsamples, O_NONBLOCK) == 1) {
 		// while there are blocks to read
 
@@ -216,6 +221,18 @@ void handle_readout(struct board_def *bdef) {
 			printf("ERROR! seq_id = %06d but expected next_id = %06d \n",t.seq_id, next);
 			assert( next == t.seq_id );
 		}
+=======
+    while( fdelay_read_raw(bdef->b, &t, 1, buf, &nsamples, O_NONBLOCK) == 1) {	    
+		// while there are samples to read
+		publisher.pub(nsamples, buf); // ZMQ publish
+		
+		// data is now contained in buf, but we do nothing with it!
+		
+		// check for missing samples
+		if ( next != t.seq_id  )
+			printf("ERROR! seq_id = %06d but expected next_id = %06d \n",t.seq_id, next);
+			
+>>>>>>> initial zmq work
 		next = t.seq_id+nsamples;
 		if (next > 65535 )
 			next = next % 65536; 

@@ -13,7 +13,9 @@
 
 #include "tdc.pb.h"
 
+
 #include "ts.hpp"
+
 
 // time-stamp publisher
 class Tspub {
@@ -45,6 +47,7 @@ class Tspub {
 			}
 			return false;
 		}
+
 		
 /* each raw sample is in fd_time format (see fine-delay.h)
 struct fd_time {
@@ -75,6 +78,7 @@ struct fd_time {
 				
 				// frac is 1/4096 fractions of the 8 ns clock.
 				// coarse is number of tics of the 125 MHz fpga clock == 8ns == 8000 ps
+
 			return (uint64_t)frac * 8000 / 4096 + (uint64_t)coarse * 8000;
 		}
 		uint32_t stamp_to_id(int j, unsigned char* buf) {
@@ -84,12 +88,14 @@ struct fd_time {
 		
 		// receive new time-stamps from hardware
 		void pub(int n, unsigned char* buf) {
+
 			/*
 			if (!initialized) {
 				unpack_stamp(t0,0,buf);
 				printf("   t0=  %lli ", t0.utc );
 				initialized = true;
 			}*/
+
 			pb_msg.set_n( pb_msg.n() + n ); // number of stamps in this block
 			//pb_msg.clear_utc(); // clear the utc-array
 			//pb_msg.clear_ps(); // clear picoseconds
@@ -116,17 +122,20 @@ struct fd_time {
 			pb_msg.clear_utc(); // clear the utc-array
 			pb_msg.clear_ps(); // clear picoseconds
 			pb_msg.clear_id(); // clear ids
+
 		}
 	private:
 		zmq::context_t* context;
 		zmq::socket_t* socket;
 		//zmq::message_t zmq_msg;
 		StampBlock pb_msg; // protobuf message type
+
 		int stamp_current;
 		int stamp_blocksize; // send a ZMQ message if we have this many stamps
 		TS stamp_timeout; // send a ZMQ message if timeout milliseconds has passed
 		TS sendtime;
 		//boost::timer::cpu_timer cpu_timer;
+
 		//fd_time ts;
 		//fd_time t0; // first time-stamp seen, use as offset for all others
 		//bool initialized;

@@ -14,7 +14,6 @@ ENDIF()
 # ZeroMQ_LIBRARIES - link these to use libzmq
 
 
-
 FIND_PACKAGE(Protobuf REQUIRED)
 #   PROTOBUF_FOUND - Found the Google Protocol Buffers library
 #   PROTOBUF_INCLUDE_DIRS - Include directories for Google Protocol Buffers

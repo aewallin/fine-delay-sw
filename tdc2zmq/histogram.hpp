@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <cstdio> // printf()
+
 #include <deque>
 
 #include <math.h>  // floorf()
@@ -16,7 +17,6 @@
 #include "tdc.pb.h"
 
 #include "ts.hpp"
-
 
 
 // simple frequency counter, with given gate-time
@@ -41,10 +41,12 @@ class Histogrammer {
 			count=0;
 			printf("     tau0: %lli.%012lli \n", tau0.s, tau0.ps );
 			printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
+
 		}
 		~Histogrammer() {
 			delete hist;
 		};
+
 
 		// add time-stamp
 		void append(TS ts) {
@@ -55,10 +57,12 @@ class Histogrammer {
 			//printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
 
 			// find the bin where modt belongs
+
 			// histogram bins correspond to time:
 		    // hist[0]      = 0 ... tau/bins
 		    // hist[bins-1] = (bins-1)*tau/bins ... tau
             double t = modt.s + modt.ps/1e12; // looses precision??
+
             double binwidth = ((double)tau.s + (double)tau.ps/1e12)/bins;
             int bin_number = floorf( t/binwidth );
             if (!( bin_number >= 0 ))
@@ -78,12 +82,14 @@ class Histogrammer {
 			}
 			
             //printf("    modt: %lli.%012lli bin= %d\n", modt.s, modt.ps , bin_number);	
+
 		}
 		// access the histogram
 		int histogram_n(int nbin) {
 			return (*hist)[nbin];
 		};
 		int get_bins() { return bins; }
+
 		int hcount() { return count; }
 		
 		bool deq_full() {
@@ -114,6 +120,7 @@ class Histogrammer {
 		
 		TS gate; // gate time
 		std::deque< std::pair<TS, int> > deq; // deq of time-stamps, and histogram-bins
+
 };
 
 // subscribe to Tstamp, and create histogram.
@@ -126,6 +133,7 @@ class TsHist {
 			char messageType[] = { 0x0a, 0x02, 0x54, 0x54 }; // protobuf + "TT"			
 			subscriber->setsockopt( ZMQ_SUBSCRIBE, messageType, 4 );
 			
+
 			// PUB socket
 			publisher = new zmq::socket_t(*context, ZMQ_PUB);
 			publisher->bind("ipc:///tmp/histogram.pipe");
@@ -144,6 +152,7 @@ class TsHist {
 			hist = new Histogrammer( hist_mod, n_bins , hist_gate);
 			update_timeout = TS(2,0); // update once/twice per second
 			last_calc = TS(0,0);
+
 		};
 		
 		void sub() {
@@ -153,6 +162,7 @@ class TsHist {
 			
 			while (1) {
 				// Subscribe to time-stamps
+
 				subscriber->recv(zmq_msg);
 				//printf("SUB[ %d ] :",  zmq_msg->size() );
 				pb_msg.ParseFromArray( (char *)zmq_msg->data(), zmq_msg->size() );
@@ -185,6 +195,7 @@ class TsHist {
 					publisher->send( zmq_pub_msg );
 					last_calc = last_stamp;
 				}
+
 			}
 			delete zmq_msg;
 		};
@@ -195,8 +206,10 @@ class TsHist {
 		StampBlock pb_msg; // protobuf time-stamp message type
 		Histogram pb_hist_msg; // protobuf histogram message type
 		Histogrammer* hist;
+
 		TS hist_mod;
 		TS hist_gate;
 		TS last_calc;
 		TS update_timeout;
+
 };

@@ -10,6 +10,7 @@
 #include <cstdio> // printf()
 
 #include <deque>
+
 #include <sys/stat.h> // chmod()
 
 #include "tdc.pb.h"
@@ -19,6 +20,7 @@
 // count input events during the gate-time
 // calculate a new f-output every gate-time seconds.
 class GateCounter {	
+
 	public:
 		GateCounter() {
 			gate.s = 5;
@@ -30,6 +32,7 @@ class GateCounter {
 		}
 		// add time-stamp
 		void append(TS ts) {
+
 			deq.push_back( ts );
 			//printf(" deq.append  id=%d ts=%lli.%012lli \n", ts.id, ts.s, ts.ps );
 			TS diff = ( deq.back()-deq.front() );
@@ -56,6 +59,7 @@ class GateCounter {
 			//printf("    gate  = %lli.%012lli \n",  gate.s, gate.ps );
 			//printf("    test = %d \n", ( diff ) > gate );
 			if (  deq_delta() > gate ) {
+
 				//std::cout << " deq full!\n";
 				return true;
 			} else
@@ -65,6 +69,7 @@ class GateCounter {
 		double f() {
 			if (deq.size()<=1)
 				return 0;
+
 			//printf(" front = %lli.%012lli \n", deq.front().s, deq.front().ps );
 			//printf(" back  = %lli.%012lli \n", deq.back().s, deq.back().ps );
 			TS diff = ( deq.back()-deq.front() );
@@ -82,6 +87,7 @@ class GateCounter {
 			return deq.back()-deq.front() ;
 		}
 		TS gatet() { return gate; };
+
 	private:
 		TS gate;
 		std::deque<TS> deq;
@@ -92,6 +98,7 @@ class Tssub {
 		Tssub() {
 			context = new zmq::context_t(1); // what's the "1" ?
 			socket = new zmq::socket_t(*context, ZMQ_SUB);
+
 			socket->connect("ipc:///tmp/tstamp.pipe");
 			char messageType[] = { 0x0a, 0x02, 0x54, 0x54 }; // protobuf + "TT"
 			socket->setsockopt( ZMQ_SUBSCRIBE, messageType, 4 );
@@ -108,6 +115,7 @@ class Tssub {
 			cnt = new GateCounter( gate );
 			prev_id = -1;
 			last_f_calc = TS(0,0);
+
 		};
 		
 		void sub() {
@@ -116,6 +124,7 @@ class Tssub {
 			std::cout << "ZMQ SUB started.\n";
 			
 			while (1) {
+
 				socket->recv(zmq_msg);
 				//printf("SUB[ %d ] :",  zmq_msg->size() );
 
@@ -169,6 +178,7 @@ class Tssub {
 					//printf("elapsed = %lli.%012lli \n", elapsed.s,elapsed.ps);
 					fflush(stdout);
 					last_f_calc = last_stamp;
+
 				}
 				
 			}
@@ -176,6 +186,7 @@ class Tssub {
 		};
 	private:
 		zmq::context_t* context;
+
 		zmq::socket_t* socket; // for SUB
 		zmq::socket_t* publisher;
 		
@@ -185,4 +196,5 @@ class Tssub {
 		TS last_f_calc; // the last time we called cnt->f() for output
 		TS gate;
 		int prev_id;
+
 };
