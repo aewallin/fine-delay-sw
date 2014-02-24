@@ -51,6 +51,7 @@ public:
 			return true;
 		else
 			return false;
+
 	};
 	TS &operator=(const TS &t) {
 			if (this == &t)
@@ -59,7 +60,7 @@ public:
 		ps=t.ps;
 		return *this;
 	}
-	
+
 	// modulo operator, for histogramming
 	TS operator%(const TS &t) const {
 		//printf("     ts: %lli.%012lli \n", s, ps );
@@ -79,4 +80,5 @@ public:
 		
 		return TS(smod,psmod);
 	};
+
 };
