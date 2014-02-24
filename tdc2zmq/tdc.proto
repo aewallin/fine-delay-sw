@@ -1,9 +1,11 @@
 message StampBlock {
+
 	required string messageType =1; // zeromq message start string
 	required int32 n=2; // number of stamps
 	repeated int32 id = 3; // sequence id of stamp
 	repeated uint64 utc = 4 [packed=true];
 	repeated uint64 ps = 5 [packed=true];
+
 
 }
 /*
@@ -30,4 +32,5 @@ message Frequency {
 	required double f=1;
 	required uint64 s = 2;
 	required uint64 ps = 3; 
+
 }
