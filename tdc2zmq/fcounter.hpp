@@ -16,6 +16,7 @@
 #include "tdc.pb.h"
 #include "ts.hpp"
 
+
 // simple frequency counter, with given gate-time
 // count input events during the gate-time
 // calculate a new f-output every gate-time seconds.
@@ -43,6 +44,7 @@ class GateCounter {
 					deq.back().s, deq.back().ps, deq.front().s, deq.front().ps, diff.s, diff.ps);
 				assert( diff > TS(0,0) );
 			}
+
 
 			//printf(" deq.diff  = %lli.%012lli \n", diff.s, diff.ps );
 			while ( deq_full() && deq.size() > 1 ) {
@@ -99,6 +101,7 @@ class Tssub {
 			context = new zmq::context_t(1); // what's the "1" ?
 			socket = new zmq::socket_t(*context, ZMQ_SUB);
 
+
 			socket->connect("ipc:///tmp/tstamp.pipe");
 			char messageType[] = { 0x0a, 0x02, 0x54, 0x54 }; // protobuf + "TT"
 			socket->setsockopt( ZMQ_SUBSCRIBE, messageType, 4 );
@@ -115,6 +118,7 @@ class Tssub {
 			cnt = new GateCounter( gate );
 			prev_id = -1;
 			last_f_calc = TS(0,0);
+
 
 		};
 		
@@ -154,6 +158,7 @@ class Tssub {
 				TS elapsed = (last_stamp - last_f_calc);
 				if ( elapsed > gate ) {
 					// frequency calculation
+
 					double f = cnt->f();
 					printf("f= %.06f deqN=%d deltaT=%lli.%012lli gate=%lli.%012lli\n", 
 					f, cnt->deq_size(), cnt->deq_delta().s, cnt->deq_delta().ps,
@@ -173,6 +178,7 @@ class Tssub {
 					
 					
 					 
+
 					//printf("last ts = %lli.%012lli \n", last_stamp.s,last_stamp.ps);
 					//printf("last f  = %lli.%012lli \n", last_f_calc.s,last_f_calc.ps);
 					//printf("elapsed = %lli.%012lli \n", elapsed.s,elapsed.ps);
