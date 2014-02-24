@@ -1681,8 +1681,7 @@ The library offers the following functions that deal with the input stamps:
         even if it implies sleeping several times.  Use it only if you are
         aware that all the expected pulses will reach you.
 
-@item int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n,
-		       int flags);
+@item int fdelay_read(struct fdelay_board *b, struct fdelay_time *t, int n, int flags);
 
 	The function behaves like @i{read}: it will wait at most once
         and return the number of samples that it received.  The @i{flags}
@@ -1690,13 +1689,14 @@ The library offers the following functions that deal with the input stamps:
         read is performed, the function may return -1 with @code{EAGAIN}
         if nothing is pending in the hardware FIFO.
 
-@item int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n,
-            unsigned char *databuffer, int *nsamples, int flags);
+@item int fdelay_read_raw(struct fdelay_board *userb, struct fdelay_time *t, int n, 
+	unsigned char *databuffer, int *nsamples, int flags);
 
 	Similar to fdelay_read(), but for the raw_tdc=1 mode. The user must provide
         a pointer to a char databuffer and and an integer nsamples. After this function 
         call the databuffer is populated with nsamples number of raw 24-byte
-        time-stamps.
+        time-stamps. Note that the time stamp contained in struct fdelay_time *t 
+        is repeated as the first time stamp in databuffer.
 
 @item int fdelay_fileno_tdc(struct fdelay_board *b);
 
