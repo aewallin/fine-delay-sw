@@ -51,14 +51,18 @@ def run():
 		
 		hist_time = 30.0
 		binwidth = histmax  / (h.bins)
-		hbins = [1e9*x*binwidth for x in range(h.bins)]
+		hbins = [x*binwidth for x in range(h.bins)]
 		hvals = h.hist
+		# normalize
+		hsum = sum(hvals)
+		hvals = [float(x)/hsum for x in hvals]
 		assert( len(hvals) == len(hbins) )
-		b0 = 4000
-		a0 = 1000
-		t0 = 10
+		
+		#b0 = 4000
+		#a0 = 1000
+		#t0 = 10
 		# hbins in units of nanoseconds!
-		fitpars, covmat = curve_fit(sinfunc,hbins, hvals, p0=[a0,t0,b0])
+		#fitpars, covmat = curve_fit(sinfunc,hbins, hvals, p0=[a0,t0,b0])
 		
 		#print sum(h.hist)
 		#print hvals
@@ -69,21 +73,21 @@ def run():
 		#ax1.semilogy(hbins,[float(h)/len(hvals) for h in hvals],'o')
 		ax1.plot(hbins, hvals,'.')
 		
-		plt.plot(hbins, sinfunc(hbins, fitpars[0], fitpars[1],fitpars[2]), 'r-')
-		fit_text = "Fit = A*sin( 2*pi*f*(t-t0) ) + B \n A=%.0f t0=%.1f ns B=%.0f" % (fitpars[0], fitpars[1], fitpars[2])
+		#plt.plot(hbins, sinfunc(hbins, fitpars[0], fitpars[1],fitpars[2]), 'r-')
+		#fit_text = "Fit = A*sin( 2*pi*f*(t-t0) ) + B \n A=%.0f t0=%.1f ns B=%.0f" % (fitpars[0], fitpars[1], fitpars[2])
 		
-		plt.xlabel('Time (ns)')
+		plt.xlabel('Time (s)')
 		plt.ylabel('Counts')
-		plt.title('TIme-stamp histogram test. AW 2014-02-21')
-		print "plotted %d histogram" % (sum(hvals))
-		print " max count ", max(hvals)
+		plt.title('TIme-stamp histogram test. AW 2014-02-26')
+		print "plot histogram, counts= %d, max_count=%f" % ( sum(h.hist), max(hvals) )
+		#print " max count ", max(hvals)
 		ftext = "histogram-gate = 30 s, histogram_count = %d f_count = %.2f Hz" % (sum(hvals), float(sum(hvals))/hist_time)
 		plt.text(5, 550, ftext )
-		plt.text(5, 1050, fit_text , color='r',size='32')
-		plt.legend(('Data', 'Fit'))
+		#plt.text(5, 1050, fit_text , color='r',size='32')
+		#plt.legend(('Data', 'Fit'))
 		#plt.text(5, 580, "a_mod = 50 mVpp, f_mod = 12 MHz" )
-		plt.ylim((0,1e4))
-		plt.xlim((0,1e9*histmax))
+		plt.ylim((0,1.0))
+		#plt.xlim((0,1e9*histmax))
 		plt.draw()
 		filename = "12meg_frame_%03d" % nframe
 		nframe = nframe+1

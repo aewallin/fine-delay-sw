@@ -1,5 +1,16 @@
-/* zmq SUB with protobuf 
-
+/* Frequency counter test
+ * AW 2014-02
+ * 
+ * ZMQ Subscribes to time-stamps
+ * collects time-stamps into a deque
+ * so that delta-T between first and last stamp in deque
+ * is equal to the gate-time.
+ * 
+ * calculates the average frequency of stamps in the deque as: 
+ * f = (deque.size()-1 ) / ( deque.front() - deque.back() )
+ * 
+ * ZMQ Publishes the frequency value
+ * 
  */
 
 #pragma once
@@ -142,8 +153,8 @@ class Tssub {
 						prev_id = pb_msg.id(n);
 					else {
 						if( ( (prev_id + 1) % 65536) != pb_msg.id(n) ) {
-							printf("ERROR! prev_id=%d current=%d",prev_id, pb_msg.id(n));
-							assert( ( (prev_id +1) % 65536) == pb_msg.id(n) );
+							printf("WARNING!! Stamps Lost: prev_id=%d current=%d",prev_id, pb_msg.id(n));
+							//assert( ( (prev_id +1) % 65536) == pb_msg.id(n) );
 						}
 						prev_id = pb_msg.id(n);
 					}

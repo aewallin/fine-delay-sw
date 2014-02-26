@@ -59,3 +59,6 @@ target_link_libraries(fcounter    ${PROTOBUF_LIBRARY} ${ZeroMQ_LIBRARIES} )
 # modulo-t histogram calculation
 ADD_EXECUTABLE       (histogram  histogram.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(histogram  ${PROTOBUF_LIBRARY} ${ZeroMQ_LIBRARIES} ) 
+
+ADD_EXECUTABLE       (histogram2  histogram2.cpp ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(histogram2  ${PROTOBUF_LIBRARY} ${ZeroMQ_LIBRARIES} ) 

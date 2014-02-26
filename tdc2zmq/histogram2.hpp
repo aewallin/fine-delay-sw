@@ -1,15 +1,6 @@
-/* time stamp histogram
- * AW 2014-02
- * 
- * ZMQ Subscribes to time-stamps
- * 
- * collects time-stamps into a deque of length gate-time.
- * 
- * Hisograms all time-stamps modulo tau into a histogram
- * of length tau, with nbins number of bins.
- * 
- * ZMQ Publishes a message with the histogram counts.
- * 
+/* time-stamp correaltion histogram
+ * AW 2014-02-26
+
  */
 
 #pragma once
@@ -28,86 +19,112 @@
 
 #include "ts.hpp"
 
-class Histogrammer {
+// all-time intervals histogram
+class Histogrammer2 {
 	public:
-		Histogrammer() {
+		Histogrammer2() {
 			tau.s = 1;
 			tau.ps = 0;
+			nbins = 100;
 			//t0.s = -1; // uninitialized!
-			bins = 100;
-			hist = new std::vector<int>(bins);
-			count=0;
-		}
-		Histogrammer(TS tau0, int nbins, TS g0) {
-			tau = tau0;
-			gate = g0;
 			
-			//t0.s = -1; // uninitialized!
-			bins = nbins;
-			hist = new std::vector<int>(bins);
+			hist = new std::vector<int>(nbins);
 			count=0;
-			printf("     tau0: %lli.%012lli \n", tau0.s, tau0.ps );
-			printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
-
+			deq.clear();
 		}
-		~Histogrammer() {
+		Histogrammer2(TS tau0, int nbins0, TS gate0) {
+			tau = tau0;
+			gate = gate0;
+			nbins = nbins0;
+			
+			hist = new std::vector<int>(nbins);
+			count=0;
+
+			printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
+			printf("    gate: %lli.%012lli \n", gate.s, gate.ps );
+			deq.clear();
+		}
+		~Histogrammer2() {
 			delete hist;
 		};
 
 
 		// add time-stamp
 		void append(TS ts) {
+			if ( deq.empty() ) { // special case at start when deq is empty
+				printf("    ts0: %lli.%012lli \n", ts.s, ts.ps );
+				std::vector<int> no_bins;
+				deq.push_back( std::make_pair(ts, no_bins ) );
+				return;
+			}
+            double binwidth = ((double)tau.s + (double)tau.ps/1e12)/(nbins-1);
+			//printf("  append-ts: %lli.%012lli \n", ts.s, ts.ps );
+			//printf("  deq.size(): %d \n", deq.size() );
+			/*
+			int deqn=0;
+			for (deqType::iterator itr = deq.begin();itr!=deq.end();++itr) {
+				printf("%d %lli.%012lli \n",(*itr).first.s, (*itr).first.ps, deqn);
+				++deqn;
+			}*/
 			
-			TS modt = ts % tau ; // modulus operator of TS!
-			//printf("  append: %lli.%012lli \n", ts.s, ts.ps );
-			//printf("    modt: %lli.%012lli \n", modt.s, modt.ps );
-			//printf("     tau: %lli.%012lli \n", tau.s, tau.ps );
-
-			// find the bin where modt belongs
-
 			// histogram bins correspond to time:
 		    // hist[0]      = 0 ... tau/bins
 		    // hist[bins-1] = (bins-1)*tau/bins ... tau
-            double t = modt.s + modt.ps/1e12; // looses precision??
+		    deqType::iterator it = deq.begin();
+		    TS diff;
+		    std::vector<int> my_bins;
+		    do {
+				diff = ts - (*it).first;
+				//printf("  diff: %lli.%012lli  %d \n", diff.s, diff.ps, tau > diff );
+				if ( !(tau > diff) ) { // TS class could implement < also.. 
+					++it;
+					continue; // stop if we don't have a histogram bin for this stamp
+				}
+				double t = (double)diff.s + (double)diff.ps/1e12; // looses precision??
+				int bin_number = floorf( t/binwidth );
+				//printf("    diff: %lli.%012lli bin= %d\n", diff.s, diff.ps, bin_number );
+				
+				// sanity check on bin-number
+				if (!( bin_number >= 0 ) || (bin_number >= nbins) )
+					printf("ERROR bin_number=%d nbins=%d \n",bin_number,nbins);
+				assert( bin_number >= 0 );
+				assert( bin_number < nbins );
 
-            double binwidth = ((double)tau.s + (double)tau.ps/1e12)/bins;
-            int bin_number = floorf( t/binwidth );
-            if (!( bin_number >= 0 ))
-				printf("ERROR bin_number=%d \n",bin_number);
-            assert( bin_number >= 0 );
-            assert( bin_number < bins );
+				
+				(*hist)[bin_number] = (*hist)[bin_number] + 1;
+				my_bins.push_back( bin_number );
+				count++;
+				
+
+				++it;
+			} while ( it!=deq.end() );
+			
+			// store the new time-stamp in deq
+            deq.push_back( std::make_pair(ts, my_bins ) );
             
-            (*hist)[bin_number] = (*hist)[bin_number] + 1;
-            count++;
-            deq.push_back( std::make_pair(ts,bin_number) );
-            
-            // remove elements from the deq:
+            // remove elements from the deq, to keep only stamps within the gate-time
 			while ( deq_full() && deq.size() > 1 ) {
-				(*hist)[ deq.front().second ]--; // decrease hisogram count for this element
-				count--;
+				for (std::vector<int>::iterator it = deq.front().second.begin() ; 
+				     it != deq.front().second.end(); ++it) {
+					(*hist)[ *it ]--; // decrease histogram count for this element
+					count--;
+				}
 				deq.pop_front(); // remove elements
 			}
-			
-            //printf("    modt: %lli.%012lli bin= %d\n", modt.s, modt.ps , bin_number);	
 
 		}
 		// access the histogram
 		int histogram_n(int nbin) {
 			return (*hist)[nbin];
 		};
-		int get_bins() { return bins; }
+		int get_bins() { return nbins; }
 
 		int hcount() { return count; }
 		
 		bool deq_full() {
 			if (deq.size()<=1)
-				return false;			
-			//TS diff = ( deq.back()-deq.front() );
-			//printf(" %d diff  = %lli.%012lli \n", deq.size(), diff.s, diff.ps );
-			//printf("    gate  = %lli.%012lli \n",  gate.s, gate.ps );
-			//printf("    test = %d \n", ( diff ) > gate );
+				return false;
 			if (  deq_delta() > gate ) {
-				//std::cout << " deq full!\n";
 				return true;
 			} else
 				return false;
@@ -119,21 +136,21 @@ class Histogrammer {
 			return deq.back().first - deq.front().first ;
 		}
 	private:
-		TS tau; // histogram modulo this time-interval
-		// TS t0; // first observation
-		int bins; // number of bins in the histogram
+		TS tau;    // time-interval for histogram rightmost bin
+		int nbins; // number of bins in the histogram
 		int count; // number of counts in the histogram
 		std::vector<int>* hist; // the histogram itself
-		
 		TS gate; // gate time
-		std::deque< std::pair<TS, int> > deq; // deq of time-stamps, and histogram-bins
+		typedef std::deque< std::pair<TS, std::vector<int> > > deqType;
+		//std::deque< std::pair<TS, std::vector<int> > > 
+		deqType deq; // deq of time-stamps and histogram-bins
 
 };
 
 // subscribe to Tstamp, and create histogram.
-class TsHist {
+class TsHist2 {
 	public:
-		TsHist() {
+		TsHist2() {
 			context = new zmq::context_t(1); // what's the "1" ?
 			subscriber = new zmq::socket_t(*context, ZMQ_SUB);
 			subscriber->connect("ipc:///tmp/tstamp.pipe");			
@@ -152,11 +169,11 @@ class TsHist {
 			// 100us = 10 kHz =      (int64_t)100000000
 			// 1 MHz =                 (int64_t)1000000
 			// 12 MHz =                  (int64_t)83333
-			hist_mod = TS( (int64_t)0,(int64_t)83333);
+			hist_mod = TS( (int64_t)0,(int64_t)10000000000);
 			hist_gate = TS(30,0);
-			int n_bins = 100;
+			int n_bins = 10000;
 			// this class does the work
-			hist = new Histogrammer( hist_mod, n_bins , hist_gate);
+			hist = new Histogrammer2( hist_mod, n_bins , hist_gate);
 			update_timeout = TS(2,0); // update once/twice per second
 			last_calc = TS(0,0);
 
@@ -194,9 +211,9 @@ class TsHist {
 					}
 					zmq::message_t zmq_pub_msg( pb_hist_msg.ByteSize() );
 					pb_hist_msg.SerializeToArray( (void *)zmq_pub_msg.data(), pb_hist_msg.ByteSize() );
-					printf("PUB[ %d ] : deq_count=%d hcount = %d  mod=%lli.%012lli elapsed=%lli.%012lli gate_time.ps=%lli ps \n",  
+					printf("PUB[ %d ] : deq_count=%d hcount = %d  tau=%lli.%012lli elapsed=%lli.%012lli gate=%lli.%012lli  \n",  
 					zmq_pub_msg.size(), hist->deq_size(), hist->hcount(), hist_mod.s, hist_mod.ps, 
-					elapsed.s, elapsed.ps );
+					elapsed.s, elapsed.ps, hist_gate.s, hist_gate.ps );
 					fflush(stdout);
 					// actual send , , msg.ByteSize()
 					publisher->send( zmq_pub_msg );
@@ -212,7 +229,7 @@ class TsHist {
 		zmq::socket_t* publisher;
 		StampBlock pb_msg; // protobuf time-stamp message type
 		Histogram pb_hist_msg; // protobuf histogram message type
-		Histogrammer* hist;
+		Histogrammer2* hist;
 
 		TS hist_mod;
 		TS hist_gate;

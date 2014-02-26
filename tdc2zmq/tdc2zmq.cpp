@@ -280,10 +280,10 @@ int main(int argc, char *argv[]) {
 		// int select( 	int nfds,  	fd_set *readfds,  	fd_set *writefds,  	fd_set *exceptfds, struct timeval *timeout);
 		// int poll(struct pollfd *ufds, unsigned int nfds, int timeout);
 		if ( poll( &pfd, 1, timeout) <= 0) { 
-			printf("ERROR poll() <=0\n");
-			exit(-1); // we should not get here !?
-			//fflush(stdout);
-			//continue; /* signal handler did it... */
+			printf("Timeout poll() <=0\n");
+			//exit(-1); // we should not get here !?
+			fflush(stdout);
+			continue; /* signal handler did it... */
 		}
 		handle_readout( &my_board );
 	}
