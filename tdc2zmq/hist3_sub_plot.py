@@ -19,7 +19,8 @@ socket.connect("ipc:///tmp/histogram2.pipe")
 socket.setsockopt(zmq.SUBSCRIBE, "") 
 
 fig = plt.figure()
-ax1 = fig.add_subplot(1,1,1)
+ax1 = fig.add_subplot(1,2,1)
+ax2 = fig.add_subplot(1,2,2)
 
 mng = plt.get_current_fig_manager()
 mng.resize(*mng.window.maxsize())
@@ -67,8 +68,13 @@ def run():
 		
 		#print sum(h.hist)
 		#print hvals
-		
+		ft_raw = numpy.fft.fft(hvals[50:] - numpy.mean(hvals[50:]) )
+		#ft = numpy.fft.fftshift(ft_raw)
+		ft = ft_raw
+		sample_interval = binwidth
+		faxis =  numpy.fft.fftfreq( len(ft), d=sample_interval)
 		# update plot
+		ax2.clear()
 		ax1.clear()
 		##print "cleared"
 		#ax1.semilogy(hbins,[float(h)/len(hvals) for h in hvals],'o')
@@ -77,9 +83,15 @@ def run():
 		#plt.plot(hbins, sinfunc(hbins, fitpars[0], fitpars[1],fitpars[2]), 'r-')
 		#fit_text = "Fit = A*sin( 2*pi*f*(t-t0) ) + B \n A=%.0f t0=%.1f ns B=%.0f" % (fitpars[0], fitpars[1], fitpars[2])
 		
-		plt.xlabel('Time (s)')
-		plt.ylabel('Counts')
-		plt.title('TIme-stamp histogram test. AW 2014-02-26')
+		ax1.set_xlabel('Time (s)')
+		ax1.set_ylabel('Counts (a.u.)')
+		ax1.set_title('second order correlation')
+		ax1.set_ylim((0,0.02))
+		
+		ax2.set_xlabel('Frequency (Hz)')
+		ax2.set_ylabel('abs(FFT)')
+		ax2.set_title('FFT')
+		ax2.grid()
 		print "plot histogram2, counts= %d, max_count=%f" % ( sum(h.hist), max(hvals) )
 		#print " max count ", max(hvals)
 		#ftext = "histogram-gate = 30 s, histogram_count = %d f_count = %.2f Hz" % (sum(hvals), float(sum(hvals))/hist_time)
@@ -87,8 +99,14 @@ def run():
 		#plt.text(5, 1050, fit_text , color='r',size='32')
 		#plt.legend(('Data', 'Fit'))
 		#plt.text(5, 580, "a_mod = 50 mVpp, f_mod = 12 MHz" )
-		plt.ylim((0,0.02))
+		ax1.set_ylim((0,0.0025))
+		
+		ax2.set_ylim((0.001,100))
 		#plt.xlim((0,1e9*histmax))
+		ax2.semilogy(faxis, abs(ft),'r.')
+		#ax2.set_xlim((0.0, 1/(2*float(binwidth))))
+		
+		#ax2.set_ylim((0,0.02))
 		plt.draw()
 		filename = "12meg_frame_%03d" % nframe
 		nframe = nframe+1

@@ -150,9 +150,10 @@ class TsHist {
 			// 10ms = 100 Hz   =   (int64_t)10000000000
 			// 1 ms = 1  kHz =      (int64_t)1000000000
 			// 100us = 10 kHz =      (int64_t)100000000
-			// 1 MHz =                 (int64_t)1000000
-			// 12 MHz =                  (int64_t)83333
-			hist_mod = TS( (int64_t)0,(int64_t)83333);
+			// 10us = 100 kHz =       (int64_t)10000000
+			// 1 MHz = 1 us =          (int64_t)1000000
+			// 12 000 048 Hz =           (int64_t)83333
+			hist_mod = TS( (int64_t)0,(int64_t)1000000);
 			hist_gate = TS(30,0);
 			int n_bins = 100;
 			// this class does the work

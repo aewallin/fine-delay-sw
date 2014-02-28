@@ -31,7 +31,11 @@ plt.show(block=False)
 #hbins = [1,2,3]
 #hvals = [4,5,6]
 
+# 12M
 ftrap = float(2*math.pi*12000048) / float(1e9)
+
+# 1M
+ftrap = float(2*math.pi*1000000) / float(1e9)
 
 def sinfunc(x,a,phi,b):
     return b+a*numpy.sin( numpy.multiply(ftrap,x)-numpy.multiply(ftrap,phi))
